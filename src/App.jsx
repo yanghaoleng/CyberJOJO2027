@@ -83,11 +83,12 @@ const WELCOME_CHARACTER_DELAY_MS = 76;
 const WELCOME_ANIMATION_SETTLE_MS = 420;
 const WELCOME_HEADLINE_HOLD_MS = 3_000;
 
-function ProgressiveCalligraphLine({ text, onComplete }) {
+function ProgressiveCalligraphLine({ text, start, lineIndex, onComplete }) {
   const characters = Array.from(text);
   const [visibleCharacterCount, setVisibleCharacterCount] = useState(0);
 
   useEffect(() => {
+    if (!start) return undefined;
     if (visibleCharacterCount < characters.length) {
       const revealTimer = window.setTimeout(() => {
         setVisibleCharacterCount((current) => Math.min(current + 1, characters.length));
@@ -96,9 +97,12 @@ function ProgressiveCalligraphLine({ text, onComplete }) {
     }
 
     if (!onComplete) return undefined;
-    const completeTimer = window.setTimeout(onComplete, WELCOME_ANIMATION_SETTLE_MS);
+    const completeTimer = window.setTimeout(
+      () => onComplete(lineIndex),
+      WELCOME_ANIMATION_SETTLE_MS,
+    );
     return () => window.clearTimeout(completeTimer);
-  }, [characters.length, onComplete, visibleCharacterCount]);
+  }, [characters.length, lineIndex, onComplete, start, visibleCharacterCount]);
 
   return (
     <Calligraph
@@ -115,6 +119,28 @@ function ProgressiveCalligraphLine({ text, onComplete }) {
       {characters.slice(0, visibleCharacterCount).join("")}
     </Calligraph>
   );
+}
+
+function ProgressiveCalligraphHeadline({ lines, onComplete }) {
+  const [activeLineIndex, setActiveLineIndex] = useState(0);
+
+  const handleLineComplete = useCallback((lineIndex) => {
+    if (lineIndex < lines.length - 1) {
+      setActiveLineIndex(lineIndex + 1);
+      return;
+    }
+    onComplete?.();
+  }, [lines.length, onComplete]);
+
+  return lines.map((line, lineIndex) => (
+    <ProgressiveCalligraphLine
+      key={lineIndex}
+      text={line}
+      start={lineIndex <= activeLineIndex}
+      lineIndex={lineIndex}
+      onComplete={handleLineComplete}
+    />
+  ));
 }
 
 async function preferWidestFrontCamera(mediaDevices, stream, videoConstraints) {
@@ -3438,13 +3464,11 @@ function App() {
                 aria-live="polite"
                 aria-label={WELCOME_HEADLINES[welcomeHeadlineIndex].join("")}
               >
-                {WELCOME_HEADLINES[welcomeHeadlineIndex].map((line, lineIndex) => (
-                  <ProgressiveCalligraphLine
-                    key={`${welcomeHeadlineIndex}-${lineIndex}`}
-                    text={line}
-                    onComplete={lineIndex === 1 ? scheduleNextWelcomeHeadline : undefined}
-                  />
-                ))}
+                <ProgressiveCalligraphHeadline
+                  key={welcomeHeadlineIndex}
+                  lines={WELCOME_HEADLINES[welcomeHeadlineIndex]}
+                  onComplete={scheduleNextWelcomeHeadline}
+                />
               </h1>
             </div>
 

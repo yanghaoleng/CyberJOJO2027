@@ -149,7 +149,7 @@ button {
 }
 
 .app-shell.is-desktop-device .camera-stage.is-landscape .welcome-headline {
-  font-size: clamp(42px, 4vw, 64px);
+  font-size: clamp(44px, 4.3vw, 68px);
 }
 
 .app-shell.is-desktop-device .camera-stage.is-landscape .open-camera-button {
@@ -805,15 +805,17 @@ button {
 }
 
 .welcome-icon {
-  width: 54px;
-  height: 54px;
+  width: 62px;
+  height: 62px;
   display: grid;
   place-items: center;
   overflow: hidden;
-  margin-bottom: 19px;
-  border-radius: 17px;
+  margin-bottom: 22px;
+  border-radius: 19px;
   transform: rotate(-5deg);
   box-shadow: 0 14px 30px rgba(8, 9, 6, 0.2);
+  animation: welcome-icon-float 3.4s ease-in-out infinite;
+  will-change: transform;
 }
 
 .welcome-icon img {
@@ -832,7 +834,7 @@ button {
   justify-content: flex-end;
   margin: 0;
   color: #f7f8f1;
-  font-size: clamp(30px, min(8vw, 6.4vh), 49px);
+  font-size: clamp(31px, min(8.7vw, 6.8vh), 52px);
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: -0.05em;
@@ -840,8 +842,20 @@ button {
 
 .welcome-headline-line {
   display: inline-flex !important;
+  min-height: 1.05em;
   max-width: 100%;
+  flex: 0 0 1.05em;
   white-space: nowrap;
+}
+
+@keyframes welcome-icon-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-5deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(-3.5deg);
+  }
 }
 
 .open-camera-button {
@@ -1746,9 +1760,9 @@ button {
   }
 
   .app-shell.is-mobile-device .welcome-icon {
-    width: 46px;
-    height: 46px;
-    margin-bottom: 14px;
+    width: 52px;
+    height: 52px;
+    margin-bottom: 15px;
   }
 
   .app-shell.is-mobile-device .welcome-copy {
@@ -1756,7 +1770,7 @@ button {
   }
 
   .app-shell.is-mobile-device .welcome-headline {
-    font-size: clamp(29px, 7.6vw, 38px);
+    font-size: clamp(30px, 8.1vw, 41px);
   }
 
   .app-shell.is-mobile-device .open-camera-button {
@@ -1772,6 +1786,10 @@ button {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .welcome-icon {
+    animation: none;
   }
 }
 
