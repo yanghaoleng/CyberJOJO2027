@@ -3,11 +3,12 @@ import {
   ArrowClockwise,
   ArrowsLeftRight,
   Camera,
+  CaretDown,
   Check,
-  DotsThreeVertical,
   DownloadSimple,
   ImagesSquare,
   LockSimple,
+  PictureInPicture,
   PlayCircle,
   X,
 } from "@phosphor-icons/react";
@@ -54,6 +55,8 @@ import {
   loadMediaCaptures,
   storeMediaCapture,
 } from "./media-library.js";
+import { createShutterSamples } from "./camera-feedback.js";
+import { getFrontCameraPipRect, hasLiveVideoTrack } from "./dual-camera.js";
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -602,6 +605,7 @@ function createCaptureId(type) {
 
 function formatCaptureDate(createdAt) {
   return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
     month: "numeric",
     day: "numeric",
     hour: "2-digit",
@@ -680,6 +684,7 @@ function App() {
   const caption = CAPTION_MODES[captionMode];
 
   const videoRef = useRef(null);
+  const pipVideoRef = useRef(null);
   const outputCanvasRef = useRef(null);
   const photoCanvasRef = useRef(null);
   const riveCanvasRef = useRef(null);
@@ -698,6 +703,8 @@ function App() {
   const gestureRecognizerRef = useRef(null);
   const gestureTrackerRef = useRef(createGestureTracker());
   const streamRef = useRef(null);
+  const pipStreamRef = useRef(null);
+  const pipRequestIdRef = useRef(0);
   const voiceSocketRef = useRef(null);
   const voiceAudioGraphRef = useRef(null);
   const speechBubbleOverlayRef = useRef(null);
@@ -735,6 +742,13 @@ function App() {
   const mediaPreviewRef = useRef(null);
   const mediaLibraryRef = useRef([]);
   const mediaLibraryOpenRef = useRef(false);
+  const mediaLibraryGridRef = useRef(null);
+  const mediaLibraryCloseTimerRef = useRef(null);
+  const mediaPreviewCloseTimerRef = useRef(null);
+  const mediaLibrarySwipeRef = useRef({ active: false, startX: 0, startY: 0, dragY: 0 });
+  const mediaPreviewSwipeRef = useRef({ active: false, pointerId: null, startX: 0, startY: 0 });
+  const shutterAudioContextRef = useRef(null);
+  const flashTimerRef = useRef(null);
   const riveAnimationsRef = useRef([]);
   const riveAnimationIndexRef = useRef(0);
   const riveAnimationNameRef = useRef(DEFAULT_RIVE_ANIMATION);
@@ -771,6 +785,8 @@ function App() {
   const [cameraState, setCameraState] = useState("idle");
   const [cameraError, setCameraError] = useState("");
   const [cameraLensMode, setCameraLensMode] = useState("default");
+  const [pipVisible, setPipVisible] = useState(false);
+  const [pipOpening, setPipOpening] = useState(false);
   const [voiceState, setVoiceState] = useState("idle");
   const [speechText, setSpeechText] = useState("");
 
@@ -800,11 +816,16 @@ function App() {
   const [personLayer, setPersonLayer] = useState("behind");
   const [recording, setRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [flash, setFlash] = useState(false);
+  const [flashMode, setFlashMode] = useState("");
   const [toast, setToast] = useState("");
   const [mediaPreview, setMediaPreview] = useState(null);
+  const [mediaPreviewClosing, setMediaPreviewClosing] = useState(false);
+  const [mediaPreviewDirection, setMediaPreviewDirection] = useState("open");
   const [mediaLibrary, setMediaLibrary] = useState([]);
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
+  const [mediaLibraryClosing, setMediaLibraryClosing] = useState(false);
+  const [mediaLibraryDragY, setMediaLibraryDragY] = useState(0);
+  const [mediaLibraryDragging, setMediaLibraryDragging] = useState(false);
   const [cameraMenuOpen, setCameraMenuOpen] = useState(false);
   const frameSize = FRAME_SIZES[frameOrientation];
 
@@ -863,6 +884,119 @@ function App() {
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
     setToast(message);
     toastTimerRef.current = window.setTimeout(() => setToast(""), 2_600);
+  }, []);
+
+  const unlockShutterSound = useCallback(() => {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    if (!shutterAudioContextRef.current || shutterAudioContextRef.current.state === "closed") {
+      shutterAudioContextRef.current = new AudioContextClass();
+    }
+    if (shutterAudioContextRef.current.state === "suspended") {
+      shutterAudioContextRef.current.resume().catch(() => {});
+    }
+    return shutterAudioContextRef.current;
+  }, []);
+
+  const playShutterSound = useCallback(() => {
+    const context = unlockShutterSound();
+    if (!context) return;
+    try {
+      const samples = createShutterSamples(context.sampleRate);
+      const buffer = context.createBuffer(1, samples.length, context.sampleRate);
+      buffer.getChannelData(0).set(samples);
+      const source = context.createBufferSource();
+      const highPass = context.createBiquadFilter();
+      const gain = context.createGain();
+      highPass.type = "highpass";
+      highPass.frequency.value = 620;
+      gain.gain.value = 0.28;
+      source.buffer = buffer;
+      source.connect(highPass);
+      highPass.connect(gain);
+      gain.connect(context.destination);
+      source.start();
+    } catch (error) {
+      console.warn("Shutter sound unavailable", error);
+    }
+  }, [unlockShutterSound]);
+
+  const stopPipCamera = useCallback(() => {
+    pipRequestIdRef.current += 1;
+    pipStreamRef.current?.getTracks().forEach((track) => track.stop());
+    pipStreamRef.current = null;
+    if (pipVideoRef.current) pipVideoRef.current.srcObject = null;
+    setPipVisible(false);
+    setPipOpening(false);
+  }, []);
+
+  const startPipCamera = useCallback(async (mainStream = streamRef.current) => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      return { ok: false, mainInterrupted: false };
+    }
+
+    const requestId = pipRequestIdRef.current + 1;
+    pipRequestIdRef.current = requestId;
+    pipStreamRef.current?.getTracks().forEach((track) => track.stop());
+    pipStreamRef.current = null;
+    setPipVisible(false);
+    setPipOpening(true);
+    let pipStream;
+    try {
+      const pipConstraints = {
+        facingMode: { exact: "user" },
+        width: { ideal: 720 },
+        height: { ideal: 960 },
+      };
+      pipStream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: pipConstraints,
+      });
+      const preferredCamera = await preferWidestFrontCamera(
+        navigator.mediaDevices,
+        pipStream,
+        pipConstraints,
+      );
+      pipStream = preferredCamera.stream;
+      if (requestId !== pipRequestIdRef.current) {
+        pipStream.getTracks().forEach((track) => track.stop());
+        return { ok: false, mainInterrupted: false, cancelled: true };
+      }
+
+      const pipVideo = pipVideoRef.current;
+      if (!pipVideo) throw new Error("Front camera preview is unavailable");
+      pipStreamRef.current = pipStream;
+      pipVideo.srcObject = pipStream;
+      await pipVideo.play();
+      await new Promise((resolve) => window.setTimeout(resolve, 80));
+      if (mainStream && !hasLiveVideoTrack(mainStream)) {
+        const interruption = new Error("Opening the front camera interrupted the rear camera");
+        interruption.name = "DualCameraInterruptionError";
+        throw interruption;
+      }
+
+      const pipTrack = pipStream.getVideoTracks()[0];
+      pipTrack?.addEventListener("ended", () => {
+        if (pipRequestIdRef.current !== requestId) return;
+        pipStreamRef.current = null;
+        if (pipVideoRef.current) pipVideoRef.current.srcObject = null;
+        setPipVisible(false);
+        setPipOpening(false);
+      }, { once: true });
+      setPipVisible(true);
+      return { ok: true, mainInterrupted: false };
+    } catch (error) {
+      pipStream?.getTracks().forEach((track) => track.stop());
+      if (pipStreamRef.current === pipStream) pipStreamRef.current = null;
+      if (pipVideoRef.current) pipVideoRef.current.srcObject = null;
+      setPipVisible(false);
+      const mainInterrupted = error?.name === "DualCameraInterruptionError"
+        || Boolean(mainStream && !hasLiveVideoTrack(mainStream));
+      console.warn("Front camera picture-in-picture unavailable", error);
+      return { ok: false, mainInterrupted, error };
+    } finally {
+      if (requestId === pipRequestIdRef.current) setPipOpening(false);
+    }
   }, []);
 
   const addMediaCapture = useCallback((capture, { automatic = false } = {}) => {
@@ -1268,14 +1402,14 @@ function App() {
     const mouthY = anchor.y * targetHeight;
     const eyeY = anchor.eyeY * targetHeight;
     const direction = anchor.x < 0.5 ? 1 : -1;
-    const captionSafeY = isLandscape ? 120 : 240;
+    const captionSafeY = isLandscape ? 88 : 195;
     const bubbleX = clamp(
       mouthX + direction * targetWidth * (isLandscape ? 0.17 : 0.2),
       bubbleWidth / 2 + 18,
       targetWidth - bubbleWidth / 2 - 18,
     );
-    const desiredBubbleY = mouthY - targetHeight * (isLandscape ? 0.17 : 0.13);
-    const eyeSafeBubbleY = eyeY - bubbleHeight / 2 - tailHeight - fontSize * 0.42;
+    const desiredBubbleY = mouthY - targetHeight * (isLandscape ? 0.21 : 0.19);
+    const eyeSafeBubbleY = eyeY - bubbleHeight / 2 - tailHeight - fontSize * 0.82;
     const bubbleY = clamp(
       Math.min(desiredBubbleY, eyeSafeBubbleY),
       captionSafeY + bubbleHeight / 2,
@@ -1436,6 +1570,45 @@ function App() {
     drawRiveLayer(outputContext, outputCanvas, true);
   }, [drawRiveLayer]);
 
+  const drawFrontCameraPip = useCallback((context, targetWidth, targetHeight) => {
+    const pipVideo = pipVideoRef.current;
+    if (!pipVisible || !pipVideo || pipVideo.readyState < 2) return;
+    const pipRect = getFrontCameraPipRect(targetWidth, targetHeight);
+    const sourceWidth = pipVideo.videoWidth || 720;
+    const sourceHeight = pipVideo.videoHeight || 960;
+    const coverRect = getCoverRect(sourceWidth, sourceHeight, pipRect.width, pipRect.height);
+    const borderWidth = Math.max(4, Math.round(pipRect.width * 0.025));
+
+    context.save();
+    context.shadowColor = "rgba(10, 8, 3, 0.34)";
+    context.shadowBlur = Math.max(14, Math.round(pipRect.width * 0.09));
+    roundedRectPath(
+      context,
+      pipRect.x - borderWidth,
+      pipRect.y - borderWidth,
+      pipRect.width + borderWidth * 2,
+      pipRect.height + borderWidth * 2,
+      pipRect.radius + borderWidth,
+    );
+    context.fillStyle = "#ffd84d";
+    context.fill();
+    context.restore();
+
+    context.save();
+    roundedRectPath(context, pipRect.x, pipRect.y, pipRect.width, pipRect.height, pipRect.radius);
+    context.clip();
+    context.translate(pipRect.x + pipRect.width, pipRect.y);
+    context.scale(-1, 1);
+    context.drawImage(
+      pipVideo,
+      coverRect.x,
+      coverRect.y,
+      coverRect.width,
+      coverRect.height,
+    );
+    context.restore();
+  }, [pipVisible]);
+
   const renderFrame = useCallback((
     includeCaption = recordingRef.current,
     riveCanvasOverride = null,
@@ -1502,9 +1675,10 @@ function App() {
 
     if (personLayer === "front") drawPerson();
 
+    drawFrontCameraPip(outputContext, targetWidth, targetHeight);
     if (includeCaption) drawCaption(outputContext, targetWidth, targetHeight);
     drawSpeechBubble(outputContext, targetWidth, targetHeight, includeSpeechText);
-  }, [drawCaption, drawRiveLayer, drawSpeechBubble, personLayer]);
+  }, [drawCaption, drawFrontCameraPip, drawRiveLayer, drawSpeechBubble, personLayer]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2089,6 +2263,7 @@ function App() {
   useEffect(() => () => {
     cameraReadyRef.current = false;
     stopVoiceSession();
+    stopPipCamera();
     streamRef.current?.getTracks().forEach((track) => track.stop());
     if (recordingIntervalRef.current) window.clearInterval(recordingIntervalRef.current);
     if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
@@ -2097,13 +2272,21 @@ function App() {
     if (guideTimerRef.current) window.clearTimeout(guideTimerRef.current);
     if (gestureEffectTimerRef.current) window.clearTimeout(gestureEffectTimerRef.current);
     if (autoCaptureTimerRef.current) window.clearTimeout(autoCaptureTimerRef.current);
+    if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
+    if (mediaLibraryCloseTimerRef.current) window.clearTimeout(mediaLibraryCloseTimerRef.current);
+    if (mediaPreviewCloseTimerRef.current) window.clearTimeout(mediaPreviewCloseTimerRef.current);
     guideAudioRef.current?.pause();
+    shutterAudioContextRef.current?.close().catch(() => {});
+    shutterAudioContextRef.current = null;
     for (const item of mediaLibraryRef.current) {
       if (item.url) URL.revokeObjectURL(item.url);
     }
-  }, [stopVoiceSession]);
+  }, [stopPipCamera, stopVoiceSession]);
 
-  const openCamera = useCallback(async (nextFacingMode = facingMode) => {
+  const openCamera = useCallback(async (
+    nextFacingMode = facingMode,
+    { attemptPip = nextFacingMode === "environment" } = {},
+  ) => {
     cameraReadyRef.current = false;
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraState("error");
@@ -2116,6 +2299,15 @@ function App() {
     setCameraLensMode("default");
     setCameraMenuOpen(false);
     setMediaLibraryOpen(false);
+    mediaLibraryOpenRef.current = false;
+    setMediaLibraryClosing(false);
+    setMediaLibraryDragging(false);
+    setMediaLibraryDragY(0);
+    setMediaPreview(null);
+    mediaPreviewRef.current = null;
+    setMediaPreviewClosing(false);
+    if (mediaLibraryCloseTimerRef.current) window.clearTimeout(mediaLibraryCloseTimerRef.current);
+    if (mediaPreviewCloseTimerRef.current) window.clearTimeout(mediaPreviewCloseTimerRef.current);
     maskReadyRef.current = false;
     personMaskRevisionRef.current = 0;
     gestureEffectUntilRef.current = 0;
@@ -2128,6 +2320,7 @@ function App() {
     setLastRecognizedGesture("");
     setActiveGestureEffect("");
     stopVoiceSession();
+    stopPipCamera();
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
 
@@ -2138,22 +2331,31 @@ function App() {
         width: { ideal: 1280 },
         height: { ideal: 720 },
       };
-      let microphoneUnavailable = false;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            channelCount: { ideal: 1 },
-            echoCancellation: { ideal: true },
-            noiseSuppression: { ideal: true },
-            autoGainControl: { ideal: true },
-          },
-          video: videoConstraints,
-        });
-      } catch (mediaError) {
-        microphoneUnavailable = true;
-        stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints });
-        console.warn("Microphone permission unavailable; continuing with camera only", mediaError);
-      }
+      const acquireMainStream = async () => {
+        try {
+          return {
+            stream: await navigator.mediaDevices.getUserMedia({
+              audio: {
+                channelCount: { ideal: 1 },
+                echoCancellation: { ideal: true },
+                noiseSuppression: { ideal: true },
+                autoGainControl: { ideal: true },
+              },
+              video: videoConstraints,
+            }),
+            microphoneUnavailable: false,
+          };
+        } catch (mediaError) {
+          console.warn("Microphone permission unavailable; continuing with camera only", mediaError);
+          return {
+            stream: await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints }),
+            microphoneUnavailable: true,
+          };
+        }
+      };
+      let acquired = await acquireMainStream();
+      stream = acquired.stream;
+      let microphoneUnavailable = acquired.microphoneUnavailable;
 
       if (nextFacingMode === "user") {
         const preferredCamera = await preferWidestFrontCamera(navigator.mediaDevices, stream, videoConstraints);
@@ -2164,6 +2366,20 @@ function App() {
       const video = videoRef.current;
       video.srcObject = stream;
       await video.play();
+      let pipResult = null;
+      if (nextFacingMode === "environment" && attemptPip) {
+        pipResult = await startPipCamera(stream);
+        if (pipResult.mainInterrupted) {
+          stopPipCamera();
+          stream.getTracks().forEach((track) => track.stop());
+          acquired = await acquireMainStream();
+          stream = acquired.stream;
+          microphoneUnavailable = acquired.microphoneUnavailable;
+          streamRef.current = stream;
+          video.srcObject = stream;
+          await video.play();
+        }
+      }
       setFacingMode(nextFacingMode);
       cameraReadyRef.current = true;
       setCameraState("ready");
@@ -2189,7 +2405,11 @@ function App() {
         setVoiceState("unavailable");
         showToast("相机已打开，允许麦克风后才会显示语音气泡");
       }
-      if (!segmenterReady) showToast("相机已打开，人像识别还在准备");
+      if (pipResult && !pipResult.ok) {
+        showToast("当前设备暂不支持前后双摄，已保留后摄主画面");
+      } else if (!segmenterReady) {
+        showToast("相机已打开，人像识别还在准备");
+      }
     } catch (error) {
       cameraReadyRef.current = false;
       stream?.getTracks().forEach((track) => track.stop());
@@ -2205,17 +2425,36 @@ function App() {
             : "相机暂时打不开，请稍后再试",
       );
     }
-  }, [facingMode, preloadLvdou, segmenterReady, showToast, startVoiceSession, stopVoiceSession]);
+  }, [facingMode, preloadLvdou, segmenterReady, showToast, startPipCamera, startVoiceSession, stopPipCamera, stopVoiceSession]);
 
   const enterCamera = useCallback(() => {
+    unlockShutterSound();
     playGuideClip("enter", { force: true });
     openCamera("user");
-  }, [openCamera, playGuideClip]);
+  }, [openCamera, playGuideClip, unlockShutterSound]);
 
   const switchCamera = useCallback(() => {
     if (recordingRef.current) return;
     openCamera(facingMode === "user" ? "environment" : "user");
   }, [facingMode, openCamera]);
+
+  const togglePipCamera = useCallback(async () => {
+    if (recordingRef.current || facingMode !== "environment" || pipOpening) return;
+    if (pipVisible) {
+      stopPipCamera();
+      showToast("前摄小窗已关闭");
+      return;
+    }
+    const result = await startPipCamera(streamRef.current);
+    if (result.ok) {
+      showToast("前摄小窗已打开，拍照和录像都会保留");
+      return;
+    }
+    if (result.mainInterrupted) {
+      await openCamera("environment", { attemptPip: false });
+    }
+    showToast("当前设备暂不支持同时打开前后摄像头");
+  }, [facingMode, openCamera, pipOpening, pipVisible, showToast, startPipCamera, stopPipCamera]);
 
   const switchRiveAnimation = useCallback(() => {
     if (!rivePlayPraiseRef.current?.()) return;
@@ -2300,8 +2539,142 @@ function App() {
     });
   }, [showToast]);
 
+  const openMediaLibrary = useCallback(() => {
+    if (mediaLibraryCloseTimerRef.current) {
+      window.clearTimeout(mediaLibraryCloseTimerRef.current);
+      mediaLibraryCloseTimerRef.current = null;
+    }
+    setCameraMenuOpen(false);
+    setMediaLibraryClosing(false);
+    setMediaLibraryDragging(false);
+    setMediaLibraryDragY(0);
+    mediaLibraryOpenRef.current = true;
+    setMediaLibraryOpen(true);
+  }, []);
+
+  const closeMediaLibrary = useCallback(() => {
+    if (!mediaLibraryOpenRef.current || mediaLibraryClosing) return;
+    setMediaLibraryDragging(false);
+    setMediaLibraryDragY(0);
+    setMediaLibraryClosing(true);
+    if (mediaLibraryCloseTimerRef.current) window.clearTimeout(mediaLibraryCloseTimerRef.current);
+    mediaLibraryCloseTimerRef.current = window.setTimeout(() => {
+      mediaLibraryCloseTimerRef.current = null;
+      mediaLibraryOpenRef.current = false;
+      setMediaLibraryOpen(false);
+      setMediaLibraryClosing(false);
+    }, 280);
+  }, [mediaLibraryClosing]);
+
+  const openMediaPreview = useCallback((item, direction = "open") => {
+    if (!item) return;
+    if (mediaPreviewCloseTimerRef.current) {
+      window.clearTimeout(mediaPreviewCloseTimerRef.current);
+      mediaPreviewCloseTimerRef.current = null;
+    }
+    setMediaPreviewClosing(false);
+    setMediaPreviewDirection(direction);
+    mediaPreviewRef.current = item;
+    setMediaPreview(item);
+  }, []);
+
   const closePreview = useCallback(() => {
-    setMediaPreview(null);
+    if (!mediaPreviewRef.current || mediaPreviewClosing) return;
+    setMediaPreviewClosing(true);
+    if (mediaPreviewCloseTimerRef.current) window.clearTimeout(mediaPreviewCloseTimerRef.current);
+    mediaPreviewCloseTimerRef.current = window.setTimeout(() => {
+      mediaPreviewCloseTimerRef.current = null;
+      mediaPreviewRef.current = null;
+      setMediaPreview(null);
+      setMediaPreviewClosing(false);
+      setMediaPreviewDirection("open");
+    }, 240);
+  }, [mediaPreviewClosing]);
+
+  const onMediaLibraryTouchStart = useCallback((event) => {
+    if (event.touches.length !== 1 || (mediaLibraryGridRef.current?.scrollTop || 0) > 1) return;
+    const touch = event.touches[0];
+    mediaLibrarySwipeRef.current = {
+      active: true,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      dragY: 0,
+    };
+  }, []);
+
+  const onMediaLibraryTouchMove = useCallback((event) => {
+    const swipe = mediaLibrarySwipeRef.current;
+    if (!swipe.active || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - swipe.startX;
+    const deltaY = touch.clientY - swipe.startY;
+    if (deltaY <= 0 || Math.abs(deltaX) > deltaY) return;
+    if (event.cancelable) event.preventDefault();
+    swipe.dragY = Math.min(148, deltaY * 0.58);
+    setMediaLibraryDragging(true);
+    setMediaLibraryDragY(swipe.dragY);
+  }, []);
+
+  const finishMediaLibraryTouch = useCallback(() => {
+    const swipe = mediaLibrarySwipeRef.current;
+    mediaLibrarySwipeRef.current = { active: false, startX: 0, startY: 0, dragY: 0 };
+    setMediaLibraryDragging(false);
+    if (swipe.dragY >= 72) {
+      closeMediaLibrary();
+      return;
+    }
+    setMediaLibraryDragY(0);
+  }, [closeMediaLibrary]);
+
+  const showAdjacentPreview = useCallback((step) => {
+    const current = mediaPreviewRef.current;
+    if (!current) return;
+    const items = mediaLibraryRef.current;
+    const currentIndex = items.findIndex(({ id }) => id === current.id);
+    const nextItem = items[currentIndex + step];
+    if (!nextItem) return;
+    openMediaPreview(nextItem, step > 0 ? "next" : "previous");
+  }, [openMediaPreview]);
+
+  const onMediaPreviewPointerDown = useCallback((event) => {
+    if (mediaPreviewRef.current?.type !== "photo" || event.target.closest?.("button, video")) return;
+    mediaPreviewSwipeRef.current = {
+      active: true,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+    };
+    try {
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    } catch {
+      // Synthetic events used in previews do not always own an active pointer.
+    }
+  }, []);
+
+  const onMediaPreviewPointerUp = useCallback((event) => {
+    const swipe = mediaPreviewSwipeRef.current;
+    if (!swipe.active || swipe.pointerId !== event.pointerId) return;
+    try {
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+    } catch {
+      // The pointer may already have been released by the browser.
+    }
+    mediaPreviewSwipeRef.current = { active: false, pointerId: null, startX: 0, startY: 0 };
+    const deltaX = event.clientX - swipe.startX;
+    const deltaY = event.clientY - swipe.startY;
+    const horizontal = Math.abs(deltaX);
+    const vertical = Math.abs(deltaY);
+    if (vertical >= 58 && vertical > horizontal) {
+      closePreview();
+      return;
+    }
+    if (horizontal >= 58 && horizontal > vertical) {
+      showAdjacentPreview(deltaX < 0 ? 1 : -1);
+    }
+  }, [closePreview, showAdjacentPreview]);
+
+  const onMediaPreviewPointerCancel = useCallback(() => {
+    mediaPreviewSwipeRef.current = { active: false, pointerId: null, startX: 0, startY: 0 };
   }, []);
 
   const takePhoto = useCallback(({ automatic = false, reason = "manual" } = {}) => {
@@ -2324,8 +2697,13 @@ function App() {
       return;
     }
     photoContext.drawImage(canvas, 0, 0);
-    setFlash(true);
-    window.setTimeout(() => setFlash(false), 170);
+    playShutterSound();
+    if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
+    setFlashMode(automatic ? "automatic" : "manual");
+    flashTimerRef.current = window.setTimeout(() => {
+      flashTimerRef.current = null;
+      setFlashMode("");
+    }, automatic ? 280 : 170);
 
     photoCanvas.toBlob((blob) => {
       if (!blob) {
@@ -2342,7 +2720,7 @@ function App() {
         automatic,
       });
     }, "image/jpeg", 0.94);
-  }, [addMediaCapture, cameraState, captionMode, paddedDay, renderFrame, showToast]);
+  }, [addMediaCapture, cameraState, captionMode, paddedDay, playShutterSound, renderFrame, showToast]);
 
   useEffect(() => {
     takePhotoRef.current = takePhoto;
@@ -2518,6 +2896,7 @@ function App() {
         data-gesture-effect={activeGestureEffect || "none"}
         data-gesture-outline="rainbow-mask"
         data-camera-lens={cameraLensMode}
+        data-pip-camera={facingMode === "environment" ? (pipVisible ? "visible" : pipOpening ? "opening" : "hidden") : "inactive"}
         data-media-count={mediaLibrary.length}
         data-camera-menu={cameraMenuOpen ? "open" : "closed"}
         data-voice-state={voiceState}
@@ -2548,6 +2927,7 @@ function App() {
         <span className="sr-only" aria-live="polite">{speechText}</span>
         <div className="viewfinder">
           <video ref={videoRef} className="camera-source" playsInline muted aria-hidden="true" />
+          <video ref={pipVideoRef} className="camera-source pip-camera-source" playsInline muted aria-hidden="true" />
           <canvas ref={riveCanvasRef} className="rive-source" width={RIVE_SOURCE_SIZE.width} height={RIVE_SOURCE_SIZE.height} aria-hidden="true" />
           <canvas ref={foregroundCanvasRef} className="render-source" width={frameSize.width} height={frameSize.height} aria-hidden="true" />
           <canvas ref={maskCanvasRef} className="render-source" width="256" height="256" aria-hidden="true" />
@@ -2614,36 +2994,48 @@ function App() {
             </div>
           )}
 
-          {flash && <div className="camera-flash" aria-hidden="true" />}
+          {flashMode && <div className={`camera-flash is-${flashMode}`} aria-hidden="true" />}
         </div>
 
         {cameraState === "ready" && (
           <div className="control-deck">
             <div className="capture-toolbar" aria-label="拍摄工具">
-              <button
-                className={`media-library-entry ${latestMedia ? "has-media" : ""}`}
-                type="button"
-                disabled={recording}
-                onClick={() => {
-                  setCameraMenuOpen(false);
-                  setMediaLibraryOpen(true);
-                }}
-                aria-label={mediaLibrary.length ? `打开作品列表，共 ${mediaLibrary.length} 个作品` : "打开作品列表"}
-              >
-                {latestMedia ? (
-                  <>
-                    {latestMedia.type === "photo" ? (
-                      <img src={latestMedia.url} alt="最近拍摄的照片" />
-                    ) : (
-                      <video src={latestMedia.url} muted playsInline preload="metadata" aria-label="最近拍摄的短视频" />
-                    )}
-                    {latestMedia.type === "video" && <PlayCircle className="media-entry-play" size={19} weight="fill" aria-hidden="true" />}
-                    <span className="media-entry-count">{mediaLibrary.length}</span>
-                  </>
-                ) : (
-                  <ImagesSquare size={24} weight="bold" aria-hidden="true" />
+              <div className="capture-side capture-side-left">
+                <button
+                  className={`media-library-entry ${latestMedia ? "has-media" : ""}`}
+                  type="button"
+                  disabled={recording}
+                  onClick={openMediaLibrary}
+                  aria-label={mediaLibrary.length ? `打开作品列表，共 ${mediaLibrary.length} 个作品` : "打开作品列表"}
+                >
+                  {latestMedia ? (
+                    <>
+                      {latestMedia.type === "photo" ? (
+                        <img src={latestMedia.url} alt="最近拍摄的照片" />
+                      ) : (
+                        <video src={latestMedia.url} muted playsInline preload="metadata" aria-label="最近拍摄的短视频" />
+                      )}
+                      {latestMedia.type === "video" && <PlayCircle className="media-entry-play" size={19} weight="fill" aria-hidden="true" />}
+                      <span className="media-entry-count">{mediaLibrary.length}</span>
+                    </>
+                  ) : (
+                    <ImagesSquare size={24} weight="bold" aria-hidden="true" />
+                  )}
+                </button>
+                {facingMode === "environment" && (
+                  <button
+                    className={`round-control pip-control ${pipVisible ? "is-active" : ""} ${pipOpening ? "is-opening" : ""}`}
+                    type="button"
+                    disabled={recording || pipOpening}
+                    aria-pressed={pipVisible}
+                    aria-label={pipVisible ? "关闭前置摄像头小窗" : "显示前置摄像头小窗"}
+                    onClick={togglePipCamera}
+                  >
+                    <PictureInPicture size={21} weight={pipVisible ? "fill" : "bold"} aria-hidden="true" />
+                    <span className="pip-control-state" aria-hidden="true">{pipVisible ? "×" : "+"}</span>
+                  </button>
                 )}
-              </button>
+              </div>
 
               <div className="capture-controls">
                 <span className="capture-hint">轻点拍照 · 按住录像</span>
@@ -2669,10 +3061,10 @@ function App() {
                   disabled={recording}
                   aria-expanded={cameraMenuOpen}
                   aria-haspopup="menu"
-                  aria-label="打开相机设置菜单"
+                  aria-label={cameraMenuOpen ? "收起相机设置菜单" : "展开相机设置菜单"}
                   onClick={() => setCameraMenuOpen((current) => !current)}
                 >
-                  <DotsThreeVertical size={24} weight="bold" aria-hidden="true" />
+                  <CaretDown className="camera-menu-chevron" size={24} weight="bold" aria-hidden="true" />
                 </button>
                 {cameraMenuOpen && (
                   <div className="camera-menu-popover" role="menu" aria-label="相机设置">
@@ -2749,24 +3141,34 @@ function App() {
         {toast && <div className="camera-toast" role="status">{toast}</div>}
 
         {mediaLibraryOpen && (
-          <div className="media-library-panel" role="dialog" aria-modal="true" aria-label="我的合拍作品">
+          <div
+            className={`media-library-panel ${mediaLibraryClosing ? "is-closing" : ""} ${mediaLibraryDragging ? "is-dragging" : ""}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label="我的合拍作品"
+            style={{ "--library-drag-y": `${mediaLibraryDragY}px` }}
+            onTouchStart={onMediaLibraryTouchStart}
+            onTouchMove={onMediaLibraryTouchMove}
+            onTouchEnd={finishMediaLibraryTouch}
+            onTouchCancel={finishMediaLibraryTouch}
+          >
             <header className="media-library-header">
               <div>
                 <strong>我的合拍</strong>
                 <span>{mediaLibrary.length ? `${mediaLibrary.length} 个作品 · 仅保存在本机` : "作品仅保存在本机"}</span>
               </div>
-              <button type="button" onClick={() => setMediaLibraryOpen(false)} aria-label="关闭作品列表">
+              <button type="button" onClick={closeMediaLibrary} aria-label="关闭作品列表">
                 <X size={25} weight="bold" aria-hidden="true" />
               </button>
             </header>
             {mediaLibrary.length ? (
-              <div className="media-library-grid">
+              <div className="media-library-grid" ref={mediaLibraryGridRef}>
                 {mediaLibrary.map((item) => (
                   <button
                     className={`media-library-card is-${item.type}`}
                     type="button"
                     key={item.id}
-                    onClick={() => setMediaPreview(item)}
+                    onClick={() => openMediaPreview(item)}
                     aria-label={`打开${item.type === "photo" ? "照片" : "短视频"}，${formatCaptureDate(item.createdAt)}`}
                   >
                     <span className="media-library-visual">
@@ -2779,7 +3181,6 @@ function App() {
                     </span>
                     <span className="media-library-meta">
                       <strong>{item.type === "photo" ? "照片" : "短视频"}</strong>
-                      <small>{formatCaptureDate(item.createdAt)}</small>
                     </span>
                   </button>
                 ))}
@@ -2795,9 +3196,20 @@ function App() {
         )}
 
         {mediaPreview && (
-          <div className={`media-preview is-${mediaPreview.type}`} role="dialog" aria-modal="true" aria-label={mediaPreview.type === "photo" ? "照片预览" : "录像预览"}>
+          <div
+            className={`media-preview is-${mediaPreview.type} ${mediaPreviewClosing ? "is-closing" : ""}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label={mediaPreview.type === "photo" ? "照片预览" : "录像预览"}
+            onPointerDown={onMediaPreviewPointerDown}
+            onPointerUp={onMediaPreviewPointerUp}
+            onPointerCancel={onMediaPreviewPointerCancel}
+          >
             <div className="preview-media-wrap">
-              <div className="preview-media-clip">
+              <div
+                className={`preview-media-clip is-${mediaPreviewDirection}`}
+                key={mediaPreview.id}
+              >
                 {mediaPreview.type === "photo" ? (
                   <img
                     src={mediaPreview.url}
@@ -2815,6 +3227,7 @@ function App() {
               <div>
                 <strong>{mediaPreview.type === "photo" ? "这一刻拍好了" : "这一段录好了"}</strong>
                 <span>{getCaptionText(mediaPreview.captionMode || captionMode, mediaPreview.day || paddedDay)}</span>
+                <small>{formatCaptureDate(mediaPreview.createdAt)}{mediaPreview.type === "photo" ? " · 左右滑切换，上下滑返回" : ""}</small>
               </div>
               <button type="button" onClick={savePreview}>
                 <DownloadSimple size={20} weight="bold" />
