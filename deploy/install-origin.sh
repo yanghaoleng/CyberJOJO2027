@@ -13,7 +13,7 @@ test ! -e "${release_dir}"
 mkdir -p "${release_dir}"
 tar -xzf /tmp/jocam-release.tgz --strip-components=1 -C "${release_dir}"
 
-find "${release_dir}" -type f \( -name '*.js' -o -name '*.css' -o -name '*.wasm' -o -name '*.riv' -o -name '*.tflite' \) -exec gzip -9 -k {} \;
+find "${release_dir}" -type f \( -name '*.js' -o -name '*.css' -o -name '*.wasm' -o -name '*.riv' -o -name '*.tflite' -o -name '*.task' \) -exec gzip -9 -k {} \;
 chown -R root:root "${release_dir}"
 find "${release_dir}" -type d -exec chmod 0755 {} +
 find "${release_dir}" -type f -exec chmod 0644 {} +

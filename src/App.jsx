@@ -71,6 +71,14 @@ import { getNextVisionThrottle, getThrottledInterval } from "./vision-performanc
 
 const BASE_URL = import.meta.env.BASE_URL;
 
+const WELCOME_HEADLINES = [
+  "和叫叫一起分享阅读时光",
+  "和叫叫一起打卡每一顿美食",
+  "和叫叫一起收集今天的笑脸",
+  "和叫叫一起把日常变成作品",
+  "和这位赛博朋友一起记录生活",
+];
+
 async function preferWidestFrontCamera(mediaDevices, stream, videoConstraints) {
   let activeTrack = stream.getVideoTracks()[0];
   let lensMode = getFrontCameraLensKind(activeTrack?.label);
@@ -771,6 +779,7 @@ function App() {
   const voiceIntentionalCloseRef = useRef(false);
   const speechClearTimerRef = useRef(null);
   const speechTextRef = useRef("");
+  const speechBubbleOverlayRef = useRef(null);
   const mouthAnchorRef = useRef(null);
   const lastFaceSeenAtRef = useRef(0);
   const frameRef = useRef(0);
@@ -855,6 +864,18 @@ function App() {
   const [pipOpening, setPipOpening] = useState(false);
   const [voiceState, setVoiceState] = useState("idle");
   const [speechText, setSpeechText] = useState("");
+  const [welcomeHeadlineIndex, setWelcomeHeadlineIndex] = useState(0);
+
+  useEffect(() => {
+    if (
+      cameraState === "ready"
+      || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+    ) return undefined;
+    const interval = window.setInterval(() => {
+      setWelcomeHeadlineIndex((current) => (current + 1) % WELCOME_HEADLINES.length);
+    }, 3_000);
+    return () => window.clearInterval(interval);
+  }, [cameraState]);
 
   useEffect(() => {
     if (isMobileDevice) return undefined;
@@ -1516,7 +1537,11 @@ function App() {
   const drawSpeechBubble = useCallback((context, targetWidth, targetHeight, includeCanvasText = true) => {
     const text = speechTextRef.current;
     const anchor = mouthAnchorRef.current;
-    if (!text || !anchor) return;
+    const overlay = speechBubbleOverlayRef.current;
+    if (!text || !anchor) {
+      if (overlay) overlay.hidden = true;
+      return;
+    }
 
     const isLandscape = targetWidth > targetHeight;
     const fontSize = clamp(targetWidth * (isLandscape ? 0.021 : 0.038), 22, 31);
@@ -1561,6 +1586,16 @@ function App() {
     const left = bubbleX - bubbleWidth / 2;
     const top = bubbleY - bubbleHeight / 2;
     const bottom = top + bubbleHeight;
+    if (overlay) {
+      const outputCanvas = outputCanvasRef.current;
+      const displayScaleX = (outputCanvas?.clientWidth || targetWidth) / targetWidth;
+      const displayScaleY = (outputCanvas?.clientHeight || targetHeight) / targetHeight;
+      overlay.style.left = `${bubbleX * displayScaleX}px`;
+      overlay.style.top = `${bubbleY * displayScaleY}px`;
+      overlay.style.width = `${textWidth * displayScaleX}px`;
+      overlay.style.fontSize = `${fontSize * displayScaleY}px`;
+      overlay.hidden = includeCanvasText;
+    }
     context.fillStyle = "#ffffff";
     context.shadowColor = "rgba(0, 0, 0, 0.2)";
     context.shadowBlur = 14;
@@ -2432,7 +2467,7 @@ function App() {
         }
         if (timestamp - lastRenderAtRef.current >= RENDER_INTERVAL_MS) {
           lastRenderAtRef.current = timestamp;
-          renderFrame();
+          renderFrame(recordingRef.current, null, recordingRef.current);
         }
       } else if (riveReady) {
         if (timestamp - lastRenderAtRef.current >= RENDER_INTERVAL_MS) {
@@ -3172,6 +3207,20 @@ function App() {
           <canvas ref={foregroundCanvasRef} className="render-source" width={frameSize.width} height={frameSize.height} aria-hidden="true" />
           <canvas ref={maskCanvasRef} className="render-source" width="256" height="256" aria-hidden="true" />
           <canvas ref={outputCanvasRef} className="camera-output" width={frameSize.width} height={frameSize.height} aria-label="实时合拍画面" />
+          <div ref={speechBubbleOverlayRef} className="speech-bubble-text" hidden aria-hidden="true">
+            <Calligraph
+              className="speech-bubble-calligraph"
+              variant="text"
+              animation="smooth"
+              initial
+              trend={-1}
+              drift={{ x: 8, y: 6 }}
+              stagger={0.014}
+              autoSize={false}
+            >
+              {speechText}
+            </Calligraph>
+          </div>
 
           {cameraState === "ready" && riveReady && (
             <button
@@ -3327,8 +3376,19 @@ function App() {
           <div className="welcome-panel">
             <div className="welcome-copy">
               <span className="welcome-icon"><img src="favicon-512.webp" alt="JOJO Cam" /></span>
-              <h1>和叫叫，拍一张<br />会动的阅读合照</h1>
-              <p>相机在透明区域里，叫叫默认站在人像前面。</p>
+              <Calligraph
+                className="welcome-headline"
+                as="h1"
+                variant="text"
+                animation="smooth"
+                initial
+                trend={1}
+                drift={{ x: 10, y: 12 }}
+                stagger={0.018}
+                autoSize={false}
+              >
+                {WELCOME_HEADLINES[welcomeHeadlineIndex]}
+              </Calligraph>
             </div>
 
             {cameraState === "error" && <p className="camera-error" role="alert">{cameraError}</p>}

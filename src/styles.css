@@ -148,12 +148,8 @@ button {
   margin-bottom: 14px;
 }
 
-.app-shell.is-desktop-device .camera-stage.is-landscape .welcome-copy h1 {
+.app-shell.is-desktop-device .camera-stage.is-landscape .welcome-headline {
   font-size: clamp(42px, 4vw, 64px);
-}
-
-.app-shell.is-desktop-device .camera-stage.is-landscape .welcome-copy p {
-  margin-top: 8px;
 }
 
 .app-shell.is-desktop-device .camera-stage.is-landscape .open-camera-button {
@@ -211,6 +207,24 @@ button {
   object-fit: cover;
   object-position: left bottom;
   background: #211c10;
+}
+
+.speech-bubble-text {
+  position: absolute;
+  z-index: 3;
+  color: #111111;
+  font-weight: 700;
+  line-height: 1.12;
+  text-align: center;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.speech-bubble-calligraph {
+  display: block;
+  width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .camera-stage:not(.is-live) .camera-output {
@@ -780,7 +794,8 @@ button {
   object-fit: cover;
 }
 
-.welcome-copy h1 {
+.welcome-headline {
+  display: block;
   margin: 0;
   max-width: 11em;
   color: #f7f8f1;
@@ -788,14 +803,6 @@ button {
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: -0.05em;
-}
-
-.welcome-copy p {
-  max-width: 24em;
-  margin: 14px 0 0;
-  color: rgba(247, 248, 241, 0.64);
-  font-size: 14px;
-  line-height: 1.55;
 }
 
 .open-camera-button {
@@ -1709,12 +1716,8 @@ button {
     margin-bottom: 18px;
   }
 
-  .app-shell.is-mobile-device .welcome-copy h1 {
+  .app-shell.is-mobile-device .welcome-headline {
     font-size: clamp(29px, 7.6vw, 38px);
-  }
-
-  .app-shell.is-mobile-device .welcome-copy p {
-    margin-top: 10px;
   }
 
   .app-shell.is-mobile-device .open-camera-button {
