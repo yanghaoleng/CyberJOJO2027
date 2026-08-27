@@ -72,12 +72,50 @@ import { getNextVisionThrottle, getThrottledInterval } from "./vision-performanc
 const BASE_URL = import.meta.env.BASE_URL;
 
 const WELCOME_HEADLINES = [
-  "和叫叫一起分享阅读时光",
-  "和叫叫一起打卡每一顿美食",
-  "和叫叫一起收集今天的笑脸",
-  "和叫叫一起把日常变成作品",
-  "和这位赛博朋友一起记录生活",
+  ["和叫叫一起", "分享快乐阅读时光"],
+  ["和叫叫一起", "打卡今天的美食"],
+  ["和叫叫一起", "收藏今天的笑脸"],
+  ["和叫叫一起", "把日常变成作品"],
+  ["和赛博朋友一起", "记录闪闪发光的生活"],
 ];
+
+const WELCOME_CHARACTER_DELAY_MS = 76;
+const WELCOME_ANIMATION_SETTLE_MS = 420;
+const WELCOME_HEADLINE_HOLD_MS = 3_000;
+
+function ProgressiveCalligraphLine({ text, onComplete }) {
+  const characters = Array.from(text);
+  const [visibleCharacterCount, setVisibleCharacterCount] = useState(0);
+
+  useEffect(() => {
+    if (visibleCharacterCount < characters.length) {
+      const revealTimer = window.setTimeout(() => {
+        setVisibleCharacterCount((current) => Math.min(current + 1, characters.length));
+      }, visibleCharacterCount === 0 ? 110 : WELCOME_CHARACTER_DELAY_MS);
+      return () => window.clearTimeout(revealTimer);
+    }
+
+    if (!onComplete) return undefined;
+    const completeTimer = window.setTimeout(onComplete, WELCOME_ANIMATION_SETTLE_MS);
+    return () => window.clearTimeout(completeTimer);
+  }, [characters.length, onComplete, visibleCharacterCount]);
+
+  return (
+    <Calligraph
+      className="welcome-headline-line"
+      as="span"
+      variant="text"
+      animation="smooth"
+      initial
+      trend={1}
+      drift={{ x: 8, y: 12 }}
+      autoSize={false}
+      aria-hidden="true"
+    >
+      {characters.slice(0, visibleCharacterCount).join("")}
+    </Calligraph>
+  );
+}
 
 async function preferWidestFrontCamera(mediaDevices, stream, videoConstraints) {
   let activeTrack = stream.getVideoTracks()[0];
@@ -780,6 +818,7 @@ function App() {
   const speechClearTimerRef = useRef(null);
   const speechTextRef = useRef("");
   const speechBubbleOverlayRef = useRef(null);
+  const welcomeHeadlineTimerRef = useRef(null);
   const mouthAnchorRef = useRef(null);
   const lastFaceSeenAtRef = useRef(0);
   const frameRef = useRef(0);
@@ -866,16 +905,24 @@ function App() {
   const [speechText, setSpeechText] = useState("");
   const [welcomeHeadlineIndex, setWelcomeHeadlineIndex] = useState(0);
 
-  useEffect(() => {
-    if (
-      cameraState === "ready"
-      || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-    ) return undefined;
-    const interval = window.setInterval(() => {
+  const scheduleNextWelcomeHeadline = useCallback(() => {
+    if (welcomeHeadlineTimerRef.current) window.clearTimeout(welcomeHeadlineTimerRef.current);
+    welcomeHeadlineTimerRef.current = window.setTimeout(() => {
+      welcomeHeadlineTimerRef.current = null;
       setWelcomeHeadlineIndex((current) => (current + 1) % WELCOME_HEADLINES.length);
-    }, 3_000);
-    return () => window.clearInterval(interval);
+    }, WELCOME_HEADLINE_HOLD_MS);
+  }, []);
+
+  useEffect(() => {
+    if (cameraState !== "ready") return undefined;
+    if (welcomeHeadlineTimerRef.current) window.clearTimeout(welcomeHeadlineTimerRef.current);
+    welcomeHeadlineTimerRef.current = null;
+    return undefined;
   }, [cameraState]);
+
+  useEffect(() => () => {
+    if (welcomeHeadlineTimerRef.current) window.clearTimeout(welcomeHeadlineTimerRef.current);
+  }, []);
 
   useEffect(() => {
     if (isMobileDevice) return undefined;
@@ -1586,15 +1633,25 @@ function App() {
     const left = bubbleX - bubbleWidth / 2;
     const top = bubbleY - bubbleHeight / 2;
     const bottom = top + bubbleHeight;
+    const tailTipOffset = clamp(mouthX - bubbleX, -tailWidth * 1.15, tailWidth * 1.15);
     if (overlay) {
       const outputCanvas = outputCanvasRef.current;
       const displayScaleX = (outputCanvas?.clientWidth || targetWidth) / targetWidth;
       const displayScaleY = (outputCanvas?.clientHeight || targetHeight) / targetHeight;
       overlay.style.left = `${bubbleX * displayScaleX}px`;
       overlay.style.top = `${bubbleY * displayScaleY}px`;
-      overlay.style.width = `${textWidth * displayScaleX}px`;
+      overlay.style.width = `${bubbleWidth * displayScaleX}px`;
+      overlay.style.height = `${bubbleHeight * displayScaleY}px`;
+      overlay.style.paddingInline = `${horizontalPadding * displayScaleX}px`;
       overlay.style.fontSize = `${fontSize * displayScaleY}px`;
+      overlay.style.setProperty("--speech-tail-x", `calc(50% + ${tailTipOffset * displayScaleX}px)`);
+      overlay.style.setProperty("--speech-tail-width", `${tailWidth * displayScaleX}px`);
+      overlay.style.setProperty("--speech-tail-height", `${tailHeight * displayScaleY}px`);
       overlay.hidden = includeCanvasText;
+    }
+    if (!includeCanvasText) {
+      context.restore();
+      return;
     }
     context.fillStyle = "#ffffff";
     context.shadowColor = "rgba(0, 0, 0, 0.2)";
@@ -1604,7 +1661,7 @@ function App() {
       edgeY: bottom - 1,
       height: tailHeight,
       width: tailWidth,
-      tipOffset: clamp(mouthX - bubbleX, -tailWidth * 1.15, tailWidth * 1.15),
+      tipOffset: tailTipOffset,
     });
 
     roundedRectPath(context, left, top, bubbleWidth, bubbleHeight, bubbleHeight / 2);
@@ -3376,19 +3433,19 @@ function App() {
           <div className="welcome-panel">
             <div className="welcome-copy">
               <span className="welcome-icon"><img src="favicon-512.webp" alt="JOJO Cam" /></span>
-              <Calligraph
+              <h1
                 className="welcome-headline"
-                as="h1"
-                variant="text"
-                animation="smooth"
-                initial
-                trend={1}
-                drift={{ x: 10, y: 12 }}
-                stagger={0.018}
-                autoSize={false}
+                aria-live="polite"
+                aria-label={WELCOME_HEADLINES[welcomeHeadlineIndex].join("")}
               >
-                {WELCOME_HEADLINES[welcomeHeadlineIndex]}
-              </Calligraph>
+                {WELCOME_HEADLINES[welcomeHeadlineIndex].map((line, lineIndex) => (
+                  <ProgressiveCalligraphLine
+                    key={`${welcomeHeadlineIndex}-${lineIndex}`}
+                    text={line}
+                    onComplete={lineIndex === 1 ? scheduleNextWelcomeHeadline : undefined}
+                  />
+                ))}
+              </h1>
             </div>
 
             {cameraState === "error" && <p className="camera-error" role="alert">{cameraError}</p>}
