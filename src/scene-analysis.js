@@ -96,6 +96,23 @@ export function advanceSceneGate(state, fingerprint, now) {
   return { state: next, shouldRequest, fingerprint: shouldRequest ? fingerprint : null };
 }
 
+export function beginImmediateSceneRequest(state, fingerprint, now) {
+  if (!fingerprint?.length || state.inFlight) {
+    return { state, shouldRequest: false, fingerprint: null };
+  }
+  return {
+    state: {
+      ...state,
+      candidate: fingerprint,
+      stableSamples: 1,
+      lastRequestAt: now,
+      inFlight: true,
+    },
+    shouldRequest: true,
+    fingerprint,
+  };
+}
+
 export function finishSceneRequest(state, fingerprint, succeeded) {
   return {
     ...state,

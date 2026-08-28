@@ -71,6 +71,7 @@ import { getNextVisionThrottle, getThrottledInterval } from "./vision-performanc
 import { TypingIndicator } from "./components/amicro/typing-indicator.jsx";
 import { CharacterCaptionBubble } from "./components/character-caption-bubble.jsx";
 import { drawCharacterCaption } from "./character-caption.js";
+import { getUserSpeechBubblePlacement } from "./speech-bubble-layout.js";
 import { useCameraSceneAnalysis } from "./use-camera-scene-analysis.js";
 
 const BASE_URL = import.meta.env.BASE_URL;
@@ -577,18 +578,18 @@ function drawSpeechTriangle(context, {
   centerX,
   edgeY,
   height,
+  width,
   tipOffset,
+  direction = "down",
 }) {
-  const verticalX = centerX + tipOffset - height / 2;
-  const tipY = edgeY + height;
-  const tipRadius = 2;
-  const diagonalStartX = verticalX + height;
+  const tipX = centerX + tipOffset;
+  const tipY = edgeY + (direction === "up" ? -height : height);
+  const halfWidth = width / 2;
 
   context.beginPath();
-  context.moveTo(verticalX, edgeY);
-  context.lineTo(verticalX, tipY - tipRadius);
-  context.quadraticCurveTo(verticalX, tipY, verticalX + tipRadius, tipY - tipRadius);
-  context.lineTo(diagonalStartX, edgeY);
+  context.moveTo(tipX - halfWidth, edgeY);
+  context.lineTo(tipX, tipY);
+  context.lineTo(tipX + halfWidth, edgeY);
   context.closePath();
   context.fill();
 }
@@ -1557,7 +1558,7 @@ function App() {
     const text = speechTextRef.current;
     const anchor = mouthAnchorRef.current;
     const overlay = speechBubbleOverlayRef.current;
-    if (!text || !anchor) {
+    if (!text || (!anchor && facingMode !== "environment")) {
       if (overlay) overlay.hidden = true;
       return;
     }
@@ -1584,28 +1585,26 @@ function App() {
     const bubbleHeight = Math.max(fontSize * 2.15, lines.length * lineHeight + fontSize * 0.92);
     const tailHeight = fontSize * 0.44;
     const tailWidth = fontSize * 0.8;
-    const mouthX = anchor.x * targetWidth;
-    const mouthY = anchor.y * targetHeight;
-    const eyeY = anchor.eyeY * targetHeight;
-    const direction = anchor.x < 0.5 ? 1 : -1;
-    const captionSafeY = isLandscape ? 88 : 195;
-    const bubbleX = clamp(
-      mouthX + direction * targetWidth * (isLandscape ? 0.22 : 0.24),
-      bubbleWidth / 2 + 18,
-      targetWidth - bubbleWidth / 2 - 18,
-    );
-    const verticalOffset = targetHeight * (isLandscape ? 0.28 : 0.27);
-    const desiredBubbleY = mouthY - verticalOffset;
-    const eyeSafeBubbleY = eyeY - bubbleHeight / 2 - tailHeight - fontSize * 1.08;
-    const bubbleY = clamp(
-      Math.min(desiredBubbleY, eyeSafeBubbleY),
-      captionSafeY + bubbleHeight / 2,
-      targetHeight - bubbleHeight / 2 - tailHeight - 30,
-    );
+    const placement = getUserSpeechBubblePlacement({
+      facingMode,
+      anchor,
+      targetWidth,
+      targetHeight,
+      bubbleWidth,
+      bubbleHeight,
+      tailWidth,
+      tailHeight,
+      fontSize,
+    });
+    if (!placement) {
+      if (overlay) overlay.hidden = true;
+      context.restore();
+      return;
+    }
+    const { bubbleX, bubbleY, tailTipOffset } = placement;
     const left = bubbleX - bubbleWidth / 2;
     const top = bubbleY - bubbleHeight / 2;
     const bottom = top + bubbleHeight;
-    const tailTipOffset = clamp(mouthX - bubbleX, -tailWidth * 1.15, tailWidth * 1.15);
     if (overlay) {
       const outputCanvas = outputCanvasRef.current;
       const displayScaleX = (outputCanvas?.clientWidth || targetWidth) / targetWidth;
@@ -1653,7 +1652,7 @@ function App() {
     }
 
     context.restore();
-  }, []);
+  }, [facingMode]);
 
   const drawCaption = useCallback((context, targetWidth, targetHeight) => {
     const activeCaption = CAPTION_MODES[captionMode];

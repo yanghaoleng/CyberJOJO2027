@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   SCENE_SAMPLE_INTERVAL_MS,
   advanceSceneGate,
+  beginImmediateSceneRequest,
   createSceneFingerprint,
   createSceneGate,
   finishSceneRequest,
@@ -88,7 +89,7 @@ export function useCameraSceneAnalysis({
     }
     if (!captureCanvasRef.current) captureCanvasRef.current = createFrameCanvas(1, 1);
 
-    const analyzeStableScene = async (fingerprint) => {
+    const analyzeStableScene = async (fingerprint, { forceReaction = false } = {}) => {
       const video = videoRef.current;
       if (!video || video.readyState < 2 || cancelled) {
         gateRef.current = finishSceneRequest(gateRef.current, fingerprint, false);
@@ -118,7 +119,7 @@ export function useCameraSceneAnalysis({
 
         if (!result.evaluable || !result.text) return;
         const now = Date.now();
-        if (!shouldShowSceneReaction(reactionHistoryRef.current, result.repeatKey, now)) return;
+        if (!forceReaction && !shouldShowSceneReaction(reactionHistoryRef.current, result.repeatKey, now)) return;
         reactionHistoryRef.current.set(result.repeatKey, now);
         const reaction = {
           id: `${now}-${Math.random().toString(36).slice(2, 8)}`,
@@ -152,19 +153,22 @@ export function useCameraSceneAnalysis({
       }
     };
 
-    const sample = () => {
+    const sample = ({ immediate = false } = {}) => {
       const video = videoRef.current;
       if (!video || video.readyState < 2 || gateRef.current.inFlight) return;
       try {
         const fingerprint = captureFingerprint(video, fingerprintCanvasRef.current);
-        const update = advanceSceneGate(gateRef.current, fingerprint, performance.now());
+        const update = immediate
+          ? beginImmediateSceneRequest(gateRef.current, fingerprint, performance.now())
+          : advanceSceneGate(gateRef.current, fingerprint, performance.now());
         gateRef.current = update.state;
-        if (update.shouldRequest) void analyzeStableScene(update.fingerprint);
+        if (update.shouldRequest) void analyzeStableScene(update.fingerprint, { forceReaction: immediate });
       } catch (error) {
         console.warn("Camera scene sampling unavailable", error);
       }
     };
 
+    sample({ immediate: true });
     const interval = window.setInterval(sample, SCENE_SAMPLE_INTERVAL_MS);
     return () => {
       cancelled = true;

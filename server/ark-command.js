@@ -74,9 +74,12 @@ async function readSse(response, onDelta) {
 
 export function getArkConfig(env = process.env) {
   if (!env.VOLC_ARK_API_KEY) throw new Error("Volcengine Ark API key is not configured");
+  const model = env.VOLC_ARK_MODEL || "doubao-seed-2-0-lite-260215";
   return {
     apiKey: env.VOLC_ARK_API_KEY,
-    model: env.VOLC_ARK_MODEL || "doubao-seed-2-0-lite-260215",
+    model,
+    visionModel: env.VOLC_ARK_VISION_MODEL || model,
+    visionFallbackModel: env.VOLC_ARK_VISION_FALLBACK_MODEL || model,
     endpoint: env.VOLC_ARK_ENDPOINT || "https://ark.cn-beijing.volces.com/api/v3/responses",
   };
 }

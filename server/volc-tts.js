@@ -3,8 +3,12 @@ import { randomUUID } from "node:crypto";
 const DEFAULT_ENDPOINT = "https://openspeech.bytedance.com/api/v3/tts/unidirectional";
 const DEFAULT_RESOURCE_ID = "seed-tts-2.0";
 const DEFAULT_VOICES = Object.freeze({
-  jiaojiao: "zh_female_xueayi_saturn_bigtts",
-  lvdou: "zh_male_dayi_saturn_bigtts",
+  jiaojiao: "saturn_zh_male_shuanglangshaonian_tob",
+  lvdou: "saturn_zh_male_tiancaitongzhuo_tob",
+});
+const DEFAULT_VOICE_PROFILES = Object.freeze({
+  jiaojiao: Object.freeze({ speechRate: 2, pitchRate: 0 }),
+  lvdou: Object.freeze({ speechRate: 6, pitchRate: 2 }),
 });
 
 function normalizeCharacter(character) {
@@ -21,6 +25,16 @@ export function getVolcTtsConfig(env = process.env) {
     voices: {
       jiaojiao: env.JOCAM_TTS_JIAOJIAO_VOICE || DEFAULT_VOICES.jiaojiao,
       lvdou: env.JOCAM_TTS_LVDOU_VOICE || DEFAULT_VOICES.lvdou,
+    },
+    voiceProfiles: {
+      jiaojiao: {
+        speechRate: Number(env.JOCAM_TTS_JIAOJIAO_SPEECH_RATE ?? DEFAULT_VOICE_PROFILES.jiaojiao.speechRate),
+        pitchRate: Number(env.JOCAM_TTS_JIAOJIAO_PITCH_RATE ?? DEFAULT_VOICE_PROFILES.jiaojiao.pitchRate),
+      },
+      lvdou: {
+        speechRate: Number(env.JOCAM_TTS_LVDOU_SPEECH_RATE ?? DEFAULT_VOICE_PROFILES.lvdou.speechRate),
+        pitchRate: Number(env.JOCAM_TTS_LVDOU_PITCH_RATE ?? DEFAULT_VOICE_PROFILES.lvdou.pitchRate),
+      },
     },
   };
   const endpointHost = new URL(config.endpoint).hostname;
@@ -52,6 +66,7 @@ export async function synthesizeSpeech(text, character, config, fetchImpl = fetc
   const normalizedText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 120);
   if (!normalizedText) throw new Error("TTS text is empty");
   const activeCharacter = normalizeCharacter(character);
+  const voiceProfile = config.voiceProfiles?.[activeCharacter] || DEFAULT_VOICE_PROFILES[activeCharacter];
   const requestId = randomUUID();
   const headers = {
     "Content-Type": "application/json",
@@ -72,7 +87,12 @@ export async function synthesizeSpeech(text, character, config, fetchImpl = fetc
       req_params: {
         text: normalizedText,
         speaker: config.voices[activeCharacter],
-        audio_params: { format: "mp3", sample_rate: 24_000 },
+        audio_params: {
+          format: "mp3",
+          sample_rate: 24_000,
+          speech_rate: voiceProfile.speechRate,
+          pitch_rate: voiceProfile.pitchRate,
+        },
       },
     }),
   });
@@ -83,4 +103,4 @@ export async function synthesizeSpeech(text, character, config, fetchImpl = fetc
   return parseTtsResponse(await response.text());
 }
 
-export const ttsInternals = { DEFAULT_VOICES, normalizeCharacter };
+export const ttsInternals = { DEFAULT_VOICES, DEFAULT_VOICE_PROFILES, normalizeCharacter };

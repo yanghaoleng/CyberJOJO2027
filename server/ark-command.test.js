@@ -1,6 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { arkInternals, looksLikeJiaojiaoCommand } from "./ark-command.js";
+import { arkInternals, getArkConfig, looksLikeJiaojiaoCommand } from "./ark-command.js";
+
+test("vision uses the fastest model available to the account and supports an explicit upgrade", () => {
+  const config = getArkConfig({ VOLC_ARK_API_KEY: "test-key" });
+  assert.equal(config.model, "doubao-seed-2-0-lite-260215");
+  assert.equal(config.visionModel, "doubao-seed-2-0-lite-260215");
+  assert.equal(config.visionFallbackModel, "doubao-seed-2-0-lite-260215");
+
+  const upgraded = getArkConfig({
+    VOLC_ARK_API_KEY: "test-key",
+    VOLC_ARK_VISION_MODEL: "doubao-seed-2-0-mini-260215",
+  });
+  assert.equal(upgraded.visionModel, "doubao-seed-2-0-mini-260215");
+  assert.equal(upgraded.visionFallbackModel, "doubao-seed-2-0-lite-260215");
+});
 
 test("command hints distinguish photo chat from action requests", () => {
   assert.equal(looksLikeJiaojiaoCommand("叫叫，比个赞"), true);

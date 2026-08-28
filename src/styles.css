@@ -296,45 +296,40 @@ button {
 }
 
 .character-caption-bubble {
+  --character-tail-x: 18%;
+  --character-tail-width: 24px;
+  --character-tail-height: 15px;
   position: absolute;
   z-index: 3;
-  left: 50%;
-  bottom: clamp(18px, 4.5%, 58px);
+  left: 42%;
+  bottom: clamp(58px, 9%, 104px);
   width: max-content;
   max-width: min(calc(100% - 32px), 430px);
   padding: 12px 17px 13px;
-  border: 3px solid #ffd84d;
-  border-radius: 22px;
-  background: #fffdf6;
-  color: #241d0b;
+  border: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #111111;
   font-size: clamp(17px, 3.8vw, 23px);
   font-weight: 700;
   line-height: 1.14;
   text-align: center;
   pointer-events: none;
   transform: translateX(-50%);
-  box-shadow: 0 10px 24px rgba(22, 17, 5, 0.25);
-  animation: character-caption-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  box-shadow: 0 7px 14px rgba(0, 0, 0, 0.2);
 }
 
 .character-caption-bubble::after {
   position: absolute;
-  top: calc(100% - 1px);
-  left: 21%;
-  width: 20px;
-  height: 16px;
-  background: #fffdf6;
-  clip-path: polygon(0 0, 100% 0, 52% 100%);
+  bottom: calc(100% - 1px);
+  left: var(--character-tail-x);
+  width: 0;
+  height: 0;
+  border-right: calc(var(--character-tail-width) / 2) solid transparent;
+  border-bottom: var(--character-tail-height) solid #ffffff;
+  border-left: calc(var(--character-tail-width) / 2) solid transparent;
   content: "";
-}
-
-.character-caption-bubble.is-cautious {
-  border-color: #f0b84b;
-  background: #fff8e8;
-}
-
-.character-caption-bubble.is-cautious::after {
-  background: #fff8e8;
+  transform: translateX(-50%);
 }
 
 .character-caption-bubble.is-canvas-rendered {
@@ -345,17 +340,6 @@ button {
   display: block !important;
   max-height: 2.28em;
   overflow: hidden;
-}
-
-@keyframes character-caption-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 10px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-  }
 }
 
 .camera-stage:not(.is-live) .camera-output {
@@ -750,8 +734,8 @@ button {
 }
 
 .camera-stage.is-landscape .character-caption-bubble {
-  left: 42%;
-  bottom: max(17px, 4.5%);
+  left: 37%;
+  bottom: max(54px, 10%);
   max-width: min(48%, 520px);
   font-size: clamp(17px, 2.1vw, 23px);
 }
@@ -1842,12 +1826,6 @@ button {
 
   .camera-stage.is-live.is-landscape .camera-toast {
     left: calc(50% - 44px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .character-caption-bubble {
-    animation: none;
   }
 }
 

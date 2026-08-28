@@ -67,7 +67,11 @@ const server = http.createServer(async (request, response) => {
         resourceId: ttsConfig.resourceId,
         characters: Object.keys(ttsConfig.voices),
       },
-      vision: { enabled: true },
+      vision: {
+        enabled: true,
+        model: arkConfig.visionModel,
+        fallbackModel: arkConfig.visionFallbackModel,
+      },
     }));
     return;
   }

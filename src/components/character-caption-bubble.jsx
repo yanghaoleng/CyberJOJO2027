@@ -16,9 +16,9 @@ export function CharacterCaptionBubble({ reaction, canvasRendered = false }) {
         variant="text"
         animation="smooth"
         initial
-        trend={1}
-        drift={{ x: 7, y: 7 }}
-        stagger={0.015}
+        trend={-1}
+        drift={{ x: 8, y: 6 }}
+        stagger={0.014}
         autoSize={false}
       >
         {reaction.text}

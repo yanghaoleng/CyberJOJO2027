@@ -61,6 +61,7 @@ test("vision requests send low-detail images and return usage", async () => {
   const result = await assessCameraScene(JPEG_DATA_URL, "jiaojiao", {
     apiKey: "test-key",
     model: "test-model",
+    visionModel: "fast-vision-model",
     endpoint: "https://ark.example.test/responses",
   }, async (_url, options) => {
     requestBody = JSON.parse(options.body);
@@ -78,9 +79,45 @@ test("vision requests send low-detail images and return usage", async () => {
 
   const imageInput = requestBody.input[1].content.find(({ type }) => type === "input_image");
   assert.equal(requestBody.store, false);
+  assert.equal(requestBody.model, "fast-vision-model");
+  assert.deepEqual(requestBody.thinking, { type: "disabled" });
   assert.equal(imageInput.detail, "low");
   assert.equal(imageInput.image_url, JPEG_DATA_URL);
   assert.equal(requestBody.tool_choice.name, "comment_on_camera_scene");
   assert.equal(result.assessment.subject, "橘猫");
   assert.deepEqual(result.usage, { input_tokens: 700, output_tokens: 55 });
+});
+
+test("vision falls back to an authorized model when the preferred model is unavailable", async () => {
+  const requestedModels = [];
+  const result = await assessCameraScene(JPEG_DATA_URL, "jiaojiao", {
+    apiKey: "test-key",
+    model: "safe-model",
+    visionModel: "fast-model",
+    visionFallbackModel: "safe-model",
+    endpoint: "https://ark.example.test/responses",
+  }, async (_url, options) => {
+    const { model } = JSON.parse(options.body);
+    requestedModels.push(model);
+    if (model === "fast-model") {
+      return {
+        ok: false,
+        status: 403,
+        text: async () => "AccessDenied",
+      };
+    }
+    return createSseResponse(JSON.stringify({
+      evaluable: false,
+      category: "none",
+      subject: "",
+      tone: "none",
+      text: "",
+      action: "none",
+      repeat_key: "",
+      confidence: 0.2,
+    }));
+  });
+
+  assert.deepEqual(requestedModels, ["fast-model", "safe-model"]);
+  assert.equal(result.assessment.evaluable, false);
 });

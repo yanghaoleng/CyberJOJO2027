@@ -6,6 +6,9 @@ test("TTS reuses the configured speech API key and keeps character voices distin
   const config = getVolcTtsConfig({ VOLC_SPEECH_API_KEY: "test-key" });
   assert.equal(config.apiKey, "test-key");
   assert.notEqual(config.voices.jiaojiao, config.voices.lvdou);
+  assert.match(config.voices.jiaojiao, /male/);
+  assert.match(config.voices.lvdou, /male/);
+  assert.ok(config.voiceProfiles.lvdou.pitchRate > config.voiceProfiles.jiaojiao.pitchRate);
 });
 
 test("TTS response parser joins streamed base64 audio chunks", () => {
@@ -28,5 +31,7 @@ test("TTS request selects the active character voice", async () => {
     };
   });
   assert.equal(requestBody.req_params.speaker, config.voices.lvdou);
+  assert.equal(requestBody.req_params.audio_params.speech_rate, config.voiceProfiles.lvdou.speechRate);
+  assert.equal(requestBody.req_params.audio_params.pitch_rate, config.voiceProfiles.lvdou.pitchRate);
   assert.equal(audio.toString(), "mp3");
 });

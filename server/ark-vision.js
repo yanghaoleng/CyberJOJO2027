@@ -131,20 +131,28 @@ async function readVisionSse(response) {
 export async function assessCameraScene(image, character, config, fetchImpl = fetch) {
   const imageDataUrl = validateVisionImage(image);
   const activeCharacter = character === "lvdou" ? "lvdou" : "jiaojiao";
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10_000);
+  const models = [...new Set([
+    config.visionModel || config.model,
+    config.visionFallbackModel,
+  ].filter(Boolean))];
+  let lastError = null;
 
-  try {
-    const response = await fetchImpl(config.endpoint, {
+  for (const [modelIndex, model] of models.entries()) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+
+    try {
+      const response = await fetchImpl(config.endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${config.apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: config.model,
+        model,
         stream: true,
         store: false,
+        thinking: { type: "disabled" },
         max_output_tokens: 220,
         input: [
           {
@@ -199,19 +207,25 @@ export async function assessCameraScene(image, character, config, fetchImpl = fe
         tool_choice: { type: "function", name: "comment_on_camera_scene" },
       }),
       signal: controller.signal,
-    });
+      });
 
-    if (!response.ok) {
-      const detail = (await response.text()).slice(0, 260);
-      throw new Error(`Ark vision request failed (${response.status}): ${detail}`);
+      if (!response.ok) {
+        const detail = (await response.text()).slice(0, 260);
+        lastError = new Error(`Ark vision request failed (${response.status}): ${detail}`);
+        const canFallback = [403, 404].includes(response.status) && modelIndex < models.length - 1;
+        if (canFallback) continue;
+        throw lastError;
+      }
+
+      const result = await readVisionSse(response);
+      if (!result?.assessment) throw new Error("Ark vision returned no structured assessment");
+      return result;
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const result = await readVisionSse(response);
-    if (!result?.assessment) throw new Error("Ark vision returned no structured assessment");
-    return result;
-  } finally {
-    clearTimeout(timeout);
   }
+
+  throw lastError || new Error("Ark vision has no configured model");
 }
 
 export const visionInternals = {

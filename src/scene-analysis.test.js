@@ -4,6 +4,7 @@ import {
   SCENE_INITIAL_DELAY_MS,
   SCENE_MIN_REQUEST_INTERVAL_MS,
   advanceSceneGate,
+  beginImmediateSceneRequest,
   createSceneFingerprint,
   createSceneGate,
   finishSceneRequest,
@@ -55,6 +56,19 @@ test("scene gate waits for a stable frame, cooldown, and genuinely new content",
   assert.equal(update.shouldRequest, false);
   update = advanceSceneGate(gate, cat, SCENE_INITIAL_DELAY_MS + SCENE_MIN_REQUEST_INTERVAL_MS + 5_200);
   assert.equal(update.shouldRequest, true);
+});
+
+test("camera opening can request its first frame immediately without changing later cooldowns", () => {
+  const cake = createSceneFingerprint(solidImage(220, 80, 90));
+  const startedAt = 10_000;
+  let gate = createSceneGate(startedAt);
+  const initial = beginImmediateSceneRequest(gate, cake, startedAt + 16);
+  assert.equal(initial.shouldRequest, true);
+  assert.equal(initial.state.lastRequestAt, startedAt + 16);
+
+  gate = finishSceneRequest(initial.state, cake, true);
+  const repeated = advanceSceneGate(gate, cake, startedAt + SCENE_MIN_REQUEST_INTERVAL_MS + 32);
+  assert.equal(repeated.shouldRequest, false);
 });
 
 test("failed requests can retry after cooldown and reaction keys are suppressed", () => {
