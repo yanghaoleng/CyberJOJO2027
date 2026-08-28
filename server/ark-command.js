@@ -1,10 +1,26 @@
 const ACTIONS = ["praise", "surprised", "think", "happy", "frighten", "curious"];
 const COMMAND_HINT = /(?:叫叫|小鸡|比(?:个)?赞|点赞|夸夸|惊讶|吃惊|想一想|思考|开心|笑一个|害怕|吓一跳|好奇|鼓励)/;
+const CHARACTER_PROMPTS = Object.freeze({
+  jiaojiao: "你是叫叫，一只热情、活泼、喜欢阅读和陪伴小朋友记录生活的小鸡朋友。",
+  lvdou: "你是绿豆，一个沉稳一点、偶尔幽默、会认真接住小朋友每句话的赛博朋友。",
+});
 
 function parseAction(value) {
   try {
     const action = JSON.parse(value)?.action;
     return ACTIONS.includes(action) ? action : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseCharacterResponse(value) {
+  try {
+    const parsed = JSON.parse(value);
+    const text = String(parsed?.text || "").replace(/\s+/g, " ").trim().slice(0, 48);
+    if (!text) return null;
+    const action = ACTIONS.includes(parsed.action) ? parsed.action : null;
+    return { text, action };
   } catch {
     return null;
   }
@@ -16,7 +32,7 @@ async function readSse(response, onDelta) {
   const decoder = new TextDecoder();
   let buffer = "";
   let argumentsText = "";
-  let finalAction = null;
+  let finalResponse = null;
 
   while (true) {
     const { value, done } = await reader.read();
@@ -38,20 +54,22 @@ async function readSse(response, onDelta) {
       if (event.type === "response.output_text.delta" && event.delta) onDelta?.(event.delta);
       if (event.type === "response.function_call_arguments.delta") argumentsText += event.delta || "";
       if (event.type === "response.function_call_arguments.done") {
-        finalAction = parseAction(event.arguments || argumentsText) || finalAction;
+        finalResponse = parseCharacterResponse(event.arguments || argumentsText) || finalResponse;
       }
       if (event.type === "response.output_item.done" && event.item?.type === "function_call") {
-        finalAction = parseAction(event.item.arguments || argumentsText) || finalAction;
+        finalResponse = parseCharacterResponse(event.item.arguments || argumentsText) || finalResponse;
       }
       if (event.type === "response.completed") {
         for (const item of event.response?.output || []) {
-          if (item.type === "function_call") finalAction = parseAction(item.arguments) || finalAction;
+          if (item.type === "function_call") {
+            finalResponse = parseCharacterResponse(item.arguments) || finalResponse;
+          }
         }
       }
     }
     if (done) break;
   }
-  return finalAction;
+  return finalResponse;
 }
 
 export function getArkConfig(env = process.env) {
@@ -67,8 +85,8 @@ export function looksLikeJiaojiaoCommand(text) {
   return COMMAND_HINT.test(String(text || ""));
 }
 
-export async function inferJiaojiaoAction(text, config, onDelta) {
-  if (!looksLikeJiaojiaoCommand(text)) return null;
+export async function inferCharacterResponse(text, character, config, onDelta) {
+  const activeCharacter = character === "lvdou" ? "lvdou" : "jiaojiao";
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8_000);
   try {
@@ -83,24 +101,27 @@ export async function inferJiaojiaoAction(text, config, onDelta) {
             role: "system",
             content: [{
               type: "input_text",
-              text: "你是叫叫相机的动作控制器。仅当用户明确要求叫叫做动作时，调用 play_jiaojiao_action。比赞、夸赞用 praise；惊讶用 surprised；思考用 think；开心或微笑用 happy；害怕用 frighten；好奇用 curious。不要调用任何其他工具，不要生成任意动画名。",
+              text: `${CHARACTER_PROMPTS[activeCharacter]}请针对用户刚刚说的话给出一句自然、具体、适合儿童的中文回应，不超过 28 个汉字，不要复述用户整句话，也不要提出连续多个问题。选择最贴合的动作；没有合适动作就用 none。必须调用 respond_as_character。`,
             }],
           },
           { role: "user", content: [{ type: "input_text", text: String(text).slice(0, 120) }] },
         ],
         tools: [{
           type: "function",
-          name: "play_jiaojiao_action",
-          description: "让叫叫播放一个预置表情动作",
+          name: "respond_as_character",
+          description: "让当前角色用一句话回应用户，并选择一个可选表情动作",
           parameters: {
             type: "object",
             additionalProperties: false,
-            properties: { action: { type: "string", enum: ACTIONS } },
-            required: ["action"],
+            properties: {
+              text: { type: "string", description: "角色要说的简短中文回应" },
+              action: { type: "string", enum: [...ACTIONS, "none"] },
+            },
+            required: ["text", "action"],
           },
           strict: true,
         }],
-        tool_choice: "auto",
+        tool_choice: { type: "function", name: "respond_as_character" },
       }),
       signal: controller.signal,
     });
@@ -114,4 +135,4 @@ export async function inferJiaojiaoAction(text, config, onDelta) {
   }
 }
 
-export const arkInternals = { ACTIONS, parseAction, readSse };
+export const arkInternals = { ACTIONS, parseAction, parseCharacterResponse, readSse };

@@ -68,6 +68,7 @@ import {
   hasSegmentedSubject,
 } from "./subject-segmentation.js";
 import { getNextVisionThrottle, getThrottledInterval } from "./vision-performance.js";
+import { TypingIndicator } from "./components/amicro/typing-indicator.jsx";
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -312,89 +313,13 @@ function drawGestureOutline(
   context.drawImage(paint, position, position);
 }
 
-const GUIDE_AUDIO = {
-  enter: {
-    path: `${BASE_URL}audio/guides/enter.mp3`,
-    text: "我来啦！看镜头，我们一起拍张照片吧！",
-    duration: 3.684,
-  },
-  smile: {
-    path: `${BASE_URL}audio/guides/smile.mp3`,
-    text: "看镜头，我们一起笑一个！",
-    duration: 1.594,
-  },
-  think: {
-    path: `${BASE_URL}audio/guides/think.mp3`,
-    text: "想一个最好玩的表情吧！",
-    duration: 2.064,
-  },
-  surprise: {
-    path: `${BASE_URL}audio/guides/surprise.mp3`,
-    text: "哇！张大嘴巴，惊讶一下！",
-    duration: 2.325,
-  },
-  encourage: {
-    path: `${BASE_URL}audio/guides/encourage.mp3`,
-    text: "别紧张，靠近我一点点！",
-    duration: 2.273,
-  },
-  praise: {
-    path: `${BASE_URL}audio/guides/praise.mp3`,
-    text: "你笑得真好看，再来一张！",
-    duration: 2.195,
-  },
-  frighten: {
-    path: `${BASE_URL}audio/guides/frighten.mp3`,
-    text: "哇！和我一起吓一跳！",
-    duration: 2.482,
-  },
-  curious: {
-    path: `${BASE_URL}audio/guides/curious.mp3`,
-    text: "你想摆什么姿势呀？",
-    duration: 1.777,
-  },
-  commandPraise: {
-    path: `${BASE_URL}audio/commands/praise.mp3`,
-    text: "嘿嘿，这个赞送给你！",
-  },
-  commandSurprised: {
-    path: `${BASE_URL}audio/commands/surprised.mp3`,
-    text: "哇！你把我吓了一跳！",
-  },
-  commandThink: {
-    path: `${BASE_URL}audio/commands/think.mp3`,
-    text: "好呀，让我认真想一想！",
-  },
-  commandHappy: {
-    path: `${BASE_URL}audio/commands/happy.mp3`,
-    text: "好开心呀！我们再拍一张！",
-  },
-  commandFrighten: {
-    path: `${BASE_URL}audio/commands/frighten.mp3`,
-    text: "哇呀！我有一点点害怕！",
-  },
-  commandCurious: {
-    path: `${BASE_URL}audio/commands/curious.mp3`,
-    text: "嗯？让我看看发生了什么！",
-  },
-  gestureOk: {
-    path: `${BASE_URL}audio/gestures/ok.mp3`,
-    text: "我看到你比 OK 啦！",
-    duration: 1.933,
-  },
-  gestureHeart: {
-    path: `${BASE_URL}audio/gestures/heart.mp3`,
-    text: "我看到你比心啦！",
-    duration: 1.646,
-  },
-};
 const VOICE_ACTIONS = {
-  praise: { animation: "TalkingEmotion_Praise", audio: "commandPraise", toast: "叫叫送你一个赞" },
-  surprised: { animation: "TalkingEmotion_Surprised", audio: "commandSurprised", toast: "叫叫做了个惊讶表情" },
-  think: { animation: "TalkingEmotion_Think", audio: "commandThink", toast: "叫叫正在认真思考" },
-  happy: { animation: "TalkingEmotion_Happy", audio: "commandHappy", toast: "叫叫开心地笑了" },
-  frighten: { animation: "TalkingEmotion_Frighten", audio: "commandFrighten", toast: "叫叫吓了一跳" },
-  curious: { animation: "TalkingEmotion_Curious", audio: "commandCurious", toast: "叫叫好奇地看过来" },
+  praise: { animation: "TalkingEmotion_Praise", toast: "送你一个赞" },
+  surprised: { animation: "TalkingEmotion_Surprised", toast: "做了个惊讶表情" },
+  think: { animation: "TalkingEmotion_Think", toast: "正在认真思考" },
+  happy: { animation: "TalkingEmotion_Happy", toast: "开心地笑了" },
+  frighten: { animation: "TalkingEmotion_Frighten", toast: "吓了一跳" },
+  curious: { animation: "TalkingEmotion_Curious", toast: "好奇地看过来" },
 };
 const GESTURE_ACTIONS = {
   [CAMERA_GESTURES.THUMBS_UP]: {
@@ -407,19 +332,14 @@ const GESTURE_ACTIONS = {
   },
   [CAMERA_GESTURES.OK]: {
     animation: "TalkingEmotion_Sure",
-    audio: "gestureOk",
     toast: "收到你的 OK",
   },
   [CAMERA_GESTURES.FINGER_HEART]: {
     animation: "TalkingEmotion_Happy",
-    audio: "gestureHeart",
     toast: "接住你的比心",
   },
 };
-const GUIDE_SPEAK_PROBABILITY = 0.34;
-const GUIDE_MIN_INTERVAL_MS = 7_000;
-const GUIDE_PLAY_DELAY_MS = 180;
-const GUIDE_END_PADDING_SECONDS = 0.45;
+const SILENT_AUDIO_DATA_URL = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQQAAACAgICA";
 const FRAME_SIZES = {
   portrait: { width: 720, height: 1280 },
   landscape: { width: 1280, height: 720 },
@@ -458,8 +378,8 @@ const RENDER_INTERVAL_MS = 33;
 const SEGMENT_INTERVAL_MS = 150;
 const SUBJECT_SEGMENT_INTERVAL_MS = 1_700;
 const SUBJECT_FALLBACK_DELAY_MS = 1_000;
-const FACE_INTERVAL_MS = 160;
-const GESTURE_INTERVAL_MS = 240;
+const FACE_INTERVAL_MS = 120;
+const GESTURE_INTERVAL_MS = 180;
 const FACE_MISSING_TIMEOUT_MS = 850;
 const PERSON_MASK_THRESHOLD = DEFAULT_PERSON_MASK_THRESHOLD;
 const PERSON_MIN_MASK_RATIO = DEFAULT_PERSON_MIN_RATIO;
@@ -475,7 +395,6 @@ const CORE_LOAD_ASSETS = [
   { key: "subjectModel", path: "mediapipe/deeplab_v3.tflite", bytes: 2_780_176, retain: true },
   { key: "faceModel", path: "mediapipe/face_landmarker.task", bytes: 3_758_596, retain: true },
   { key: "gestureModel", path: "mediapipe/gesture_recognizer.task", bytes: 8_373_440, retain: true },
-  { key: "guideEnter", path: "audio/guides/enter.mp3", bytes: 58_931, retain: false },
 ];
 const RIVE_RUNTIME_ASSETS = {
   canvas: [
@@ -529,18 +448,6 @@ function getRandomValue(max, excludedValue) {
 function getCaptionText(mode, value) {
   const caption = CAPTION_MODES[mode] || CAPTION_MODES.together;
   return `${caption.prefix}${caption.dayPrefix} ${value} ${caption.suffix}`;
-}
-
-function getGuideKeyForAnimation(animationName) {
-  if (!animationName?.startsWith("TalkingEmotion")) return null;
-  if (/Frighten/i.test(animationName)) return "frighten";
-  if (/Surprised|Amazed|Superexcited|Excited/i.test(animationName)) return "surprise";
-  if (/Think|Focused|Serious|Doubt|Entangled/i.test(animationName)) return "think";
-  if (/Nervous|Sad|Regret|Grievance|Concerned|Shake/i.test(animationName)) return "encourage";
-  if (/Praise|Proud|Encourage|Sure/i.test(animationName)) return "praise";
-  if (/Curious|Beckoning|Expectation|Envy/i.test(animationName)) return "curious";
-  if (/Smile|Happy/i.test(animationName)) return "smile";
-  return null;
 }
 
 function getViewportOrientation() {
@@ -844,6 +751,8 @@ function App() {
   const speechClearTimerRef = useRef(null);
   const speechTextRef = useRef("");
   const speechBubbleOverlayRef = useRef(null);
+  const synthesizedSpeechQueueRef = useRef([]);
+  const synthesizedAudioUrlRef = useRef("");
   const welcomeHeadlineTimerRef = useRef(null);
   const mouthAnchorRef = useRef(null);
   const lastFaceSeenAtRef = useRef(0);
@@ -873,10 +782,6 @@ function App() {
   const longPressTriggeredRef = useRef(false);
   const autoStopTimerRef = useRef(null);
   const toastTimerRef = useRef(null);
-  const guideTimerRef = useRef(null);
-  const guideAudioUnlockedRef = useRef(false);
-  const lastGuideAtRef = useRef(0);
-  const lastGuideKeyRef = useRef(null);
   const cameraReadyRef = useRef(false);
   const mediaPreviewRef = useRef(null);
   const mediaLibraryRef = useRef([]);
@@ -892,7 +797,6 @@ function App() {
   const riveAnimationsRef = useRef([]);
   const riveAnimationIndexRef = useRef(0);
   const riveAnimationNameRef = useRef(DEFAULT_RIVE_ANIMATION);
-  const riveGuidePlaybackRef = useRef(null);
   const riveMouthPlaybackRef = useRef(null);
   const rivePlayPraiseRef = useRef(null);
   const rivePlayAnimationRef = useRef(null);
@@ -928,6 +832,7 @@ function App() {
   const [pipVisible, setPipVisible] = useState(false);
   const [pipOpening, setPipOpening] = useState(false);
   const [voiceState, setVoiceState] = useState("idle");
+  const [aiState, setAiState] = useState("idle");
   const [speechText, setSpeechText] = useState("");
   const [welcomeHeadlineIndex, setWelcomeHeadlineIndex] = useState(0);
 
@@ -1001,6 +906,12 @@ function App() {
   useEffect(() => {
     mediaLibraryOpenRef.current = mediaLibraryOpen;
   }, [mediaLibraryOpen]);
+
+  useEffect(() => {
+    const socket = voiceSocketRef.current;
+    if (socket?.readyState !== WebSocket.OPEN) return;
+    socket.send(JSON.stringify({ type: "character", character: activeCharacter }));
+  }, [activeCharacter]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1281,52 +1192,76 @@ function App() {
     })
   ), []);
 
-  const playGuideClip = useCallback((guideKey, { force = false } = {}) => {
+  const unlockVoicePlayback = useCallback(() => {
     const audio = guideAudioRef.current;
-    const guide = GUIDE_AUDIO[guideKey];
-    if (!audio || !guide) return false;
-    if (!force && (
-      !guideAudioUnlockedRef.current
-      || !cameraReadyRef.current
-      || recordingRef.current
-      || mediaPreviewRef.current
-    )) return false;
-    if (!force && !audio.paused) return false;
-
-    const desiredSource = new URL(guide.path, window.location.href).href;
-    if (audio.src !== desiredSource) audio.src = guide.path;
-    audio.pause();
-    try {
-      audio.currentTime = 0;
-    } catch {
-      // Metadata may not be ready yet; play() will start from the beginning.
-    }
-    audio.volume = 1;
-    audio.dataset.guideKey = guideKey;
-    audio.dataset.guideText = guide.text;
-
-    const stage = audio.closest(".camera-stage");
-    if (stage) {
-      stage.dataset.guideKey = guideKey;
-      stage.dataset.guideText = guide.text;
-    }
-
+    if (!audio) return;
+    audio.dataset.voiceKind = "unlock";
+    audio.src = SILENT_AUDIO_DATA_URL;
+    audio.muted = true;
     const playback = audio.play();
-    if (playback?.then) {
-      playback.then(() => {
-        guideAudioUnlockedRef.current = true;
-        lastGuideAtRef.current = performance.now();
-        lastGuideKeyRef.current = guideKey;
-      }).catch((error) => {
-        if (force) console.warn("Guide audio could not start", error);
-      });
-    } else {
-      guideAudioUnlockedRef.current = true;
-      lastGuideAtRef.current = performance.now();
-      lastGuideKeyRef.current = guideKey;
-    }
-    return true;
+    playback?.then(() => {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = false;
+    }).catch(() => {
+      audio.muted = false;
+    });
   }, []);
+
+  const playNextSynthesizedSpeech = useCallback(() => {
+    const audio = guideAudioRef.current;
+    if (!audio || (!audio.paused && audio.dataset.voiceKind === "synthesized")) return;
+    const message = synthesizedSpeechQueueRef.current.shift();
+    if (!message) {
+      setAiState((current) => current === "thinking" ? current : "idle");
+      return;
+    }
+
+    if (synthesizedAudioUrlRef.current) URL.revokeObjectURL(synthesizedAudioUrlRef.current);
+    let bytes;
+    try {
+      const decoded = window.atob(String(message.audio || ""));
+      bytes = Uint8Array.from(decoded, (character) => character.charCodeAt(0));
+    } catch (error) {
+      console.warn("Synthesized speech could not be decoded", error);
+      window.queueMicrotask(playNextSynthesizedSpeech);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(new Blob([bytes], { type: message.mime || "audio/mpeg" }));
+    synthesizedAudioUrlRef.current = objectUrl;
+    audio.pause();
+    audio.src = objectUrl;
+    audio.volume = 1;
+    audio.muted = false;
+    audio.dataset.voiceKind = "synthesized";
+    audio.dataset.character = message.character || "jiaojiao";
+    audio.dataset.opening = message.opening ? "true" : "false";
+    audio.dataset.speechText = String(message.text || "");
+    setAiState("speaking");
+    const playback = audio.play();
+    playback?.catch((error) => {
+      console.warn("Synthesized speech could not start", error);
+      setAiState((current) => current === "thinking" ? current : "idle");
+      window.queueMicrotask(playNextSynthesizedSpeech);
+    });
+  }, []);
+
+  const enqueueSynthesizedSpeech = useCallback((message) => {
+    if (!message?.audio) return;
+    synthesizedSpeechQueueRef.current.push(message);
+    playNextSynthesizedSpeech();
+  }, [playNextSynthesizedSpeech]);
+
+  const notifyVoiceInteraction = useCallback((gesture) => {
+    const socket = voiceSocketRef.current;
+    if (socket?.readyState !== WebSocket.OPEN) return;
+    socket.send(JSON.stringify({
+      type: "interaction",
+      kind: "gesture",
+      gesture,
+      character: activeCharacter,
+    }));
+  }, [activeCharacter]);
 
   const handleGestureResult = useCallback((result, timestamp) => {
     const candidate = classifyCameraGesture(result);
@@ -1353,9 +1288,9 @@ function App() {
       }, GESTURE_OUTLINE_DURATION_MS);
       scheduleAutoCapture(`gesture:${update.trigger}`);
     }
-    if (action.audio) playGuideClip(action.audio, { force: true });
+    notifyVoiceInteraction(update.trigger);
     showToast(`${CHARACTERS[activeCharacter].label}${action.toast}`);
-  }, [activeCharacter, playGuideClip, scheduleAutoCapture, showToast]);
+  }, [activeCharacter, notifyVoiceInteraction, scheduleAutoCapture, showToast]);
 
   const stopVoiceSession = useCallback(() => {
     voiceIntentionalCloseRef.current = true;
@@ -1372,10 +1307,17 @@ function App() {
     voiceSocketRef.current = null;
     if (socket && socket.readyState < WebSocket.CLOSING) socket.close(1000, "camera closed");
     if (speechClearTimerRef.current) window.clearTimeout(speechClearTimerRef.current);
+    synthesizedSpeechQueueRef.current = [];
+    guideAudioRef.current?.pause();
+    if (synthesizedAudioUrlRef.current) {
+      URL.revokeObjectURL(synthesizedAudioUrlRef.current);
+      synthesizedAudioUrlRef.current = "";
+    }
     speechTextRef.current = "";
     mouthAnchorRef.current = null;
     setSpeechText("");
     setVoiceState("idle");
+    setAiState("idle");
   }, []);
 
   const startVoiceSession = useCallback(async (stream) => {
@@ -1417,7 +1359,12 @@ function App() {
       };
 
       socket.addEventListener("open", () => {
-        socket.send(JSON.stringify({ type: "start", sampleRate: 16_000, language: "zh-CN" }));
+        socket.send(JSON.stringify({
+          type: "start",
+          sampleRate: 16_000,
+          language: "zh-CN",
+          character: activeCharacter,
+        }));
       });
       socket.addEventListener("message", (event) => {
         if (typeof event.data !== "string") return;
@@ -1446,9 +1393,16 @@ function App() {
         if (message.type === "action") {
           const action = VOICE_ACTIONS[message.action];
           if (!action || !rivePlayAnimationRef.current?.(action.animation)) return;
-          playGuideClip(action.audio, { force: true });
           showToast(action.toast);
           scheduleAutoCapture(`voice:${message.action}`, 420);
+          return;
+        }
+        if (message.type === "ai") {
+          setAiState(["thinking", "speaking", "unavailable"].includes(message.state) ? message.state : "idle");
+          return;
+        }
+        if (message.type === "speech") {
+          enqueueSynthesizedSpeech(message);
           return;
         }
         if (message.type === "error") {
@@ -1464,36 +1418,7 @@ function App() {
       console.warn("Voice session unavailable", error);
       setVoiceState("unavailable");
     }
-  }, [playGuideClip, scheduleAutoCapture, showToast, stopVoiceSession]);
-
-  const maybePlayGuideForAnimation = useCallback((animationName, animationDurationSeconds) => {
-    const guideKey = getGuideKeyForAnimation(animationName);
-    const guide = GUIDE_AUDIO[guideKey];
-    if (
-      !guide
-      || !guideAudioUnlockedRef.current
-      || !cameraReadyRef.current
-      || recordingRef.current
-      || mediaPreviewRef.current
-      || !guideAudioRef.current?.paused
-      || lastGuideKeyRef.current === guideKey
-      || performance.now() - lastGuideAtRef.current < GUIDE_MIN_INTERVAL_MS
-      || Math.random() >= GUIDE_SPEAK_PROBABILITY
-      || guide.duration + (GUIDE_PLAY_DELAY_MS / 1000) + GUIDE_END_PADDING_SECONDS > animationDurationSeconds
-    ) return;
-
-    if (guideTimerRef.current) window.clearTimeout(guideTimerRef.current);
-    guideTimerRef.current = window.setTimeout(() => {
-      guideTimerRef.current = null;
-      if (
-        riveAnimationNameRef.current !== animationName
-        || performance.now() - lastGuideAtRef.current < GUIDE_MIN_INTERVAL_MS
-      ) return;
-      playGuideClip(guideKey);
-    }, GUIDE_PLAY_DELAY_MS);
-  }, [playGuideClip]);
-
-  riveGuidePlaybackRef.current = maybePlayGuideForAnimation;
+  }, [activeCharacter, enqueueSynthesizedSpeech, scheduleAutoCapture, showToast, stopVoiceSession]);
 
   const updateMask = useCallback((result) => {
     const masks = result.confidenceMasks;
@@ -1599,9 +1524,9 @@ function App() {
     const current = mouthAnchorRef.current;
     mouthAnchorRef.current = current
       ? {
-          x: current.x * 0.68 + next.x * 0.32,
-          y: current.y * 0.68 + next.y * 0.32,
-          eyeY: current.eyeY * 0.68 + next.eyeY * 0.32,
+          x: current.x * 0.55 + next.x * 0.45,
+          y: current.y * 0.55 + next.y * 0.45,
+          eyeY: current.eyeY * 0.55 + next.eyeY * 0.45,
         }
       : next;
     lastFaceSeenAtRef.current = performance.now();
@@ -2096,7 +2021,9 @@ function App() {
                 if (!availableAnimations.length) return;
                 const normalizedIndex = (index + availableAnimations.length) % availableAnimations.length;
                 const nextAnimation = availableAnimations[normalizedIndex];
-                const speaking = guideAudioRef.current && !guideAudioRef.current.paused;
+                const speaking = guideAudioRef.current
+                  && !guideAudioRef.current.paused
+                  && guideAudioRef.current.dataset.voiceKind === "synthesized";
                 const playbackAnimations = [RIVE_POSITION_ANIMATION, nextAnimation];
                 if (speaking) playbackAnimations.push(RIVE_MOUTH_ANIMATION);
                 switchingAnimation = true;
@@ -2118,14 +2045,6 @@ function App() {
                 riveAnimationNameRef.current = nextAnimation;
                 setRiveAnimationName(nextAnimation);
                 scheduleCropAnalysis();
-                const activeAnimation = getActiveAnimation(nextAnimation);
-                const framesPerSecond = Math.max(activeAnimation?.animation?.fps || 60, 1);
-                const workStart = activeAnimation?.animation?.workStart || 0;
-                const workEnd = activeAnimation?.animation?.workEnd || activeAnimation?.animation?.duration || 0;
-                const animationDurationSeconds = Math.max(0, workEnd - workStart)
-                  / framesPerSecond
-                  / Math.max(rivePlaybackRateRef.current, 0.01);
-                riveGuidePlaybackRef.current?.(nextAnimation, animationDurationSeconds);
               };
 
               const playRandom = () => {
@@ -2174,7 +2093,11 @@ function App() {
                   instance.stop(RIVE_MOUTH_ANIMATION);
                 }
               };
-              if (guideAudioRef.current && !guideAudioRef.current.paused) {
+              if (
+                guideAudioRef.current
+                && !guideAudioRef.current.paused
+                && guideAudioRef.current.dataset.voiceKind === "synthesized"
+              ) {
                 riveMouthPlaybackRef.current(true);
               }
 
@@ -2451,7 +2374,6 @@ function App() {
       riveLoadCharacterRef.current = null;
       rivePlayPraiseRef.current = null;
       rivePlayAnimationRef.current = null;
-      riveGuidePlaybackRef.current = null;
       riveMouthPlaybackRef.current = null;
       riveMarkCaptureRef.current = null;
       rivePrepareCaptureRef.current = null;
@@ -2489,14 +2411,6 @@ function App() {
   }, [cameraState]);
 
   useEffect(() => {
-    if (cameraState !== "ready") return;
-    Object.values(GUIDE_AUDIO).forEach((guide) => {
-      if (guide === GUIDE_AUDIO.enter) return;
-      fetch(guide.path, { cache: "force-cache" }).catch(() => {});
-    });
-  }, [cameraState]);
-
-  useEffect(() => {
     const loop = (timestamp) => {
       const video = videoRef.current;
       if (cameraState === "ready" && video?.readyState >= 2) {
@@ -2527,12 +2441,7 @@ function App() {
           }
         };
 
-        if (personSegmentationDue) {
-          lastSegmentAtRef.current = timestamp;
-          runVisionTask(() => {
-            segmenterRef.current.segmentForVideo(video, timestamp, updateMask);
-          }, "Person segmentation frame failed");
-        } else if (faceTrackingDue) {
+        if (faceTrackingDue) {
           lastFaceAtRef.current = timestamp;
           runVisionTask(() => {
             updateMouthAnchor(faceLandmarkerRef.current.detectForVideo(video, timestamp));
@@ -2542,6 +2451,11 @@ function App() {
           runVisionTask(() => {
             handleGestureResult(gestureRecognizerRef.current.recognizeForVideo(video, timestamp), timestamp);
           }, "Hand gesture frame failed");
+        } else if (personSegmentationDue) {
+          lastSegmentAtRef.current = timestamp;
+          runVisionTask(() => {
+            segmenterRef.current.segmentForVideo(video, timestamp, updateMask);
+          }, "Person segmentation frame failed");
         } else if (subjectSegmentationDue) {
           lastSubjectSegmentAtRef.current = timestamp;
           runVisionTask(() => {
@@ -2574,7 +2488,6 @@ function App() {
     if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
     if (autoStopTimerRef.current) window.clearTimeout(autoStopTimerRef.current);
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
-    if (guideTimerRef.current) window.clearTimeout(guideTimerRef.current);
     if (gestureEffectTimerRef.current) window.clearTimeout(gestureEffectTimerRef.current);
     if (autoCaptureTimerRef.current) window.clearTimeout(autoCaptureTimerRef.current);
     if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
@@ -2746,9 +2659,9 @@ function App() {
   const enterCamera = useCallback(() => {
     unlockShutterSound();
     void unlockInterfaceSounds().then((sounds) => sounds?.play("open"));
-    playGuideClip("enter", { force: true });
+    unlockVoicePlayback();
     openCamera("user");
-  }, [openCamera, playGuideClip, unlockInterfaceSounds, unlockShutterSound]);
+  }, [openCamera, unlockInterfaceSounds, unlockShutterSound, unlockVoicePlayback]);
 
   const switchCamera = useCallback(() => {
     if (recordingRef.current) return;
@@ -3258,6 +3171,7 @@ function App() {
         data-media-count={mediaLibrary.length}
         data-camera-menu={cameraMenuOpen ? "open" : "closed"}
         data-voice-state={voiceState}
+        data-ai-state={aiState}
         data-reading-day={day}
         data-caption-mode={captionMode}
         aria-label="和叫叫合拍相机"
@@ -3265,10 +3179,10 @@ function App() {
         <audio
           ref={guideAudioRef}
           className="guide-audio"
-          src={GUIDE_AUDIO.enter.path}
-          preload="auto"
+          preload="none"
           playsInline
           onPlay={() => {
+            if (guideAudioRef.current?.dataset.voiceKind !== "synthesized") return;
             voicePcmMutedRef.current = true;
             riveMouthPlaybackRef.current?.(true);
           }}
@@ -3279,6 +3193,7 @@ function App() {
           onEnded={() => {
             voicePcmMutedRef.current = false;
             riveMouthPlaybackRef.current?.(false);
+            playNextSynthesizedSpeech();
           }}
           aria-hidden="true"
         />
@@ -3304,6 +3219,12 @@ function App() {
               {speechText}
             </Calligraph>
           </div>
+
+          {cameraState === "ready" && aiState === "thinking" && (
+            <div className="character-thinking-indicator" data-character={activeCharacter}>
+              <TypingIndicator />
+            </div>
+          )}
 
           {cameraState === "ready" && riveReady && (
             <button

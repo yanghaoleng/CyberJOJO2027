@@ -1,8 +1,9 @@
 import http from "node:http";
 import { WebSocketServer } from "ws";
-import { getArkConfig, inferJiaojiaoAction } from "./ark-command.js";
+import { getArkConfig, inferCharacterResponse } from "./ark-command.js";
 import { correctBrandTranscript } from "./brand-lexicon.js";
 import { getVolcAsrConfig, VolcAsrSession } from "./volc-asr.js";
+import { getVolcTtsConfig, synthesizeSpeech } from "./volc-tts.js";
 
 const PORT = Number(process.env.PORT || 8787);
 const MAX_SESSION_MS = Number(process.env.JOCAM_MAX_SESSION_MS || 5 * 60_000);
@@ -17,9 +18,11 @@ const allowedOrigins = new Set((process.env.JOCAM_ALLOWED_ORIGINS || [
 
 let asrConfig;
 let arkConfig;
+let ttsConfig;
 try {
   asrConfig = getVolcAsrConfig();
   arkConfig = getArkConfig();
+  ttsConfig = getVolcTtsConfig();
 } catch (error) {
   console.error(error.message);
   process.exit(1);
@@ -38,6 +41,11 @@ const server = http.createServer((request, response) => {
         correctionsApplied: correctionMetrics.applied,
         lastCorrectionAt: correctionMetrics.lastAppliedAt,
       },
+      tts: {
+        enabled: true,
+        resourceId: ttsConfig.resourceId,
+        characters: Object.keys(ttsConfig.voices),
+      },
     }));
     return;
   }
@@ -48,6 +56,18 @@ const websocketServer = new WebSocketServer({ noServer: true, maxPayload: 128 * 
 
 function sendJson(socket, payload) {
   if (socket.readyState === 1) socket.send(JSON.stringify(payload));
+}
+
+const OPENING_TEXT = "我来啦！看镜头，我们一起拍张照片吧！";
+const GESTURE_PROMPTS = Object.freeze({
+  thumbs_up: "用户刚刚对你比了一个赞，请自然回应这个动作。",
+  victory: "用户刚刚对你比了一个胜利手势，请自然回应这个动作。",
+  ok: "用户刚刚对你比了一个 OK 手势，请自然回应这个动作。",
+  finger_heart: "用户刚刚对你比了一个爱心手势，请自然回应这个动作。",
+});
+
+function normalizeCharacter(value) {
+  return value === "lvdou" ? "lvdou" : "jiaojiao";
 }
 
 server.on("upgrade", (request, socket, head) => {
@@ -77,33 +97,49 @@ websocketServer.on("connection", (client) => {
   let started = false;
   let closed = false;
   let inferenceRunning = false;
-  let queuedTranscript = "";
+  let queuedPrompt = null;
   let lastInferenceAt = 0;
+  let activeCharacter = "jiaojiao";
 
-  const runInference = async (text) => {
+  const sendSpeech = async (text, { opening = false, character = activeCharacter } = {}) => {
+    const speechCharacter = normalizeCharacter(character);
+    const audio = await synthesizeSpeech(text, speechCharacter, ttsConfig);
+    if (!opening) sendJson(client, { type: "ai", state: "speaking" });
+    sendJson(client, {
+      type: "speech",
+      text,
+      character: speechCharacter,
+      opening,
+      mime: "audio/mpeg",
+      audio: audio.toString("base64"),
+    });
+  };
+
+  const runInference = async (text, character = activeCharacter) => {
+    const responseCharacter = normalizeCharacter(character);
     if (!text) return;
     if (inferenceRunning || Date.now() - lastInferenceAt < 1_200) {
-      queuedTranscript = text;
+      queuedPrompt = { text, character: responseCharacter };
       return;
     }
     inferenceRunning = true;
     lastInferenceAt = Date.now();
     try {
       sendJson(client, { type: "ai", state: "thinking" });
-      const action = await inferJiaojiaoAction(text, arkConfig, (delta) => {
-        sendJson(client, { type: "ai", state: "streaming", delta: String(delta).slice(0, 80) });
-      });
-      if (action) sendJson(client, { type: "action", action });
-      sendJson(client, { type: "ai", state: "idle" });
+      const response = await inferCharacterResponse(text, responseCharacter, arkConfig);
+      if (!response?.text) throw new Error("Ark returned an empty character response");
+      if (response.action) sendJson(client, { type: "action", action: response.action });
+      await sendSpeech(response.text, { character: responseCharacter });
     } catch (error) {
-      console.error("Ark inference failed", { name: error.name, message: error.message });
+      console.error("Character response failed", { name: error.name, message: error.message });
       sendJson(client, { type: "ai", state: "unavailable" });
+      sendJson(client, { type: "ai", state: "idle" });
     } finally {
       inferenceRunning = false;
-      if (queuedTranscript) {
-        const next = queuedTranscript;
-        queuedTranscript = "";
-        setTimeout(() => runInference(next), 1_250).unref();
+      if (queuedPrompt) {
+        const next = queuedPrompt;
+        queuedPrompt = null;
+        setTimeout(() => runInference(next.text, next.character), 1_250).unref();
       }
     }
   };
@@ -133,11 +169,26 @@ websocketServer.on("connection", (client) => {
     } catch {
       return;
     }
+    if (message.type === "character") {
+      activeCharacter = normalizeCharacter(message.character);
+      return;
+    }
+    if (message.type === "interaction" && message.kind === "gesture") {
+      const prompt = GESTURE_PROMPTS[message.gesture];
+      if (started && prompt) runInference(prompt, message.character || activeCharacter);
+      return;
+    }
     if (message.type !== "start" || started) return;
     started = true;
+    activeCharacter = normalizeCharacter(message.character);
     asr = new VolcAsrSession({
       config: asrConfig,
-      onReady: () => sendJson(client, { type: "ready" }),
+      onReady: () => {
+        sendJson(client, { type: "ready" });
+        sendSpeech(OPENING_TEXT, { opening: true, character: activeCharacter }).catch((error) => {
+          console.error("Opening speech failed", { name: error.name, message: error.message });
+        });
+      },
       onTranscript: (transcript) => {
         const corrected = correctBrandTranscript(transcript.text);
         const normalizedTranscript = { ...transcript, text: corrected.text };
