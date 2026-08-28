@@ -1,6 +1,10 @@
 const CORE_BRAND_TERMS = [
   "叫叫",
+  "叫叫出来",
+  "让叫叫出来",
   "绿豆",
+  "绿豆出来",
+  "让绿豆出来",
   "粉豆",
   "猪小弟",
   "铃铛",
@@ -72,6 +76,7 @@ export const DEFAULT_BRAND_TERMS = Object.freeze([
 ]);
 
 const HIGH_CONFIDENCE_CORRECTIONS = Object.freeze([
+  ["佳佳", "叫叫"],
   ["笑笑", "叫叫"],
   ["驴豆", "绿豆"],
   ["粉痘", "粉豆"],

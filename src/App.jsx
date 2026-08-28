@@ -818,6 +818,7 @@ function App() {
   const characterOffsetXRef = useRef(0);
   const characterTransitionFrameRef = useRef(0);
   const characterSwitchingRef = useRef(false);
+  const switchCharacterToRef = useRef(null);
   const characterTapCountRef = useRef(0);
   const characterLastTapAtRef = useRef(0);
 
@@ -1417,6 +1418,11 @@ function App() {
           if (!action || !rivePlayAnimationRef.current?.(action.animation)) return;
           showToast(action.toast);
           scheduleAutoCapture(`voice:${message.action}`, 420);
+          return;
+        }
+        if (message.type === "character_switch") {
+          const requestedCharacter = CHARACTERS[message.character] ? message.character : null;
+          if (requestedCharacter) void switchCharacterToRef.current?.(requestedCharacter);
           return;
         }
         if (message.type === "ai") {
@@ -2716,10 +2722,14 @@ function App() {
     showToast(`${CHARACTERS[activeCharacter].label}正在夸夸你`);
   }, [activeCharacter, playInterfaceSound, showToast]);
 
-  const switchCharacter = useCallback(async () => {
+  const switchCharacterTo = useCallback(async (nextCharacter) => {
+    if (!CHARACTERS[nextCharacter]) return;
     if (characterSwitchingRef.current || recordingRef.current) return;
+    if (nextCharacter === activeCharacter) {
+      showToast(`${CHARACTERS[nextCharacter].label}已经在这里啦`);
+      return;
+    }
     playInterfaceSound("select");
-    const nextCharacter = activeCharacter === "jiaojiao" ? "lvdou" : "jiaojiao";
     let nextBuffer;
     try {
       if (nextCharacter === "lvdou" && !lvdouBufferRef.current) {
@@ -2762,6 +2772,18 @@ function App() {
       setCharacterSwitching(false);
     }
   }, [activeCharacter, animateCharacterOffset, frameSize.width, playInterfaceSound, preloadLvdou, showToast]);
+
+  useEffect(() => {
+    switchCharacterToRef.current = switchCharacterTo;
+    return () => {
+      if (switchCharacterToRef.current === switchCharacterTo) switchCharacterToRef.current = null;
+    };
+  }, [switchCharacterTo]);
+
+  const switchCharacter = useCallback(() => {
+    const nextCharacter = activeCharacter === "jiaojiao" ? "lvdou" : "jiaojiao";
+    return switchCharacterTo(nextCharacter);
+  }, [activeCharacter, switchCharacterTo]);
 
   const handleCharacterTap = useCallback(() => {
     if (characterSwitchingRef.current) return;

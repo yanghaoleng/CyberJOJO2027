@@ -33,9 +33,10 @@ test("hotword context follows Volcengine direct context format", () => {
 });
 
 test("high-confidence homophones are corrected without rewriting the full sentence", () => {
-  assert.deepEqual(correctBrandTranscript("笑笑和驴豆登上萌萌星求的豆夹号"), {
-    text: "叫叫和绿豆登上萌萌星球的豆荚号",
+  assert.deepEqual(correctBrandTranscript("佳佳和笑笑、驴豆登上萌萌星求的豆夹号"), {
+    text: "叫叫和叫叫、绿豆登上萌萌星球的豆荚号",
     corrections: [
+      { heard: "佳佳", brandTerm: "叫叫", occurrences: 1 },
       { heard: "笑笑", brandTerm: "叫叫", occurrences: 1 },
       { heard: "驴豆", brandTerm: "绿豆", occurrences: 1 },
       { heard: "萌萌星求", brandTerm: "萌萌星球", occurrences: 1 },

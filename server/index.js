@@ -2,6 +2,7 @@ import http from "node:http";
 import { WebSocketServer } from "ws";
 import { getArkConfig, inferCharacterResponse } from "./ark-command.js";
 import { correctBrandTranscript } from "./brand-lexicon.js";
+import { detectCharacterSwitchCommand } from "./character-switch-command.js";
 import { getVolcAsrConfig, VolcAsrSession } from "./volc-asr.js";
 import { getVolcTtsConfig, synthesizeSpeech } from "./volc-tts.js";
 import { createVisionRequestHandler } from "./vision-route.js";
@@ -228,7 +229,15 @@ websocketServer.on("connection", (client) => {
             rules: corrected.corrections.map(({ heard, brandTerm, occurrences }) => ({ heard, brandTerm, occurrences })),
           });
         }
-        if (transcript.final) runInference(corrected.text);
+        if (transcript.final) {
+          const requestedCharacter = detectCharacterSwitchCommand(corrected.text);
+          if (requestedCharacter) {
+            activeCharacter = requestedCharacter;
+            sendJson(client, { type: "character_switch", character: requestedCharacter });
+            return;
+          }
+          runInference(corrected.text);
+        }
       },
       onError: (error) => {
         console.error("ASR session failed", { name: error.name, message: error.message });
