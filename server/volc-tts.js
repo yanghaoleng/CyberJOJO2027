@@ -3,8 +3,8 @@ import { randomUUID } from "node:crypto";
 const DEFAULT_ENDPOINT = "https://openspeech.bytedance.com/api/v3/tts/unidirectional";
 const DEFAULT_RESOURCE_ID = "seed-tts-2.0";
 const DEFAULT_VOICES = Object.freeze({
-  jiaojiao: "zh_male_kailangdidi_uranus_bigtts",
-  lvdou: "zh_male_tiancaitongsheng_uranus_bigtts",
+  jiaojiao: "zh_male_tiancaitongsheng_uranus_bigtts",
+  lvdou: "zh_male_naiqimengwa_uranus_bigtts",
 });
 const DEFAULT_VOICE_PROFILES = Object.freeze({
   jiaojiao: Object.freeze({ speechRate: 4, pitchRate: 0 }),
