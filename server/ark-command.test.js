@@ -2,17 +2,19 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { arkInternals, getArkConfig, looksLikeJiaojiaoCommand } from "./ark-command.js";
 
-test("vision uses the fastest model available to the account and supports an explicit upgrade", () => {
+test("vision uses Mini with a separate credential and retains the Lite fallback", () => {
   const config = getArkConfig({ VOLC_ARK_API_KEY: "test-key" });
   assert.equal(config.model, "doubao-seed-2-0-lite-260215");
-  assert.equal(config.visionModel, "doubao-seed-2-0-lite-260215");
+  assert.equal(config.visionModel, "doubao-seed-2-0-mini-260428");
   assert.equal(config.visionFallbackModel, "doubao-seed-2-0-lite-260215");
+  assert.equal(config.visionApiKey, "test-key");
 
   const upgraded = getArkConfig({
     VOLC_ARK_API_KEY: "test-key",
-    VOLC_ARK_VISION_MODEL: "doubao-seed-2-0-mini-260215",
+    VOLC_ARK_VISION_API_KEY: "vision-key",
   });
-  assert.equal(upgraded.visionModel, "doubao-seed-2-0-mini-260215");
+  assert.equal(upgraded.visionApiKey, "vision-key");
+  assert.equal(upgraded.visionModel, "doubao-seed-2-0-mini-260428");
   assert.equal(upgraded.visionFallbackModel, "doubao-seed-2-0-lite-260215");
 });
 

@@ -145,7 +145,7 @@ export async function assessCameraScene(image, character, config, fetchImpl = fe
       const response = await fetchImpl(config.endpoint, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${config.apiKey}`,
+        Authorization: `Bearer ${config.visionApiKey || config.apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

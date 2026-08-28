@@ -58,13 +58,16 @@ test("vision images are restricted to bounded base64 JPEG data URLs", () => {
 
 test("vision requests send low-detail images and return usage", async () => {
   let requestBody;
+  let authorization;
   const result = await assessCameraScene(JPEG_DATA_URL, "jiaojiao", {
     apiKey: "test-key",
+    visionApiKey: "vision-key",
     model: "test-model",
     visionModel: "fast-vision-model",
     endpoint: "https://ark.example.test/responses",
   }, async (_url, options) => {
     requestBody = JSON.parse(options.body);
+    authorization = options.headers.Authorization;
     return createSseResponse(JSON.stringify({
       evaluable: true,
       category: "cat",
@@ -79,6 +82,7 @@ test("vision requests send low-detail images and return usage", async () => {
 
   const imageInput = requestBody.input[1].content.find(({ type }) => type === "input_image");
   assert.equal(requestBody.store, false);
+  assert.equal(authorization, "Bearer vision-key");
   assert.equal(requestBody.model, "fast-vision-model");
   assert.deepEqual(requestBody.thinking, { type: "disabled" });
   assert.equal(imageInput.detail, "low");

@@ -65,7 +65,8 @@ const server = http.createServer(async (request, response) => {
       tts: {
         enabled: true,
         resourceId: ttsConfig.resourceId,
-        characters: Object.keys(ttsConfig.voices),
+        voices: ttsConfig.voices,
+        voiceProfiles: ttsConfig.voiceProfiles,
       },
       vision: {
         enabled: true,

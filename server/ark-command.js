@@ -77,8 +77,9 @@ export function getArkConfig(env = process.env) {
   const model = env.VOLC_ARK_MODEL || "doubao-seed-2-0-lite-260215";
   return {
     apiKey: env.VOLC_ARK_API_KEY,
+    visionApiKey: env.VOLC_ARK_VISION_API_KEY || env.VOLC_ARK_API_KEY,
     model,
-    visionModel: env.VOLC_ARK_VISION_MODEL || model,
+    visionModel: env.VOLC_ARK_VISION_MODEL || "doubao-seed-2-0-mini-260428",
     visionFallbackModel: env.VOLC_ARK_VISION_FALLBACK_MODEL || model,
     endpoint: env.VOLC_ARK_ENDPOINT || "https://ark.cn-beijing.volces.com/api/v3/responses",
   };
