@@ -4,6 +4,7 @@ import { getArkConfig, inferCharacterResponse } from "./ark-command.js";
 import { correctBrandTranscript } from "./brand-lexicon.js";
 import { getVolcAsrConfig, VolcAsrSession } from "./volc-asr.js";
 import { getVolcTtsConfig, synthesizeSpeech } from "./volc-tts.js";
+import { createVisionRequestHandler } from "./vision-route.js";
 
 const PORT = Number(process.env.PORT || 8787);
 const MAX_SESSION_MS = Number(process.env.JOCAM_MAX_SESSION_MS || 5 * 60_000);
@@ -12,6 +13,7 @@ const allowedOrigins = new Set((process.env.JOCAM_ALLOWED_ORIGINS || [
   "https://mikeywa.site",
   "https://www.mikeywa.site",
   "https://rive.mikeywa.site",
+  "https://cyberjojo.mikeywa.site",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
 ].join(",")).split(",").map((value) => value.trim()).filter(Boolean));
@@ -30,7 +32,26 @@ try {
 
 const activeByIp = new Map();
 const correctionMetrics = { applied: 0, lastAppliedAt: null };
-const server = http.createServer((request, response) => {
+const handleVisionRequest = createVisionRequestHandler({
+  allowedOrigins,
+  arkConfig,
+  enrichResponse: async (assessment, body) => {
+    try {
+      const character = normalizeCharacter(body.character);
+      const audio = await synthesizeSpeech(assessment.text, character, ttsConfig);
+      return {
+        character,
+        mime: "audio/mpeg",
+        audio: audio.toString("base64"),
+      };
+    } catch (error) {
+      console.error("Camera reaction speech failed", { name: error.name, message: error.message });
+      return {};
+    }
+  },
+});
+const server = http.createServer(async (request, response) => {
+  if (await handleVisionRequest(request, response)) return;
   if (request.url === "/health") {
     response.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
     response.end(JSON.stringify({
@@ -46,6 +67,7 @@ const server = http.createServer((request, response) => {
         resourceId: ttsConfig.resourceId,
         characters: Object.keys(ttsConfig.voices),
       },
+      vision: { enabled: true },
     }));
     return;
   }

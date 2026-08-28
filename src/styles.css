@@ -295,6 +295,69 @@ button {
   bottom: 72%;
 }
 
+.character-caption-bubble {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: clamp(18px, 4.5%, 58px);
+  width: max-content;
+  max-width: min(calc(100% - 32px), 430px);
+  padding: 12px 17px 13px;
+  border: 3px solid #ffd84d;
+  border-radius: 22px;
+  background: #fffdf6;
+  color: #241d0b;
+  font-size: clamp(17px, 3.8vw, 23px);
+  font-weight: 700;
+  line-height: 1.14;
+  text-align: center;
+  pointer-events: none;
+  transform: translateX(-50%);
+  box-shadow: 0 10px 24px rgba(22, 17, 5, 0.25);
+  animation: character-caption-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.character-caption-bubble::after {
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 21%;
+  width: 20px;
+  height: 16px;
+  background: #fffdf6;
+  clip-path: polygon(0 0, 100% 0, 52% 100%);
+  content: "";
+}
+
+.character-caption-bubble.is-cautious {
+  border-color: #f0b84b;
+  background: #fff8e8;
+}
+
+.character-caption-bubble.is-cautious::after {
+  background: #fff8e8;
+}
+
+.character-caption-bubble.is-canvas-rendered {
+  opacity: 0;
+}
+
+.character-caption-copy {
+  display: block !important;
+  max-height: 2.28em;
+  overflow: hidden;
+}
+
+@keyframes character-caption-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
 .camera-stage:not(.is-live) .camera-output {
   opacity: 0;
   filter: blur(14px) saturate(0.86);
@@ -686,6 +749,13 @@ button {
   top: calc(max(24px, calc(env(safe-area-inset-top) + 12px)) + 2%);
 }
 
+.camera-stage.is-landscape .character-caption-bubble {
+  left: 42%;
+  bottom: max(17px, 4.5%);
+  max-width: min(48%, 520px);
+  font-size: clamp(17px, 2.1vw, 23px);
+}
+
 .camera-stage.is-landscape .capture-hint,
 .camera-stage.is-landscape .capture-limit {
   display: none;
@@ -992,6 +1062,10 @@ button {
 
 .privacy-note {
   margin-top: 7px;
+}
+
+.privacy-note span {
+  max-width: 35em;
 }
 
 .status-pulse {
@@ -1768,6 +1842,12 @@ button {
 
   .camera-stage.is-live.is-landscape .camera-toast {
     left: calc(50% - 44px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .character-caption-bubble {
+    animation: none;
   }
 }
 

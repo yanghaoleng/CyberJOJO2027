@@ -69,6 +69,9 @@ import {
 } from "./subject-segmentation.js";
 import { getNextVisionThrottle, getThrottledInterval } from "./vision-performance.js";
 import { TypingIndicator } from "./components/amicro/typing-indicator.jsx";
+import { CharacterCaptionBubble } from "./components/character-caption-bubble.jsx";
+import { drawCharacterCaption } from "./character-caption.js";
+import { useCameraSceneAnalysis } from "./use-camera-scene-analysis.js";
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -1292,6 +1295,24 @@ function App() {
     showToast(`${CHARACTERS[activeCharacter].label}${action.toast}`);
   }, [activeCharacter, notifyVoiceInteraction, scheduleAutoCapture, showToast]);
 
+  const handleSceneReaction = useCallback((reaction) => {
+    const action = VOICE_ACTIONS[reaction.action];
+    if (action) rivePlayAnimationRef.current?.(action.animation);
+    if (reaction.audio) {
+      enqueueSynthesizedSpeech({
+        ...reaction,
+        opening: false,
+      });
+    }
+  }, [enqueueSynthesizedSpeech]);
+
+  const { visionState: sceneVisionState, sceneReaction } = useCameraSceneAnalysis({
+    enabled: cameraState === "ready" && !recording && !mediaPreview && !mediaLibraryOpen,
+    videoRef,
+    activeCharacter,
+    onReaction: handleSceneReaction,
+  });
+
   const stopVoiceSession = useCallback(() => {
     voiceIntentionalCloseRef.current = true;
     const graph = voiceAudioGraphRef.current;
@@ -1855,7 +1876,8 @@ function App() {
     drawFrontCameraPip(outputContext, targetWidth, targetHeight);
     if (includeCaption) drawCaption(outputContext, targetWidth, targetHeight);
     drawSpeechBubble(outputContext, targetWidth, targetHeight, includeSpeechText);
-  }, [drawCaption, drawFrontCameraPip, drawRiveLayer, drawSpeechBubble, facingMode, personLayer]);
+    if (includeSpeechText) drawCharacterCaption(outputContext, sceneReaction?.text, targetWidth, targetHeight);
+  }, [drawCaption, drawFrontCameraPip, drawRiveLayer, drawSpeechBubble, facingMode, personLayer, sceneReaction]);
 
   useEffect(() => {
     let cancelled = false;
@@ -3172,6 +3194,7 @@ function App() {
         data-camera-menu={cameraMenuOpen ? "open" : "closed"}
         data-voice-state={voiceState}
         data-ai-state={aiState}
+        data-scene-vision-state={sceneVisionState}
         data-reading-day={day}
         data-caption-mode={captionMode}
         aria-label="和叫叫合拍相机"
@@ -3219,6 +3242,7 @@ function App() {
               {speechText}
             </Calligraph>
           </div>
+          <CharacterCaptionBubble reaction={sceneReaction} canvasRendered={recording} />
 
           {cameraState === "ready" && aiState === "thinking" && (
             <div className="character-thinking-indicator" data-character={activeCharacter}>
@@ -3421,7 +3445,10 @@ function App() {
                 <span className="load-progress-track"><i style={{ transform: `scaleX(${loadProgress / 100})` }} /></span>
               </div>
             )}
-            <p className="privacy-note"><LockSimple size={14} weight="fill" />画面只在本机合成；语音实时转文字且不保存</p>
+            <p className="privacy-note">
+              <LockSimple size={14} weight="fill" />
+              <span>AI 识物会间歇发送压缩画面给豆包分析；本站不保存原图，语音转写也不保存</span>
+            </p>
           </div>
         )}
 
