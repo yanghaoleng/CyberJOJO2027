@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getUserSpeechBubblePlacement } from "./speech-bubble-layout.js";
+import {
+  getUserSpeechBubblePlacement,
+  getUserSpeechBubbleSizing,
+} from "./speech-bubble-layout.js";
 
 const BASE_LAYOUT = {
   targetWidth: 720,
@@ -39,4 +42,18 @@ test("front-camera transcripts still require and point toward a mouth anchor", (
   });
   assert.equal(placement.placement, "front-mouth");
   assert.ok(placement.tailTipOffset < 0);
+});
+
+test("tablet transcript bubbles use smaller type with larger internal breathing room", () => {
+  const phone = getUserSpeechBubbleSizing({ targetWidth: 1280, targetHeight: 720 });
+  const tablet = getUserSpeechBubbleSizing({
+    targetWidth: 1280,
+    targetHeight: 720,
+    isTabletDevice: true,
+  });
+
+  assert.ok(tablet.fontSize < phone.fontSize);
+  assert.ok(tablet.maxBubbleWidth < phone.maxBubbleWidth);
+  assert.ok(tablet.horizontalPadding / tablet.fontSize > phone.horizontalPadding / phone.fontSize);
+  assert.ok(tablet.verticalPadding / tablet.fontSize > phone.verticalPadding / phone.fontSize);
 });

@@ -37,20 +37,30 @@ function splitLines(context, text, maxWidth) {
   return lines;
 }
 
-export function drawCharacterCaption(context, text, targetWidth, targetHeight) {
+export function drawCharacterCaption(
+  context,
+  text,
+  targetWidth,
+  targetHeight,
+  { isTabletDevice = false } = {},
+) {
   if (!text) return;
   const isLandscape = targetWidth > targetHeight;
-  const fontSize = clamp(targetWidth * (isLandscape ? 0.022 : 0.039), 22, 31);
-  const maxBubbleWidth = targetWidth * (isLandscape ? 0.48 : 0.78);
-  const horizontalPadding = fontSize * 0.95;
+  const baseFontSize = clamp(targetWidth * (isLandscape ? 0.022 : 0.039), 22, 31);
+  const fontSize = baseFontSize * (isTabletDevice ? 0.78 : 1);
+  const maxBubbleWidth = targetWidth * (isLandscape ? 0.48 : 0.78) * (isTabletDevice ? 0.84 : 1);
+  const horizontalPadding = fontSize * (isTabletDevice ? 1.35 : 0.95);
+  const verticalPadding = fontSize * (isTabletDevice ? 0.72 : 0.39);
   const lineHeight = fontSize * 1.14;
   context.save();
   context.font = `700 ${fontSize}px "Mohr Rounded", "PingFang SC", sans-serif`;
   const lines = splitLines(context, text, maxBubbleWidth - horizontalPadding * 2);
   const contentWidth = Math.max(...lines.map((line) => context.measureText(line).width));
   const bubbleWidth = clamp(contentWidth + horizontalPadding * 2, fontSize * 4.4, maxBubbleWidth);
-  const bubbleHeight = Math.max(fontSize * 2.12, lines.length * lineHeight + fontSize * 0.78);
-  const centerX = targetWidth * (isLandscape ? 0.37 : 0.42);
+  const bubbleHeight = Math.max(fontSize * 2.12, lines.length * lineHeight + verticalPadding * 2);
+  const centerX = targetWidth * (isLandscape
+    ? (isTabletDevice ? 0.31 : 0.37)
+    : (isTabletDevice ? 0.36 : 0.42));
   const bottom = targetHeight - targetHeight * (isLandscape ? 0.1 : 0.09);
   const left = centerX - bubbleWidth / 2;
   const top = bottom - bubbleHeight;

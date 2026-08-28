@@ -342,6 +342,18 @@ button {
   overflow: hidden;
 }
 
+.app-shell.is-tablet-device .character-caption-bubble {
+  left: 36%;
+  max-width: min(calc(100% - 64px), 360px);
+  padding: 14px 22px 15px;
+  font-size: clamp(15px, 1.9vw, 18px);
+  line-height: 1.18;
+}
+
+.app-shell.is-tablet-device .character-caption-copy {
+  padding-inline: 2px;
+}
+
 .camera-stage:not(.is-live) .camera-output {
   opacity: 0;
   filter: blur(14px) saturate(0.86);
@@ -738,6 +750,13 @@ button {
   bottom: max(54px, 10%);
   max-width: min(48%, 520px);
   font-size: clamp(17px, 2.1vw, 23px);
+}
+
+.app-shell.is-tablet-device .camera-stage.is-landscape .character-caption-bubble {
+  left: 31%;
+  max-width: min(40%, 380px);
+  padding: 13px 22px 14px;
+  font-size: clamp(15px, 1.65vw, 18px);
 }
 
 .camera-stage.is-landscape .capture-hint,

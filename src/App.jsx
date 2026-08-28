@@ -71,7 +71,14 @@ import { getNextVisionThrottle, getThrottledInterval } from "./vision-performanc
 import { TypingIndicator } from "./components/amicro/typing-indicator.jsx";
 import { CharacterCaptionBubble } from "./components/character-caption-bubble.jsx";
 import { drawCharacterCaption } from "./character-caption.js";
-import { getUserSpeechBubblePlacement } from "./speech-bubble-layout.js";
+import {
+  getUserSpeechBubblePlacement,
+  getUserSpeechBubbleSizing,
+} from "./speech-bubble-layout.js";
+import {
+  getCharacterScaleMultiplier,
+  isTabletViewport,
+} from "./device-layout.js";
 import { useCameraSceneAnalysis } from "./use-camera-scene-analysis.js";
 
 const BASE_URL = import.meta.env.BASE_URL;
@@ -469,6 +476,15 @@ function getIsMobileDevice() {
   return Boolean(navigatorMobile || mobileUserAgent || iPadDesktopMode || window.matchMedia?.("(pointer: coarse)").matches);
 }
 
+function getIsTabletDevice() {
+  if (typeof window === "undefined") return false;
+  return isTabletViewport({
+    width: window.innerWidth,
+    height: window.innerHeight,
+    isMobileDevice: getIsMobileDevice(),
+  });
+}
+
 function getRiveRendererMode() {
   if (typeof window === "undefined") return "canvas";
   const userAgent = window.navigator.userAgent || "";
@@ -718,6 +734,7 @@ function applyRivePlaybackRate(instance, playbackRateRef) {
 
 function App() {
   const [isMobileDevice] = useState(getIsMobileDevice);
+  const [isTabletDevice, setIsTabletDevice] = useState(getIsTabletDevice);
   const [shareUrl] = useState(getShareUrl);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [day, setDay] = useState(() => getRandomValue(MAX_RANDOM_DAY));
@@ -943,6 +960,7 @@ function App() {
   useEffect(() => {
     const orientationQuery = window.matchMedia("(orientation: landscape)");
     const syncOrientation = () => {
+      setIsTabletDevice(getIsTabletDevice());
       if (!recordingRef.current) setFrameOrientation(getViewportOrientation());
     };
 
@@ -1569,12 +1587,14 @@ function App() {
       return;
     }
 
-    const isLandscape = targetWidth > targetHeight;
-    const fontSize = clamp(targetWidth * (isLandscape ? 0.021 : 0.038), 22, 31);
+    const {
+      fontSize,
+      maxBubbleWidth,
+      horizontalPadding,
+      verticalPadding,
+    } = getUserSpeechBubbleSizing({ targetWidth, targetHeight, isTabletDevice });
     context.save();
     context.font = `700 ${fontSize}px "Mohr Rounded", "PingFang SC", sans-serif`;
-    const maxBubbleWidth = clamp(targetWidth * (isLandscape ? 0.42 : 0.68), 330, 610);
-    const horizontalPadding = fontSize * 1.1;
     const maxTextWidth = maxBubbleWidth - horizontalPadding * 2;
     const lines = splitBubbleText(context, text, maxTextWidth);
     const measuredTextWidth = Math.max(
@@ -1588,7 +1608,7 @@ function App() {
     );
     const textWidth = bubbleWidth - horizontalPadding * 2;
     const lineHeight = fontSize * 1.12;
-    const bubbleHeight = Math.max(fontSize * 2.15, lines.length * lineHeight + fontSize * 0.92);
+    const bubbleHeight = Math.max(fontSize * 2.15, lines.length * lineHeight + verticalPadding * 2);
     const tailHeight = fontSize * 0.44;
     const tailWidth = fontSize * 0.8;
     const placement = getUserSpeechBubblePlacement({
@@ -1615,12 +1635,16 @@ function App() {
       const outputCanvas = outputCanvasRef.current;
       const displayScaleX = (outputCanvas?.clientWidth || targetWidth) / targetWidth;
       const displayScaleY = (outputCanvas?.clientHeight || targetHeight) / targetHeight;
+      const textDisplayScale = isTabletDevice
+        ? Math.min(displayScaleX, displayScaleY)
+        : displayScaleY;
       overlay.style.left = `${bubbleX * displayScaleX}px`;
       overlay.style.top = `${bubbleY * displayScaleY}px`;
       overlay.style.width = `${bubbleWidth * displayScaleX}px`;
       overlay.style.height = `${bubbleHeight * displayScaleY}px`;
       overlay.style.paddingInline = `${horizontalPadding * displayScaleX}px`;
-      overlay.style.fontSize = `${fontSize * displayScaleY}px`;
+      overlay.style.paddingBlock = isTabletDevice ? `${verticalPadding * displayScaleY}px` : "";
+      overlay.style.fontSize = `${fontSize * textDisplayScale}px`;
       overlay.style.setProperty("--speech-tail-x", `calc(50% + ${tailTipOffset * displayScaleX}px)`);
       overlay.style.setProperty("--speech-tail-width", `${tailWidth * displayScaleX}px`);
       overlay.style.setProperty("--speech-tail-height", `${tailHeight * displayScaleY}px`);
@@ -1658,7 +1682,7 @@ function App() {
     }
 
     context.restore();
-  }, [facingMode]);
+  }, [facingMode, isTabletDevice]);
 
   const drawCaption = useCallback((context, targetWidth, targetHeight) => {
     const activeCaption = CAPTION_MODES[captionMode];
@@ -1737,7 +1761,11 @@ function App() {
       const isDesktopLandscape = !isMobileDevice && targetWidth > targetHeight;
       const orientationMultiplier = targetWidth > targetHeight ? RIVE_LANDSCAPE_MULTIPLIER : 1;
       const welcomeMultiplier = isPortraitWelcome ? 1.45 : 1;
-      const preferredScale = baseScale * RIVE_DISPLAY_MULTIPLIER * orientationMultiplier * welcomeMultiplier;
+      const preferredScale = baseScale
+        * RIVE_DISPLAY_MULTIPLIER
+        * orientationMultiplier
+        * welcomeMultiplier
+        * getCharacterScaleMultiplier(isTabletDevice);
       const desktopSafeScale = (
         visibleTargetWidth * (1 + RIVE_LEFT_OVERFLOW_RATIO)
       ) / RIVE_VISIBLE_SOURCE.width;
@@ -1760,7 +1788,7 @@ function App() {
         riveHeight,
       );
     }
-  }, [isMobileDevice, riveReady]);
+  }, [isMobileDevice, isTabletDevice, riveReady]);
 
   const renderWelcomeFrame = useCallback(() => {
     const outputCanvas = outputCanvasRef.current;
@@ -1881,8 +1909,16 @@ function App() {
     drawFrontCameraPip(outputContext, targetWidth, targetHeight);
     if (includeCaption) drawCaption(outputContext, targetWidth, targetHeight);
     drawSpeechBubble(outputContext, targetWidth, targetHeight, includeSpeechText);
-    if (includeSpeechText) drawCharacterCaption(outputContext, sceneReaction?.text, targetWidth, targetHeight);
-  }, [drawCaption, drawFrontCameraPip, drawRiveLayer, drawSpeechBubble, facingMode, personLayer, sceneReaction]);
+    if (includeSpeechText) {
+      drawCharacterCaption(
+        outputContext,
+        sceneReaction?.text,
+        targetWidth,
+        targetHeight,
+        { isTabletDevice },
+      );
+    }
+  }, [drawCaption, drawFrontCameraPip, drawRiveLayer, drawSpeechBubble, facingMode, isTabletDevice, personLayer, sceneReaction]);
 
   useEffect(() => {
     let cancelled = false;
@@ -3190,7 +3226,7 @@ function App() {
   const activeRivePlaybackRate = cameraState === "ready" ? CAMERA_RIVE_PLAYBACK_RATE : COVER_RIVE_PLAYBACK_RATE;
 
   return (
-    <main className={`app-shell is-${frameOrientation} ${isMobileDevice ? "is-mobile-device" : "is-desktop-device"}`}>
+    <main className={`app-shell is-${frameOrientation} ${isMobileDevice ? "is-mobile-device" : "is-desktop-device"} ${isTabletDevice ? "is-tablet-device" : ""}`}>
       <section
         className={`camera-stage is-${frameOrientation} ${cameraState === "ready" ? "is-live" : ""} ${riveReady ? "is-rive-ready" : ""} ${characterSwitching ? "is-character-switching" : ""}`}
         data-frame-orientation={frameOrientation}

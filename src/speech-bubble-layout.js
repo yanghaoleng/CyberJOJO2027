@@ -2,6 +2,19 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+export function getUserSpeechBubbleSizing({ targetWidth, targetHeight, isTabletDevice = false }) {
+  const isLandscape = targetWidth > targetHeight;
+  const baseFontSize = clamp(targetWidth * (isLandscape ? 0.021 : 0.038), 22, 31);
+  const fontSize = baseFontSize * (isTabletDevice ? 0.78 : 1);
+  const baseMaxBubbleWidth = clamp(targetWidth * (isLandscape ? 0.42 : 0.68), 330, 610);
+  return {
+    fontSize,
+    maxBubbleWidth: baseMaxBubbleWidth * (isTabletDevice ? 0.84 : 1),
+    horizontalPadding: fontSize * (isTabletDevice ? 1.4 : 1.1),
+    verticalPadding: fontSize * (isTabletDevice ? 0.72 : 0.46),
+  };
+}
+
 export function getUserSpeechBubblePlacement({
   facingMode,
   anchor,
