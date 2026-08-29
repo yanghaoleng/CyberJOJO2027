@@ -10,7 +10,6 @@ const BASE_LAYOUT = {
   targetHeight: 1280,
   bubbleWidth: 280,
   bubbleHeight: 84,
-  tailWidth: 26,
   tailHeight: 14,
   fontSize: 28,
 };
@@ -25,10 +24,10 @@ test("rear-camera transcripts stay visible without a face anchor", () => {
   assert.equal(placement.placement, "rear-bottom-right");
   assert.ok(placement.bubbleX > BASE_LAYOUT.targetWidth * 0.7);
   assert.ok(placement.bubbleY > BASE_LAYOUT.targetHeight * 0.85);
-  assert.ok(placement.tailTipOffset > 0);
+  assert.equal(placement.tailTipOffset, 0);
 });
 
-test("front-camera transcripts still require and point toward a mouth anchor", () => {
+test("front-camera transcripts still require and position from a mouth anchor", () => {
   assert.equal(getUserSpeechBubblePlacement({
     ...BASE_LAYOUT,
     facingMode: "user",
@@ -41,7 +40,7 @@ test("front-camera transcripts still require and point toward a mouth anchor", (
     anchor: { x: 0.28, y: 0.58, eyeY: 0.48 },
   });
   assert.equal(placement.placement, "front-mouth");
-  assert.ok(placement.tailTipOffset < 0);
+  assert.equal(placement.tailTipOffset, 0);
 });
 
 test("tablet transcript bubbles use smaller type with larger internal breathing room", () => {

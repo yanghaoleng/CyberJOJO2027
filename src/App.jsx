@@ -76,7 +76,9 @@ import {
   getUserSpeechBubbleSizing,
 } from "./speech-bubble-layout.js";
 import {
+  CHARACTER_LEFT_OVERFLOW_RATIO,
   getCharacterScaleMultiplier,
+  getTabletThinkingIndicatorPosition,
   isTabletViewport,
 } from "./device-layout.js";
 import { useCameraSceneAnalysis } from "./use-camera-scene-analysis.js";
@@ -363,7 +365,6 @@ const RIVE_ANALYSIS_SIZE = { width: 600, height: 320 };
 const RIVE_SCALE = 0.512;
 const RIVE_DISPLAY_MULTIPLIER = 1.25;
 const RIVE_LANDSCAPE_MULTIPLIER = 1.35;
-const RIVE_LEFT_OVERFLOW_RATIO = 0.045;
 const CAPTION_VERTICAL_OFFSET_RATIO = 0.02;
 const DEFAULT_RIVE_ANIMATION = "Start_Dial";
 const SECOND_RIVE_ANIMATION = "TalkingEmotion_Think";
@@ -590,22 +591,16 @@ function roundedRectPath(context, x, y, width, height, radius) {
   context.closePath();
 }
 
-function drawSpeechTriangle(context, {
+function drawSpeechSemicircle(context, {
   centerX,
   edgeY,
   height,
   width,
-  tipOffset,
-  direction = "down",
 }) {
-  const tipX = centerX + tipOffset;
-  const tipY = edgeY + (direction === "up" ? -height : height);
   const halfWidth = width / 2;
 
   context.beginPath();
-  context.moveTo(tipX - halfWidth, edgeY);
-  context.lineTo(tipX, tipY);
-  context.lineTo(tipX + halfWidth, edgeY);
+  context.ellipse(centerX, edgeY, halfWidth, height, 0, 0, Math.PI);
   context.closePath();
   context.fill();
 }
@@ -1609,8 +1604,8 @@ function App() {
     const textWidth = bubbleWidth - horizontalPadding * 2;
     const lineHeight = fontSize * 1.12;
     const bubbleHeight = Math.max(fontSize * 2.15, lines.length * lineHeight + verticalPadding * 2);
-    const tailHeight = fontSize * 0.44;
-    const tailWidth = fontSize * 0.8;
+    const tailHeight = fontSize * 0.4;
+    const tailWidth = tailHeight * 2;
     const placement = getUserSpeechBubblePlacement({
       facingMode,
       anchor,
@@ -1618,7 +1613,6 @@ function App() {
       targetHeight,
       bubbleWidth,
       bubbleHeight,
-      tailWidth,
       tailHeight,
       fontSize,
     });
@@ -1627,7 +1621,7 @@ function App() {
       context.restore();
       return;
     }
-    const { bubbleX, bubbleY, tailTipOffset } = placement;
+    const { bubbleX, bubbleY } = placement;
     const left = bubbleX - bubbleWidth / 2;
     const top = bubbleY - bubbleHeight / 2;
     const bottom = top + bubbleHeight;
@@ -1645,7 +1639,6 @@ function App() {
       overlay.style.paddingInline = `${horizontalPadding * displayScaleX}px`;
       overlay.style.paddingBlock = isTabletDevice ? `${verticalPadding * displayScaleY}px` : "";
       overlay.style.fontSize = `${fontSize * textDisplayScale}px`;
-      overlay.style.setProperty("--speech-tail-x", `calc(50% + ${tailTipOffset * displayScaleX}px)`);
       overlay.style.setProperty("--speech-tail-width", `${tailWidth * displayScaleX}px`);
       overlay.style.setProperty("--speech-tail-height", `${tailHeight * displayScaleY}px`);
       overlay.hidden = includeCanvasText;
@@ -1657,12 +1650,11 @@ function App() {
     context.fillStyle = "#ffffff";
     context.shadowColor = "rgba(0, 0, 0, 0.2)";
     context.shadowBlur = 14;
-    drawSpeechTriangle(context, {
+    drawSpeechSemicircle(context, {
       centerX: bubbleX,
       edgeY: bottom - 1,
       height: tailHeight,
       width: tailWidth,
-      tipOffset: tailTipOffset,
     });
 
     roundedRectPath(context, left, top, bubbleWidth, bubbleHeight, bubbleHeight / 2);
@@ -1767,14 +1759,14 @@ function App() {
         * welcomeMultiplier
         * getCharacterScaleMultiplier(isTabletDevice);
       const desktopSafeScale = (
-        visibleTargetWidth * (1 + RIVE_LEFT_OVERFLOW_RATIO)
+        visibleTargetWidth * (1 + CHARACTER_LEFT_OVERFLOW_RATIO)
       ) / RIVE_VISIBLE_SOURCE.width;
       const scale = isDesktopLandscape
         ? Math.min(preferredScale, desktopSafeScale)
         : preferredScale;
       const riveWidth = RIVE_VISIBLE_SOURCE.width * scale;
       const riveHeight = RIVE_VISIBLE_SOURCE.height * scale;
-      const riveX = -visibleTargetWidth * RIVE_LEFT_OVERFLOW_RATIO + characterOffsetXRef.current;
+      const riveX = -visibleTargetWidth * CHARACTER_LEFT_OVERFLOW_RATIO + characterOffsetXRef.current;
       const riveY = targetHeight - riveHeight - (isPortraitWelcome ? targetHeight * 0.12 : 0);
       outputContext.drawImage(
         riveCanvas,
@@ -3224,6 +3216,9 @@ function App() {
   const formattedRecordingTime = `${String(Math.floor(recordingTime / 1000)).padStart(2, "0")}.${Math.floor((recordingTime % 1000) / 100)}`;
   const readyForCamera = engineState !== "error";
   const activeRivePlaybackRate = cameraState === "ready" ? CAMERA_RIVE_PLAYBACK_RATE : COVER_RIVE_PLAYBACK_RATE;
+  const thinkingIndicatorPosition = isTabletDevice
+    ? getTabletThinkingIndicatorPosition(frameOrientation)
+    : null;
 
   return (
     <main className={`app-shell is-${frameOrientation} ${isMobileDevice ? "is-mobile-device" : "is-desktop-device"} ${isTabletDevice ? "is-tablet-device" : ""}`}>
@@ -3302,7 +3297,16 @@ function App() {
           <CharacterCaptionBubble reaction={sceneReaction} canvasRendered={recording} />
 
           {cameraState === "ready" && aiState === "thinking" && (
-            <div className="character-thinking-indicator" data-character={activeCharacter}>
+            <div
+              className="character-thinking-indicator"
+              data-character={activeCharacter}
+              style={thinkingIndicatorPosition
+                ? {
+                    left: `${thinkingIndicatorPosition.left}%`,
+                    bottom: `${thinkingIndicatorPosition.bottom}%`,
+                  }
+                : undefined}
+            >
               <TypingIndicator />
             </div>
           )}

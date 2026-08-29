@@ -22,12 +22,10 @@ export function getUserSpeechBubblePlacement({
   targetHeight,
   bubbleWidth,
   bubbleHeight,
-  tailWidth,
   tailHeight,
   fontSize,
 }) {
   const isLandscape = targetWidth > targetHeight;
-  const maxTailOffset = Math.max(0, bubbleWidth / 2 - tailWidth);
 
   if (facingMode === "environment") {
     const edgeMargin = isLandscape ? 22 : 18;
@@ -35,7 +33,7 @@ export function getUserSpeechBubblePlacement({
     return {
       bubbleX: targetWidth - bubbleWidth / 2 - edgeMargin,
       bubbleY: targetHeight - bubbleHeight / 2 - tailHeight - bottomMargin,
-      tailTipOffset: maxTailOffset,
+      tailTipOffset: 0,
       placement: "rear-bottom-right",
     };
   }
@@ -62,7 +60,7 @@ export function getUserSpeechBubblePlacement({
       captionSafeY + bubbleHeight / 2,
       targetHeight - bubbleHeight / 2 - tailHeight - 30,
     ),
-    tailTipOffset: clamp(mouthX - bubbleX, -maxTailOffset, maxTailOffset),
+    tailTipOffset: 0,
     placement: "front-mouth",
   };
 }
