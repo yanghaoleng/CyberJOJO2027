@@ -1240,6 +1240,11 @@ button {
   scrollbar-width: none;
 }
 
+.app-shell.is-mobile-device:not(.is-tablet-device).is-portrait .media-library-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
 .media-library-grid::-webkit-scrollbar {
   display: none;
 }
@@ -1280,17 +1285,7 @@ button {
   object-fit: cover;
 }
 
-.media-library-card.is-photo {
-  align-self: start;
-}
-
-.media-library-card.is-photo .media-library-visual {
-  aspect-ratio: auto;
-  display: block;
-}
-
 .media-library-card.is-photo .media-library-visual img {
-  height: auto;
   object-fit: contain;
 }
 
