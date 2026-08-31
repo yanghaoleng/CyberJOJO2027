@@ -3635,7 +3635,7 @@ function App() {
               </div>
               <button type="button" onClick={savePreview}>
                 <DownloadSimple size={20} weight="bold" />
-                保存{mediaPreview.type === "photo" ? "照片" : "视频"}
+                分享
               </button>
             </div>
           </div>

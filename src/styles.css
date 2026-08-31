@@ -1280,6 +1280,20 @@ button {
   object-fit: cover;
 }
 
+.media-library-card.is-photo {
+  align-self: start;
+}
+
+.media-library-card.is-photo .media-library-visual {
+  aspect-ratio: auto;
+  display: block;
+}
+
+.media-library-card.is-photo .media-library-visual img {
+  height: auto;
+  object-fit: contain;
+}
+
 .media-library-visual > svg {
   position: absolute;
   color: #fff;
