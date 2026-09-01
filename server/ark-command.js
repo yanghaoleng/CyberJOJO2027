@@ -78,9 +78,12 @@ export function getArkConfig(env = process.env) {
   return {
     apiKey: env.VOLC_ARK_API_KEY,
     visionApiKey: env.VOLC_ARK_VISION_API_KEY || env.VOLC_ARK_API_KEY,
+    summaryApiKey: env.VOLC_ARK_SUMMARY_API_KEY || env.VOLC_ARK_VISION_API_KEY || env.VOLC_ARK_API_KEY,
     model,
     visionModel: env.VOLC_ARK_VISION_MODEL || "doubao-seed-2-0-mini-260428",
     visionFallbackModel: env.VOLC_ARK_VISION_FALLBACK_MODEL || model,
+    summaryModel: env.VOLC_ARK_SUMMARY_MODEL || env.VOLC_ARK_VISION_MODEL || "doubao-seed-2-0-mini-260428",
+    summaryFallbackModel: env.VOLC_ARK_SUMMARY_FALLBACK_MODEL || env.VOLC_ARK_VISION_FALLBACK_MODEL || model,
     endpoint: env.VOLC_ARK_ENDPOINT || "https://ark.cn-beijing.volces.com/api/v3/responses",
   };
 }

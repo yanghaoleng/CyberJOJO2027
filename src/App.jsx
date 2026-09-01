@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import {
   ArrowClockwise,
   ArrowsLeftRight,
-  Camera,
   CaretDown,
+  ChatCircleText,
   Check,
   DownloadSimple,
   ImagesSquare,
   LockSimple,
+  MagnifyingGlass,
   PictureInPicture,
   PlayCircle,
   X,
@@ -58,6 +59,20 @@ import {
   loadMediaCaptures,
   storeMediaCapture,
 } from "./media-library.js";
+import {
+  CONVERSATION_ENTRY_LIMIT,
+  createConversationEntry,
+  loadConversationEntries,
+  loadConversationSummaries,
+  storeConversationEntry,
+  storeConversationSummary,
+} from "./conversation-journal.js";
+import {
+  createConversationFingerprint,
+  groupConversationEntriesByDay,
+  groupMediaCapturesByDay,
+} from "./daily-timeline.js";
+import { getContextualCaption } from "./contextual-caption.js";
 import { createShutterSamples } from "./camera-feedback.js";
 import { getFrontCameraPipRect, hasLiveVideoTrack } from "./dual-camera.js";
 import {
@@ -659,6 +674,31 @@ function formatCaptureDate(createdAt) {
   }).format(new Date(createdAt));
 }
 
+function formatTimelineDay(dayKey) {
+  const [year, month, day] = String(dayKey).split("-").map(Number);
+  const date = new Date(year, month - 1, day, 12);
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 12);
+  const yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
+  const prefix = dayKey === todayKey ? "今天" : dayKey === yesterdayKey ? "昨天" : "";
+  const calendar = new Intl.DateTimeFormat("zh-CN", {
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  }).format(date);
+  return prefix ? `${prefix} · ${calendar}` : `${year}年${calendar}`;
+}
+
+function getConversationSummaryApiUrl() {
+  const configured = import.meta.env.VITE_JOCAM_SUMMARY_URL;
+  if (configured) return configured;
+  if (["localhost", "127.0.0.1"].includes(window.location.hostname)) {
+    return "http://127.0.0.1:8787/conversation-summary";
+  }
+  return `${window.location.origin}/api/conversation-summary`;
+}
+
 function formatMediaDuration(durationMs) {
   const totalSeconds = Math.max(0, Math.round(Number(durationMs || 0) / 1_000));
   const minutes = Math.floor(totalSeconds / 60);
@@ -735,7 +775,6 @@ function App() {
   const [day, setDay] = useState(() => getRandomValue(MAX_RANDOM_DAY));
   const [captionMode, setCaptionMode] = useState("together");
   const paddedDay = String(day).padStart(2, "0");
-  const caption = CAPTION_MODES[captionMode];
 
   const videoRef = useRef(null);
   const pipVideoRef = useRef(null);
@@ -792,6 +831,7 @@ function App() {
   const recordingStartedAtRef = useRef(0);
   const recordingDayRef = useRef(paddedDay);
   const recordingCaptionModeRef = useRef(captionMode);
+  const recordingCaptionRef = useRef(null);
   const recordingIntervalRef = useRef(null);
   const longPressTimerRef = useRef(null);
   const pointerDownRef = useRef(false);
@@ -801,6 +841,7 @@ function App() {
   const cameraReadyRef = useRef(false);
   const mediaPreviewRef = useRef(null);
   const mediaLibraryRef = useRef([]);
+  const conversationEntriesRef = useRef([]);
   const mediaLibraryOpenRef = useRef(false);
   const mediaLibraryGridRef = useRef(null);
   const mediaLibraryCloseTimerRef = useRef(null);
@@ -904,6 +945,9 @@ function App() {
   const [mediaPreviewClosing, setMediaPreviewClosing] = useState(false);
   const [mediaPreviewDirection, setMediaPreviewDirection] = useState("open");
   const [mediaLibrary, setMediaLibrary] = useState([]);
+  const [conversationEntries, setConversationEntries] = useState([]);
+  const [conversationSummaries, setConversationSummaries] = useState({});
+  const [conversationSummaryStates, setConversationSummaryStates] = useState({});
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
   const [mediaLibraryClosing, setMediaLibraryClosing] = useState(false);
   const [mediaLibraryDragY, setMediaLibraryDragY] = useState(0);
@@ -919,6 +963,10 @@ function App() {
   useEffect(() => {
     mediaLibraryRef.current = mediaLibrary;
   }, [mediaLibrary]);
+
+  useEffect(() => {
+    conversationEntriesRef.current = conversationEntries;
+  }, [conversationEntries]);
 
   useEffect(() => {
     mediaLibraryOpenRef.current = mediaLibraryOpen;
@@ -950,6 +998,43 @@ function App() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([loadConversationEntries(), loadConversationSummaries()]).then(([entries, summaries]) => {
+      if (cancelled) return;
+      setConversationEntries((current) => {
+        const byId = new Map([...entries, ...current].map((entry) => [entry.id, entry]));
+        const next = [...byId.values()]
+          .sort((left, right) => Number(left.createdAt || 0) - Number(right.createdAt || 0))
+          .slice(-CONVERSATION_ENTRY_LIMIT);
+        conversationEntriesRef.current = next;
+        return next;
+      });
+      setConversationSummaries(Object.fromEntries(
+        summaries.filter((summary) => summary?.dayKey && summary?.summary)
+          .map((summary) => [summary.dayKey, summary]),
+      ));
+    }).catch((error) => {
+      console.warn("Local conversation journal unavailable", error);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const recordConversationMessage = useCallback((message) => {
+    const entry = createConversationEntry(message);
+    if (!entry) return;
+    setConversationEntries((current) => {
+      const next = [...current, entry].slice(-CONVERSATION_ENTRY_LIMIT);
+      conversationEntriesRef.current = next;
+      return next;
+    });
+    storeConversationEntry(entry).catch((error) => {
+      console.warn("Conversation message could not be saved locally", error);
+    });
   }, []);
 
   useEffect(() => {
@@ -1313,13 +1398,18 @@ function App() {
   const handleSceneReaction = useCallback((reaction) => {
     const action = VOICE_ACTIONS[reaction.action];
     if (action) rivePlayAnimationRef.current?.(action.animation);
+    recordConversationMessage({
+      role: "assistant",
+      text: reaction.text,
+      character: reaction.character || activeCharacter,
+    });
     if (reaction.audio) {
       enqueueSynthesizedSpeech({
         ...reaction,
         opening: false,
       });
     }
-  }, [enqueueSynthesizedSpeech]);
+  }, [activeCharacter, enqueueSynthesizedSpeech, recordConversationMessage]);
 
   const { visionState: sceneVisionState, sceneReaction } = useCameraSceneAnalysis({
     enabled: cameraState === "ready" && !recording && !mediaPreview && !mediaLibraryOpen,
@@ -1327,6 +1417,94 @@ function App() {
     activeCharacter,
     onReaction: handleSceneReaction,
   });
+
+  const contextualCaption = useMemo(() => getContextualCaption({
+    gesture: activeGestureEffect,
+    sceneReaction,
+    characterLabel: CHARACTERS[activeCharacter].label,
+    fallbackMode: captionMode,
+    day,
+  }), [activeCharacter, activeGestureEffect, captionMode, day, sceneReaction]);
+  const mediaTimeline = useMemo(() => groupMediaCapturesByDay(mediaLibrary), [mediaLibrary]);
+  const conversationEntriesByDay = useMemo(
+    () => groupConversationEntriesByDay(conversationEntries),
+    [conversationEntries],
+  );
+
+  useEffect(() => {
+    if (!mediaLibraryOpen) return undefined;
+    const staleDays = mediaTimeline.map(({ dayKey }) => {
+      const entries = (conversationEntriesByDay.get(dayKey) || []).slice(-60);
+      if (!entries.length) return null;
+      const fingerprint = createConversationFingerprint(entries);
+      return conversationSummaries[dayKey]?.fingerprint === fingerprint
+        ? null
+        : { dayKey, entries, fingerprint };
+    }).filter(Boolean).slice(0, 14);
+    if (!staleDays.length) return undefined;
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setConversationSummaryStates((current) => ({
+        ...current,
+        ...Object.fromEntries(staleDays.map(({ dayKey }) => [dayKey, "loading"])),
+      }));
+      try {
+        const response = await fetch(getConversationSummaryApiUrl(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            days: staleDays.map(({ dayKey, entries }) => ({
+              dayKey,
+              entries: entries.map(({ role, text, character, createdAt }) => ({
+                role,
+                text,
+                character,
+                createdAt,
+              })),
+            })),
+          }),
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`Conversation summary request failed (${response.status})`);
+        const result = await response.json();
+        if (!result?.ok || !Array.isArray(result.summaries)) {
+          throw new Error("Conversation summary response was not successful");
+        }
+        const returnedByDay = new Map(result.summaries.map((summary) => [summary.dayKey, summary.summary]));
+        const records = staleDays.map(({ dayKey, fingerprint }) => ({
+          dayKey,
+          fingerprint,
+          summary: String(returnedByDay.get(dayKey) || "").trim().slice(0, 120),
+          updatedAt: Date.now(),
+          usage: result.usage || null,
+        })).filter(({ summary }) => summary);
+        setConversationSummaries((current) => ({
+          ...current,
+          ...Object.fromEntries(records.map((record) => [record.dayKey, record])),
+        }));
+        setConversationSummaryStates((current) => ({
+          ...current,
+          ...Object.fromEntries(staleDays.map(({ dayKey }) => [
+            dayKey,
+            returnedByDay.has(dayKey) ? "ready" : "error",
+          ])),
+        }));
+        await Promise.allSettled(records.map(storeConversationSummary));
+      } catch (error) {
+        if (error.name === "AbortError") return;
+        console.warn("Daily conversation summary unavailable", error);
+        setConversationSummaryStates((current) => ({
+          ...current,
+          ...Object.fromEntries(staleDays.map(({ dayKey }) => [dayKey, "error"])),
+        }));
+      }
+    }, 420);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [conversationEntriesByDay, conversationSummaries, mediaLibraryOpen, mediaTimeline]);
 
   const stopVoiceSession = useCallback(() => {
     voiceIntentionalCloseRef.current = true;
@@ -1417,6 +1595,13 @@ function App() {
         if (message.type === "transcript") {
           const text = String(message.text || "").trim().slice(0, 42);
           if (!text) return;
+          if (message.final) {
+            recordConversationMessage({
+              role: "user",
+              text,
+              character: activeCharacter,
+            });
+          }
           speechTextRef.current = text;
           setSpeechText(text);
           if (speechClearTimerRef.current) window.clearTimeout(speechClearTimerRef.current);
@@ -1443,6 +1628,13 @@ function App() {
           return;
         }
         if (message.type === "speech") {
+          if (!message.opening) {
+            recordConversationMessage({
+              role: "assistant",
+              text: message.text,
+              character: message.character || activeCharacter,
+            });
+          }
           enqueueSynthesizedSpeech(message);
           return;
         }
@@ -1459,7 +1651,7 @@ function App() {
       console.warn("Voice session unavailable", error);
       setVoiceState("unavailable");
     }
-  }, [activeCharacter, enqueueSynthesizedSpeech, scheduleAutoCapture, showToast, stopVoiceSession]);
+  }, [activeCharacter, enqueueSynthesizedSpeech, recordConversationMessage, scheduleAutoCapture, showToast, stopVoiceSession]);
 
   const updateMask = useCallback((result) => {
     const masks = result.confidenceMasks;
@@ -1677,7 +1869,9 @@ function App() {
   }, [facingMode, isTabletDevice]);
 
   const drawCaption = useCallback((context, targetWidth, targetHeight) => {
-    const activeCaption = CAPTION_MODES[captionMode];
+    const activeCaption = recordingRef.current && recordingCaptionRef.current
+      ? recordingCaptionRef.current
+      : contextualCaption;
     const centerX = targetWidth / 2;
     const isLandscape = targetHeight < targetWidth;
     const portraitCaptionScale = isLandscape ? 1 : 1.25;
@@ -1700,16 +1894,34 @@ function App() {
     context.font = labelFont;
     context.lineWidth = 10 * portraitCaptionScale;
     context.strokeStyle = "rgba(20, 22, 15, 0.52)";
-    context.strokeText(activeCaption.prefix, centerX, firstLineY);
+    context.strokeText(activeCaption.firstLine, centerX, firstLineY);
     context.fillStyle = "#f8f8f1";
-    context.fillText(activeCaption.prefix, centerX, firstLineY);
+    context.fillText(activeCaption.firstLine, centerX, firstLineY);
+
+    if (activeCaption.kind === "subject") {
+      const subjectFontSize = (isLandscape ? 56 : 52) * portraitCaptionScale;
+      let subjectFont = `700 ${subjectFontSize}px "Mohr Rounded", "PingFang SC", sans-serif`;
+      context.font = subjectFont;
+      const measuredWidth = context.measureText(activeCaption.secondLine).width;
+      if (measuredWidth > targetWidth * 0.86) {
+        subjectFont = `700 ${subjectFontSize * ((targetWidth * 0.86) / measuredWidth)}px "Mohr Rounded", "PingFang SC", sans-serif`;
+        context.font = subjectFont;
+      }
+      context.lineWidth = 12 * portraitCaptionScale;
+      context.strokeStyle = "rgba(20, 22, 15, 0.52)";
+      context.strokeText(activeCaption.secondLine, centerX, dayLineY);
+      context.fillStyle = "#ffd84d";
+      context.fillText(activeCaption.secondLine, centerX, dayLineY);
+      context.restore();
+      return;
+    }
 
     context.textAlign = "left";
     context.font = dayLabelFont;
     const dayPrefixWidth = context.measureText(activeCaption.dayPrefix).width;
     const suffixWidth = context.measureText(activeCaption.suffix).width;
     context.font = numberFont;
-    const numberWidth = context.measureText(paddedDay).width;
+    const numberWidth = context.measureText(activeCaption.day).width;
     let cursorX = centerX - ((dayPrefixWidth + numberWidth + suffixWidth + gap * 2) / 2);
 
     const drawDayLabel = (copy) => {
@@ -1725,15 +1937,15 @@ function App() {
     drawDayLabel(activeCaption.dayPrefix);
     cursorX += gap;
     context.font = numberFont;
-    context.lineWidth = (captionMode === "streak" ? 14 : 11) * portraitCaptionScale;
-    context.strokeStyle = captionMode === "streak" ? "#fffdf8" : "rgba(20, 22, 15, 0.52)";
-    context.strokeText(paddedDay, cursorX, dayLineY);
-    context.fillStyle = captionMode === "streak" ? "#ef3f37" : "#ffd84d";
-    context.fillText(paddedDay, cursorX, dayLineY);
+    context.lineWidth = (activeCaption.mode === "streak" ? 14 : 11) * portraitCaptionScale;
+    context.strokeStyle = activeCaption.mode === "streak" ? "#fffdf8" : "rgba(20, 22, 15, 0.52)";
+    context.strokeText(activeCaption.day, cursorX, dayLineY);
+    context.fillStyle = activeCaption.mode === "streak" ? "#ef3f37" : "#ffd84d";
+    context.fillText(activeCaption.day, cursorX, dayLineY);
     cursorX += numberWidth + gap;
     drawDayLabel(activeCaption.suffix);
     context.restore();
-  }, [captionMode, paddedDay]);
+  }, [contextualCaption]);
 
   const drawRiveLayer = useCallback((outputContext, outputCanvas, welcomeMode = false, riveCanvasOverride = null) => {
     const riveCanvas = riveCanvasOverride || riveCanvasRef.current;
@@ -3053,12 +3265,13 @@ function App() {
         blob,
         day: paddedDay,
         captionMode,
+        captionText: contextualCaption.text,
         source: reason,
       }, {
         automatic,
       });
     }, "image/jpeg", 0.94);
-  }, [addMediaCapture, cameraState, captionMode, paddedDay, playShutterSound, renderFrame, showToast]);
+  }, [addMediaCapture, cameraState, captionMode, contextualCaption.text, paddedDay, playShutterSound, renderFrame, showToast]);
 
   useEffect(() => {
     takePhotoRef.current = takePhoto;
@@ -3141,6 +3354,7 @@ function App() {
           blob,
           day: recordingDayRef.current,
           captionMode: recordingCaptionModeRef.current,
+          captionText: recordingCaptionRef.current?.text,
           source: "manual",
           durationMs: Math.max(0, performance.now() - recordingStartedAtRef.current),
         });
@@ -3148,6 +3362,7 @@ function App() {
 
       recordingDayRef.current = paddedDay;
       recordingCaptionModeRef.current = captionMode;
+      recordingCaptionRef.current = contextualCaption;
       recordingStartedAtRef.current = performance.now();
       recordingRef.current = true;
       setRecording(true);
@@ -3162,7 +3377,7 @@ function App() {
       console.warn("Recording failed", error);
       showToast("录像启动失败，可以先拍照");
     }
-  }, [addMediaCapture, captionMode, paddedDay, playInterfaceSound, showToast, stopRecording]);
+  }, [addMediaCapture, captionMode, contextualCaption, paddedDay, playInterfaceSound, showToast, stopRecording]);
 
   const onShutterPointerDown = useCallback((event) => {
     if (cameraState !== "ready") return;
@@ -3203,11 +3418,12 @@ function App() {
     if (!mediaPreview) return;
     const previewDay = mediaPreview.day || paddedDay;
     const previewCaptionMode = mediaPreview.captionMode || captionMode;
+    const previewCaptionText = mediaPreview.captionText || getCaptionText(previewCaptionMode, previewDay);
     const extension = mediaPreview.type === "photo" ? "jpg" : getFileExtension(mediaPreview.blob.type);
     await saveBlob(
       mediaPreview.blob,
       `我和叫叫-第${previewDay}天-${getTimestamp()}.${extension}`,
-      getCaptionText(previewCaptionMode, previewDay),
+      previewCaptionText,
     );
     playInterfaceSound("success");
   }, [captionMode, mediaPreview, paddedDay, playInterfaceSound]);
@@ -3323,27 +3539,31 @@ function App() {
 
           {cameraState === "ready" && (
             <button
-              className={`live-caption is-${captionMode} ${recording ? "is-canvas-rendered" : ""}`}
+              className={`live-caption is-${contextualCaption.mode} ${recording ? "is-canvas-rendered" : ""}`}
               type="button"
               disabled={recording}
               onClick={switchCaption}
-              aria-label={`${getCaptionText(captionMode, day)}，点击切换字幕和数值`}
+              aria-label={`${contextualCaption.text}，点击切换默认字幕和数值`}
             >
-              <span className="caption-line caption-line-copy">{caption.prefix}</span>
-              <span className="caption-line caption-line-day">
-                <span>{caption.dayPrefix}</span>
-                <Calligraph
-                  className="reading-day"
-                  variant="number"
-                  animation="bouncy"
-                  initial
-                  trend={1}
-                  aria-label={`${day}`}
-                >
-                  {paddedDay}
-                </Calligraph>
-                <span>{caption.suffix}</span>
-              </span>
+              <span className="caption-line caption-line-copy">{contextualCaption.firstLine}</span>
+              {contextualCaption.kind === "subject" ? (
+                <span className="caption-line caption-line-subject">{contextualCaption.secondLine}</span>
+              ) : (
+                <span className="caption-line caption-line-day">
+                  <span>{contextualCaption.dayPrefix}</span>
+                  <Calligraph
+                    className="reading-day"
+                    variant="number"
+                    animation="bouncy"
+                    initial
+                    trend={1}
+                    aria-label={`${day}`}
+                  >
+                    {contextualCaption.day}
+                  </Calligraph>
+                  <span>{contextualCaption.suffix}</span>
+                </span>
+              )}
             </button>
           )}
 
@@ -3489,7 +3709,7 @@ function App() {
               {cameraState === "opening" ? (
                 <><span className="button-loader" />正在打开相机</>
               ) : (
-                <><Camera size={21} weight="fill" />{cameraState === "error" ? "重新进入相机" : "进入相机"}</>
+                <><MagnifyingGlass size={21} weight="bold" />进入赛博叫叫2027</>
               )}
             </button>
 
@@ -3508,7 +3728,7 @@ function App() {
             )}
             <p className="privacy-note">
               <LockSimple size={14} weight="fill" />
-              <span>AI 识物会间歇发送压缩画面给豆包分析；本站不保存原图，语音转写也不保存</span>
+              <span>AI 识物会发送压缩画面；对话文字仅在本机留作日记，并发送给豆包 Mini 生成概要；本站不保存原图和原始音频</span>
             </p>
           </div>
         )}
@@ -3537,50 +3757,81 @@ function App() {
               </button>
             </header>
             {mediaLibrary.length ? (
-              <div className="media-library-grid" ref={mediaLibraryGridRef}>
-                {mediaLibrary.map((item) => (
-                  <button
-                    className={`media-library-card is-${item.type}`}
-                    type="button"
-                    key={item.id}
-                    onClick={() => openMediaPreview(item)}
-                    aria-label={`打开${item.type === "photo" ? "照片" : "短视频"}，${formatCaptureDate(item.createdAt)}`}
-                  >
-                    <span
-                      className="media-library-visual"
-                      style={{
-                        viewTransitionName: mediaPreview?.id === item.id
-                          ? "none"
-                          : getMediaTransitionName(item.id),
-                      }}
-                    >
-                      {item.type === "photo" ? (
-                        <img src={item.url} alt="" />
-                      ) : (
-                        <video
-                          src={item.url}
-                          muted
-                          playsInline
-                          preload="metadata"
-                          aria-hidden="true"
-                          onLoadedMetadata={(event) => {
-                            const durationMs = Math.round((event.currentTarget.duration || 0) * 1_000);
-                            if (!durationMs) return;
-                            setVideoDurations((current) => current[item.id] === durationMs
-                              ? current
-                              : { ...current, [item.id]: durationMs });
-                          }}
-                        />
-                      )}
-                      {item.type === "video" && (
-                        <span className="media-video-badge" aria-hidden="true">
-                          <PlayCircle size={15} weight="fill" />
-                          <span>{formatMediaDuration(item.durationMs || videoDurations[item.id])}</span>
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                ))}
+              <div className="media-library-timeline" ref={mediaLibraryGridRef}>
+                {mediaTimeline.map(({ dayKey, items }, dayIndex) => {
+                  const entries = conversationEntriesByDay.get(dayKey) || [];
+                  const summaryRecord = conversationSummaries[dayKey];
+                  const summaryState = conversationSummaryStates[dayKey] || "idle";
+                  const summaryText = summaryRecord?.summary
+                    || (entries.length
+                      ? summaryState === "error"
+                        ? "这次没能整理出来，下次打开相册会再试一次。"
+                        : "叫叫正在回想这一天聊过的内容…"
+                      : "这一天只留下了影像，还没有对话记录。");
+                  return (
+                    <section className="media-timeline-day" key={dayKey} style={{ "--timeline-day-index": dayIndex }}>
+                      <header className="media-timeline-day-header">
+                        <span className="media-timeline-marker" aria-hidden="true" />
+                        <div>
+                          <strong>{formatTimelineDay(dayKey)}</strong>
+                          <span>{items.length} 个作品</span>
+                        </div>
+                      </header>
+                      <div className="media-day-grid">
+                        {items.map((item) => (
+                          <button
+                            className={`media-library-card is-${item.type}`}
+                            type="button"
+                            key={item.id}
+                            onClick={() => openMediaPreview(item)}
+                            aria-label={`打开${item.type === "photo" ? "照片" : "短视频"}，${formatCaptureDate(item.createdAt)}`}
+                          >
+                            <span
+                              className="media-library-visual"
+                              style={{
+                                viewTransitionName: mediaPreview?.id === item.id
+                                  ? "none"
+                                  : getMediaTransitionName(item.id),
+                              }}
+                            >
+                              {item.type === "photo" ? (
+                                <img src={item.url} alt="" />
+                              ) : (
+                                <video
+                                  src={item.url}
+                                  muted
+                                  playsInline
+                                  preload="metadata"
+                                  aria-hidden="true"
+                                  onLoadedMetadata={(event) => {
+                                    const durationMs = Math.round((event.currentTarget.duration || 0) * 1_000);
+                                    if (!durationMs) return;
+                                    setVideoDurations((current) => current[item.id] === durationMs
+                                      ? current
+                                      : { ...current, [item.id]: durationMs });
+                                  }}
+                                />
+                              )}
+                              {item.type === "video" && (
+                                <span className="media-video-badge" aria-hidden="true">
+                                  <PlayCircle size={15} weight="fill" />
+                                  <span>{formatMediaDuration(item.durationMs || videoDurations[item.id])}</span>
+                                </span>
+                              )}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className={`media-day-summary is-${summaryState}`} aria-live={summaryState === "loading" ? "polite" : "off"}>
+                        <ChatCircleText size={20} weight="duotone" aria-hidden="true" />
+                        <div>
+                          <span>当天对话</span>
+                          <p>{summaryText}</p>
+                        </div>
+                      </div>
+                    </section>
+                  );
+                })}
               </div>
             ) : (
               <div className="media-library-empty">
@@ -3616,7 +3867,7 @@ function App() {
                   {mediaPreview.type === "photo" ? (
                     <img
                       src={mediaPreview.url}
-                      alt={getCaptionText(mediaPreview.captionMode || captionMode, mediaPreview.day || paddedDay)}
+                      alt={mediaPreview.captionText || getCaptionText(mediaPreview.captionMode || captionMode, mediaPreview.day || paddedDay)}
                     />
                   ) : (
                     <video src={mediaPreview.url} playsInline controls autoPlay loop />
@@ -3630,7 +3881,7 @@ function App() {
             <div className="preview-actions">
               <div>
                 <strong>{mediaPreview.type === "photo" ? "这一刻拍好了" : "这一段录好了"}</strong>
-                <span>{getCaptionText(mediaPreview.captionMode || captionMode, mediaPreview.day || paddedDay)}</span>
+                <span>{mediaPreview.captionText || getCaptionText(mediaPreview.captionMode || captionMode, mediaPreview.day || paddedDay)}</span>
                 <small>{formatCaptureDate(mediaPreview.createdAt)}{mediaPreview.type === "photo" ? " · 左右滑切换，上下滑返回" : ""}</small>
               </div>
               <button type="button" onClick={savePreview}>

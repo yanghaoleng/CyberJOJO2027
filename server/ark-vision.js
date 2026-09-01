@@ -1,5 +1,5 @@
 const VISION_ACTIONS = ["praise", "surprised", "think", "happy", "frighten", "curious"];
-const VISION_CATEGORIES = ["food", "dessert", "cat", "dog", "animal", "object"];
+const VISION_CATEGORIES = ["food", "dessert", "book", "toy", "cat", "dog", "animal", "object"];
 const VISION_TONES = ["delighted", "curious", "cautious"];
 const MIN_EVALUABLE_CONFIDENCE = 0.82;
 const MAX_IMAGE_DATA_URL_LENGTH = 240_000;
@@ -161,7 +161,7 @@ export async function assessCameraScene(image, character, config, fetchImpl = fe
               type: "input_text",
               text: `${CHARACTER_PROMPTS[activeCharacter]}
 你正在通过儿童相机看一张低清实时画面。只有当主体非常清楚且适合准确评价时，才设置 evaluable=true。
-可评价主体仅限：食物、具体甜点、猫、狗、其他常见动物，或非常明确且适合儿童互动的日常物品。模糊、遮挡、无法确定、人脸或身体为主体、屏幕文字、危险情境时必须返回 evaluable=false。
+可评价主体仅限：食物、具体甜点、绘本或书本、玩具、猫、狗、其他常见动物，或非常明确且适合儿童互动的日常物品。绘本或书本使用 book，玩具使用 toy。模糊、遮挡、无法确定、人脸或身体为主体、屏幕文字、危险情境时必须返回 evaluable=false。
 评价要像角色当场看到后自然说出的一句话，不超过 26 个汉字。可以热情夸赞，也可以在食物出现肉眼明显发霉、严重变色、萎蔫时谨慎说“看起来有点怪怪的，先请大人看看”。绝不声称已经闻到、尝到，也不判断食品一定变质、有毒或能否食用。
 不要评价人的长相、年龄、身体、健康或身份。不要使用 emoji。为相同主体生成稳定、简短的 repeat_key，并选择最贴合的预置动作；没有合适动作使用 none。必须调用 comment_on_camera_scene。`,
             }],

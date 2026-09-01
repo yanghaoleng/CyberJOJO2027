@@ -56,6 +56,29 @@ test("vision images are restricted to bounded base64 JPEG data URLs", () => {
   );
 });
 
+test("vision distinguishes books and toys for contextual captions", () => {
+  assert.equal(parseSceneAssessment(JSON.stringify({
+    evaluable: true,
+    category: "book",
+    subject: "一本绘本",
+    tone: "curious",
+    text: "这本绘本讲了什么呀？",
+    action: "curious",
+    repeat_key: "book:picture-book",
+    confidence: 0.91,
+  })).category, "book");
+  assert.equal(parseSceneAssessment(JSON.stringify({
+    evaluable: true,
+    category: "toy",
+    subject: "积木",
+    tone: "delighted",
+    text: "这些积木真有意思！",
+    action: "happy",
+    repeat_key: "toy:blocks",
+    confidence: 0.92,
+  })).category, "toy");
+});
+
 test("vision requests send low-detail images and return usage", async () => {
   let requestBody;
   let authorization;

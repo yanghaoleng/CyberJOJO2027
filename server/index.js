@@ -6,6 +6,7 @@ import { detectCharacterSwitchCommand } from "./character-switch-command.js";
 import { getVolcAsrConfig, VolcAsrSession } from "./volc-asr.js";
 import { getVolcTtsConfig, synthesizeSpeech } from "./volc-tts.js";
 import { createVisionRequestHandler } from "./vision-route.js";
+import { createSummaryRequestHandler } from "./summary-route.js";
 
 const PORT = Number(process.env.PORT || 8787);
 const MAX_SESSION_MS = Number(process.env.JOCAM_MAX_SESSION_MS || 5 * 60_000);
@@ -51,8 +52,10 @@ const handleVisionRequest = createVisionRequestHandler({
     }
   },
 });
+const handleSummaryRequest = createSummaryRequestHandler({ allowedOrigins, arkConfig });
 const server = http.createServer(async (request, response) => {
   if (await handleVisionRequest(request, response)) return;
+  if (await handleSummaryRequest(request, response)) return;
   if (request.url === "/health") {
     response.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
     response.end(JSON.stringify({
@@ -73,6 +76,11 @@ const server = http.createServer(async (request, response) => {
         enabled: true,
         model: arkConfig.visionModel,
         fallbackModel: arkConfig.visionFallbackModel,
+      },
+      conversationSummary: {
+        enabled: true,
+        model: arkConfig.summaryModel,
+        fallbackModel: arkConfig.summaryFallbackModel,
       },
     }));
     return;

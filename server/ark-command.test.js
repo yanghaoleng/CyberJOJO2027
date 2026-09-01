@@ -8,6 +8,9 @@ test("vision uses Mini with a separate credential and retains the Lite fallback"
   assert.equal(config.visionModel, "doubao-seed-2-0-mini-260428");
   assert.equal(config.visionFallbackModel, "doubao-seed-2-0-lite-260215");
   assert.equal(config.visionApiKey, "test-key");
+  assert.equal(config.summaryModel, "doubao-seed-2-0-mini-260428");
+  assert.equal(config.summaryFallbackModel, "doubao-seed-2-0-lite-260215");
+  assert.equal(config.summaryApiKey, "test-key");
 
   const upgraded = getArkConfig({
     VOLC_ARK_API_KEY: "test-key",
@@ -16,6 +19,8 @@ test("vision uses Mini with a separate credential and retains the Lite fallback"
   assert.equal(upgraded.visionApiKey, "vision-key");
   assert.equal(upgraded.visionModel, "doubao-seed-2-0-mini-260428");
   assert.equal(upgraded.visionFallbackModel, "doubao-seed-2-0-lite-260215");
+  assert.equal(upgraded.summaryApiKey, "vision-key");
+  assert.equal(upgraded.summaryModel, "doubao-seed-2-0-mini-260428");
 });
 
 test("command hints distinguish photo chat from action requests", () => {
