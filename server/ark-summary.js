@@ -2,6 +2,7 @@ const MAX_DAYS = 14;
 const MAX_ENTRIES_PER_DAY = 60;
 const MAX_ENTRY_TEXT_LENGTH = 180;
 const MAX_TOTAL_TEXT_LENGTH = 24_000;
+const MAX_IMAGE_DATA_URL_LENGTH = 210_000;
 
 function cleanText(value, maxLength) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, maxLength);
@@ -19,7 +20,7 @@ export function validateConversationDays(value) {
       throw Object.assign(new Error("Conversation summary day is invalid"), { statusCode: 400 });
     }
     seenDays.add(dayKey);
-    if (!Array.isArray(day.entries) || day.entries.length < 1 || day.entries.length > MAX_ENTRIES_PER_DAY) {
+    if (!Array.isArray(day.entries) || day.entries.length > MAX_ENTRIES_PER_DAY) {
       throw Object.assign(new Error("Conversation summary entries are invalid"), { statusCode: 400 });
     }
     const entries = day.entries.map((entry) => {
@@ -33,7 +34,17 @@ export function validateConversationDays(value) {
         createdAt: Number(entry?.createdAt) || 0,
       };
     });
-    return { dayKey, entries };
+    const image = String(day?.image || "");
+    if (image && !/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(image)) {
+      throw Object.assign(new Error("Conversation summary image must be a base64 JPEG data URL"), { statusCode: 400 });
+    }
+    if (image.length > MAX_IMAGE_DATA_URL_LENGTH) {
+      throw Object.assign(new Error("Conversation summary image is too large"), { statusCode: 413 });
+    }
+    if (!entries.length && !image) {
+      throw Object.assign(new Error("Conversation summary day has no usable source"), { statusCode: 400 });
+    }
+    return { dayKey, entries, image, source: entries.length ? "dialogue" : "captures" };
   }).map((day) => {
     if (totalTextLength > MAX_TOTAL_TEXT_LENGTH) {
       throw Object.assign(new Error("Conversation summary text is too large"), { statusCode: 413 });
@@ -108,14 +119,33 @@ async function readSummarySse(response, expectedDayKeys) {
   return summaries ? { summaries, usage } : null;
 }
 
-function createSummaryPrompt(days) {
-  return days.map((day) => ({
-    day_key: day.dayKey,
-    dialogue: day.entries.map((entry) => ({
-      speaker: entry.role === "user" ? "小朋友" : entry.character === "lvdou" ? "绿豆" : "叫叫",
-      text: entry.text,
-    })),
-  }));
+function createSummaryInput(days) {
+  return days.flatMap((day) => {
+    if (day.entries.length) {
+      return [{
+        type: "input_text",
+        text: JSON.stringify({
+          day_key: day.dayKey,
+          source: "dialogue",
+          dialogue: day.entries.map((entry) => ({
+            speaker: entry.role === "user" ? "小朋友" : entry.character === "lvdou" ? "绿豆" : "叫叫",
+            text: entry.text,
+          })),
+        }),
+      }];
+    }
+    return [
+      {
+        type: "input_text",
+        text: JSON.stringify({
+          day_key: day.dayKey,
+          source: "captures",
+          instruction: "这一天没有可用对话，请根据紧随其后的低清作品拼图写当天小记。",
+        }),
+      },
+      { type: "input_image", image_url: day.image, detail: "low" },
+    ];
+  });
 }
 
 export async function summarizeConversationDays(rawDays, config, fetchImpl = fetch) {
@@ -148,18 +178,18 @@ export async function summarizeConversationDays(rawDays, config, fetchImpl = fet
               role: "system",
               content: [{
                 type: "input_text",
-                text: "你是儿童相机的日记整理员。请为每一天分别写一句自然温暖的中文对话概要，概括小朋友聊了什么、角色怎样回应。只写记录中真实出现的内容，不补充身份、情绪或活动，不评价小朋友。每句 18 到 52 个汉字，不使用 emoji。必须调用 summarize_daily_conversations。",
+                text: "你是儿童相机的日记整理员。请为每一天分别写一句自然温暖的中文当天小记。有对话时，只概括小朋友聊了什么、角色怎样回应；没有对话时，只根据对应的低清作品拼图概括当天拍到了什么。只写输入中真实出现且能看清的内容，不补充人物身份、年龄、情绪、健康、地点或活动，不评价小朋友，不判断食物是否新鲜或安全。画面不清楚时，只写高把握的可见事物。每句 18 到 52 个汉字，不使用 emoji。必须调用 summarize_daily_conversations。",
               }],
             },
             {
               role: "user",
-              content: [{ type: "input_text", text: JSON.stringify(createSummaryPrompt(days)) }],
+              content: createSummaryInput(days),
             },
           ],
           tools: [{
             type: "function",
             name: "summarize_daily_conversations",
-            description: "按日期返回每天的对话概要",
+            description: "按日期返回每天的当天小记",
             parameters: {
               type: "object",
               additionalProperties: false,
@@ -195,7 +225,14 @@ export async function summarizeConversationDays(rawDays, config, fetchImpl = fet
       }
       const result = await readSummarySse(response, dayKeys);
       if (!result?.summaries) throw new Error("Ark summary returned no structured summaries");
-      return result;
+      const sourceByDay = new Map(days.map(({ dayKey, source }) => [dayKey, source]));
+      return {
+        ...result,
+        summaries: result.summaries.map((summary) => ({
+          ...summary,
+          source: sourceByDay.get(summary.dayKey) || "dialogue",
+        })),
+      };
     } finally {
       clearTimeout(timeout);
     }
@@ -208,6 +245,7 @@ export const summaryInternals = {
   MAX_ENTRIES_PER_DAY,
   MAX_ENTRY_TEXT_LENGTH,
   MAX_TOTAL_TEXT_LENGTH,
+  MAX_IMAGE_DATA_URL_LENGTH,
+  createSummaryInput,
   readSummarySse,
 };
-

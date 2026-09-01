@@ -1,7 +1,7 @@
 import { summarizeConversationDays } from "./ark-summary.js";
 
-const DEFAULT_MAX_BODY_BYTES = 48_000;
-const DEFAULT_MIN_INTERVAL_MS = 6_000;
+const DEFAULT_MAX_BODY_BYTES = 680_000;
+const DEFAULT_MIN_INTERVAL_MS = 2_000;
 
 function getClientIp(request) {
   return String(request.headers["x-forwarded-for"] || request.socket?.remoteAddress || "unknown")
@@ -120,4 +120,3 @@ export const summaryRouteInternals = {
   getCorsHeaders,
   readJsonBody,
 };
-

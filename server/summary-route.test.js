@@ -28,7 +28,7 @@ test("summary route returns Mini summaries for an allowed origin", async () => {
     arkConfig: { summaryModel: "mini" },
     now: () => 20_000,
     summarizeDays: async (days) => ({
-      summaries: [{ dayKey: days[0].dayKey, summary: "聊了今天看到的小猫。" }],
+      summaries: [{ dayKey: days[0].dayKey, summary: "聊了今天看到的小猫。", source: "dialogue" }],
       usage: { input_tokens: 20, output_tokens: 8 },
     }),
   });
@@ -37,6 +37,7 @@ test("summary route returns Mini summaries for an allowed origin", async () => {
   assert.equal(response.status, 200);
   assert.equal(response.headers["Access-Control-Allow-Origin"], "https://cyberjojo.mikeywa.site");
   assert.equal(JSON.parse(response.body).summaries[0].dayKey, "2026-09-01");
+  assert.equal(JSON.parse(response.body).summaries[0].source, "dialogue");
   assert.deepEqual(JSON.parse(response.body).usage, { inputTokens: 20, outputTokens: 8 });
 });
 
@@ -60,4 +61,3 @@ test("summary route rejects unknown origins and repeated requests", async () => 
   assert.equal(limited.status, 429);
   assert.equal(JSON.parse(limited.body).code, "SUMMARY_RATE_LIMIT");
 });
-

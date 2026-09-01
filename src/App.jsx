@@ -72,6 +72,10 @@ import {
   groupConversationEntriesByDay,
   groupMediaCapturesByDay,
 } from "./daily-timeline.js";
+import {
+  createCaptureFingerprint,
+  createCaptureSummaryCollage,
+} from "./capture-summary.js";
 import { getContextualCaption } from "./contextual-caption.js";
 import { createShutterSamples } from "./camera-feedback.js";
 import { getFrontCameraPipRect, hasLiveVideoTrack } from "./dual-camera.js";
@@ -842,6 +846,7 @@ function App() {
   const mediaPreviewRef = useRef(null);
   const mediaLibraryRef = useRef([]);
   const conversationEntriesRef = useRef([]);
+  const summaryNextRequestAtRef = useRef(0);
   const mediaLibraryOpenRef = useRef(false);
   const mediaLibraryGridRef = useRef(null);
   const mediaLibraryCloseTimerRef = useRef(null);
@@ -1433,14 +1438,16 @@ function App() {
 
   useEffect(() => {
     if (!mediaLibraryOpen) return undefined;
-    const staleDays = mediaTimeline.map(({ dayKey }) => {
+    const staleDays = mediaTimeline.map(({ dayKey, items }) => {
       const entries = (conversationEntriesByDay.get(dayKey) || []).slice(-60);
-      if (!entries.length) return null;
-      const fingerprint = createConversationFingerprint(entries);
+      const source = entries.length ? "dialogue" : "captures";
+      const fingerprint = source === "dialogue"
+        ? `dialogue:${createConversationFingerprint(entries)}`
+        : `captures:${createCaptureFingerprint(items)}`;
       return conversationSummaries[dayKey]?.fingerprint === fingerprint
         ? null
-        : { dayKey, entries, fingerprint };
-    }).filter(Boolean).slice(0, 14);
+        : { dayKey, entries, items, fingerprint, source };
+    }).filter(Boolean).slice(0, 3);
     if (!staleDays.length) return undefined;
 
     const controller = new AbortController();
@@ -1449,12 +1456,41 @@ function App() {
         ...current,
         ...Object.fromEntries(staleDays.map(({ dayKey }) => [dayKey, "loading"])),
       }));
+      const preparedDays = await Promise.all(staleDays.map(async (day) => {
+        if (day.source === "dialogue") return { ...day, image: "" };
+        const image = await createCaptureSummaryCollage(day.items).catch(() => "");
+        return { ...day, image };
+      }));
+      if (controller.signal.aborted) return;
+      const fallbackRecords = preparedDays.filter(({ source, image }) => source === "captures" && !image)
+        .map(({ dayKey, fingerprint }) => ({
+          dayKey,
+          fingerprint,
+          source: "captures",
+          summary: "这一天留下了几段影像，暂时没能看清具体内容。",
+          updatedAt: Date.now(),
+          usage: null,
+        }));
+      const requestDays = preparedDays.filter(({ source, image }) => source === "dialogue" || image);
+      if (!requestDays.length) {
+        setConversationSummaries((current) => ({
+          ...current,
+          ...Object.fromEntries(fallbackRecords.map((record) => [record.dayKey, record])),
+        }));
+        setConversationSummaryStates((current) => ({
+          ...current,
+          ...Object.fromEntries(fallbackRecords.map(({ dayKey }) => [dayKey, "ready"])),
+        }));
+        await Promise.allSettled(fallbackRecords.map(storeConversationSummary));
+        return;
+      }
+      summaryNextRequestAtRef.current = Date.now() + 2_500;
       try {
         const response = await fetch(getConversationSummaryApiUrl(), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            days: staleDays.map(({ dayKey, entries }) => ({
+            days: requestDays.map(({ dayKey, entries, image }) => ({
               dayKey,
               entries: entries.map(({ role, text, character, createdAt }) => ({
                 role,
@@ -1462,6 +1498,7 @@ function App() {
                 character,
                 createdAt,
               })),
+              ...(image ? { image } : {}),
             })),
           }),
           signal: controller.signal,
@@ -1471,35 +1508,46 @@ function App() {
         if (!result?.ok || !Array.isArray(result.summaries)) {
           throw new Error("Conversation summary response was not successful");
         }
-        const returnedByDay = new Map(result.summaries.map((summary) => [summary.dayKey, summary.summary]));
-        const records = staleDays.map(({ dayKey, fingerprint }) => ({
+        const returnedByDay = new Map(result.summaries.map((summary) => [summary.dayKey, summary]));
+        const records = requestDays.map(({ dayKey, fingerprint, source }) => ({
           dayKey,
           fingerprint,
-          summary: String(returnedByDay.get(dayKey) || "").trim().slice(0, 120),
+          source: returnedByDay.get(dayKey)?.source || source,
+          summary: String(returnedByDay.get(dayKey)?.summary || "").trim().slice(0, 120),
           updatedAt: Date.now(),
           usage: result.usage || null,
-        })).filter(({ summary }) => summary);
+        })).filter(({ summary }) => summary).concat(fallbackRecords);
         setConversationSummaries((current) => ({
           ...current,
           ...Object.fromEntries(records.map((record) => [record.dayKey, record])),
         }));
         setConversationSummaryStates((current) => ({
           ...current,
-          ...Object.fromEntries(staleDays.map(({ dayKey }) => [
+          ...Object.fromEntries(requestDays.map(({ dayKey }) => [
             dayKey,
             returnedByDay.has(dayKey) ? "ready" : "error",
-          ])),
+          ]).concat(fallbackRecords.map(({ dayKey }) => [dayKey, "ready"]))),
         }));
         await Promise.allSettled(records.map(storeConversationSummary));
       } catch (error) {
         if (error.name === "AbortError") return;
         console.warn("Daily conversation summary unavailable", error);
+        if (fallbackRecords.length) {
+          setConversationSummaries((current) => ({
+            ...current,
+            ...Object.fromEntries(fallbackRecords.map((record) => [record.dayKey, record])),
+          }));
+          await Promise.allSettled(fallbackRecords.map(storeConversationSummary));
+        }
         setConversationSummaryStates((current) => ({
           ...current,
-          ...Object.fromEntries(staleDays.map(({ dayKey }) => [dayKey, "error"])),
+          ...Object.fromEntries(
+            requestDays.map(({ dayKey }) => [dayKey, "error"])
+              .concat(fallbackRecords.map(({ dayKey }) => [dayKey, "ready"])),
+          ),
         }));
       }
-    }, 420);
+    }, Math.max(420, summaryNextRequestAtRef.current - Date.now()));
     return () => {
       window.clearTimeout(timer);
       controller.abort();
@@ -3728,7 +3776,7 @@ function App() {
             )}
             <p className="privacy-note">
               <LockSimple size={14} weight="fill" />
-              <span>AI 识物会发送压缩画面；对话文字仅在本机留作日记，并发送给豆包 Mini 生成概要；本站不保存原图和原始音频</span>
+              <span>AI 识物和相册小记会按需发送压缩画面；对话文字仅在本机留作日记，并发送给豆包 Mini 生成小记；本站不保存原图和原始音频</span>
             </p>
           </div>
         )}
@@ -3763,11 +3811,11 @@ function App() {
                   const summaryRecord = conversationSummaries[dayKey];
                   const summaryState = conversationSummaryStates[dayKey] || "idle";
                   const summaryText = summaryRecord?.summary
-                    || (entries.length
-                      ? summaryState === "error"
-                        ? "这次没能整理出来，下次打开相册会再试一次。"
-                        : "叫叫正在回想这一天聊过的内容…"
-                      : "这一天只留下了影像，还没有对话记录。");
+                    || (summaryState === "error"
+                      ? "这次没能整理出来，下次打开相册会再试一次。"
+                      : entries.length
+                        ? "叫叫正在回想这一天聊过的内容…"
+                        : "叫叫正在翻看这一天的作品…");
                   return (
                     <section className="media-timeline-day" key={dayKey} style={{ "--timeline-day-index": dayIndex }}>
                       <header className="media-timeline-day-header">
@@ -3825,7 +3873,7 @@ function App() {
                       <div className={`media-day-summary is-${summaryState}`} aria-live={summaryState === "loading" ? "polite" : "off"}>
                         <ChatCircleText size={20} weight="duotone" aria-hidden="true" />
                         <div>
-                          <span>当天对话</span>
+                          <span>当天小记</span>
                           <p>{summaryText}</p>
                         </div>
                       </div>

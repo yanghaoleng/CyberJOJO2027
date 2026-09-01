@@ -18,9 +18,17 @@ test("conversation days are bounded and normalized", () => {
   }]), [{
     dayKey: "2026-09-01",
     entries: [{ role: "user", character: "jiaojiao", text: "今天看小猫", createdAt: 12 }],
+    image: "",
+    source: "dialogue",
   }]);
   assert.throws(() => validateConversationDays([]), /1 to 14 days/);
   assert.throws(() => validateConversationDays([{ dayKey: "today", entries: [{ text: "hi" }] }]), /day is invalid/);
+  assert.throws(() => validateConversationDays([{ dayKey: "2026-09-01", entries: [] }]), /no usable source/);
+  assert.equal(validateConversationDays([{
+    dayKey: "2026-09-01",
+    entries: [],
+    image: "data:image/jpeg;base64,/9j/2Q==",
+  }])[0].source, "captures");
 });
 
 test("summary parser ignores unknown dates and empty text", () => {
@@ -67,3 +75,31 @@ test("daily summaries use Mini and return usage", async () => {
   assert.deepEqual(result.usage, { input_tokens: 92, output_tokens: 31 });
 });
 
+test("photo-only days send one low-detail collage to Mini", async () => {
+  let requestBody;
+  const result = await summarizeConversationDays([{
+    dayKey: "2026-09-01",
+    entries: [],
+    image: "data:image/jpeg;base64,/9j/2Q==",
+  }], {
+    endpoint: "https://ark.example.test/responses",
+    summaryApiKey: "mini-key",
+    summaryModel: "doubao-mini",
+  }, async (_url, options) => {
+    requestBody = JSON.parse(options.body);
+    return createSseResponse([{
+      type: "response.function_call_arguments.done",
+      arguments: JSON.stringify({ summaries: [{
+        day_key: "2026-09-01",
+        summary: "拍到了桌上的绘本和一只彩色玩具。",
+      }] }),
+    }]);
+  });
+  const imageInput = requestBody.input[1].content.find(({ type }) => type === "input_image");
+  assert.deepEqual(imageInput, {
+    type: "input_image",
+    image_url: "data:image/jpeg;base64,/9j/2Q==",
+    detail: "low",
+  });
+  assert.equal(result.summaries[0].source, "captures");
+});
