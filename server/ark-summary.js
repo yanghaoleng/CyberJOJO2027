@@ -8,6 +8,13 @@ function cleanText(value, maxLength) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, maxLength);
 }
 
+function neutralizeCapturePersonLabels(value) {
+  return String(value || "")
+    .replace(/(?:年轻的|年幼的|年长的)/g, "")
+    .replace(/(?:一名|一位|一个)?(?:小女孩|小男孩|女孩|男孩|女生|男生|女人|男人|女士|男士|儿童|孩子|小朋友|成人|老人)/g, "画面中的人物")
+    .replace(/画面中的人物(?:画面中的人物)+/g, "画面中的人物");
+}
+
 export function validateConversationDays(value) {
   if (!Array.isArray(value) || value.length < 1 || value.length > MAX_DAYS) {
     throw Object.assign(new Error("Conversation summary requires 1 to 14 days"), { statusCode: 400 });
@@ -178,7 +185,7 @@ export async function summarizeConversationDays(rawDays, config, fetchImpl = fet
               role: "system",
               content: [{
                 type: "input_text",
-                text: "你是儿童相机的日记整理员。请为每一天分别写一句自然温暖的中文当天小记。有对话时，只概括小朋友聊了什么、角色怎样回应；没有对话时，只根据对应的低清作品拼图概括当天拍到了什么。只写输入中真实出现且能看清的内容，不补充人物身份、年龄、情绪、健康、地点或活动，不评价小朋友，不判断食物是否新鲜或安全。画面不清楚时，只写高把握的可见事物。每句 18 到 52 个汉字，不使用 emoji。必须调用 summarize_daily_conversations。",
+                text: "你是儿童相机的日记整理员。请为每一天分别写一句自然温暖的中文当天小记。有对话时，只概括小朋友聊了什么、角色怎样回应；没有对话时，只根据对应的低清作品拼图概括当天拍到了什么。只写输入中真实出现且能看清的内容，不补充人物身份、性别、年龄、情绪、健康、地点或活动，不评价小朋友，不判断食物是否新鲜或安全。影像中即使出现人物，也只能称为‘画面中的人物’，不能称为女孩、男孩、小朋友、成人或老人。画面不清楚时，只写高把握的可见事物。每句 18 到 52 个汉字，不使用 emoji。必须调用 summarize_daily_conversations。",
               }],
             },
             {
@@ -228,10 +235,16 @@ export async function summarizeConversationDays(rawDays, config, fetchImpl = fet
       const sourceByDay = new Map(days.map(({ dayKey, source }) => [dayKey, source]));
       return {
         ...result,
-        summaries: result.summaries.map((summary) => ({
-          ...summary,
-          source: sourceByDay.get(summary.dayKey) || "dialogue",
-        })),
+        summaries: result.summaries.map((summary) => {
+          const source = sourceByDay.get(summary.dayKey) || "dialogue";
+          return {
+            ...summary,
+            summary: source === "captures"
+              ? cleanText(neutralizeCapturePersonLabels(summary.summary), 120)
+              : summary.summary,
+            source,
+          };
+        }),
       };
     } finally {
       clearTimeout(timeout);
@@ -247,5 +260,6 @@ export const summaryInternals = {
   MAX_TOTAL_TEXT_LENGTH,
   MAX_IMAGE_DATA_URL_LENGTH,
   createSummaryInput,
+  neutralizeCapturePersonLabels,
   readSummarySse,
 };

@@ -91,7 +91,7 @@ test("photo-only days send one low-detail collage to Mini", async () => {
       type: "response.function_call_arguments.done",
       arguments: JSON.stringify({ summaries: [{
         day_key: "2026-09-01",
-        summary: "拍到了桌上的绘本和一只彩色玩具。",
+        summary: "一位小女孩拍到了桌上的绘本和一只彩色玩具。",
       }] }),
     }]);
   });
@@ -102,4 +102,5 @@ test("photo-only days send one low-detail collage to Mini", async () => {
     detail: "low",
   });
   assert.equal(result.summaries[0].source, "captures");
+  assert.equal(result.summaries[0].summary, "画面中的人物拍到了桌上的绘本和一只彩色玩具。");
 });
