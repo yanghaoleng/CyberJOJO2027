@@ -13,8 +13,12 @@ id jocam-voice >/dev/null 2>&1 || useradd --system --home-dir /nonexistent --she
 mkdir -p "${release_dir}" /etc/jocam /var/log/jocam-voice
 tar -xzf /tmp/jocam-voice-release.tgz -C "${release_dir}"
 if test ! -f "${release_dir}/server/node_modules/ws/package.json"; then
-  command -v npm >/dev/null 2>&1
-  npm install --omit=dev --ignore-scripts --prefix "${release_dir}/server"
+  if test -f /opt/jocam-voice/current/server/node_modules/ws/package.json; then
+    cp -a /opt/jocam-voice/current/server/node_modules "${release_dir}/server/node_modules"
+  else
+    command -v npm >/dev/null 2>&1
+    npm install --omit=dev --ignore-scripts --prefix "${release_dir}/server"
+  fi
 fi
 chown -R root:root "${release_dir}"
 chown jocam-voice:jocam-voice /var/log/jocam-voice
