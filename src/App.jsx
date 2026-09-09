@@ -3836,12 +3836,13 @@ function App() {
         )}
 
         {cameraState !== "ready" && (
-          <div className="welcome-panel">
+          <>
             <nav className="welcome-corner-links" aria-label="了解更多">
               <a href={`${import.meta.env.BASE_URL}changelog/`}>更新日志</a>
               <span aria-hidden="true">·</span>
               <a href={`${import.meta.env.BASE_URL}assets/`}>资源</a>
             </nav>
+          <div className="welcome-panel">
             <div className="welcome-copy">
               <span className="welcome-icon"><img src="favicon-512.webp" alt="JOJO Cam" /></span>
               <h1
@@ -3890,6 +3891,7 @@ function App() {
               <span>AI 识物和相册小记会按需发送压缩画面；对话文字仅在本机留作日记，并发送给豆包 Mini 生成小记；本站不保存原图和原始音频</span>
             </p>
           </div>
+          </>
         )}
 
         {toast && <div className="camera-toast" role="status">{toast}</div>}

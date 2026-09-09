@@ -1,4 +1,5 @@
 import { lazy, StrictMode, Suspense } from "react";
+import "./safe-area.css";
 import { createRoot } from "react-dom/client";
 const isAssetGallery = /^\/assets\/?$/.test(window.location.pathname);
 const isChangelog = /^\/changelog\/?$/.test(window.location.pathname);
@@ -9,7 +10,7 @@ const Page = lazy(() => isAssetGallery
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <Suspense fallback={<p style={{ padding: 24, fontFamily: "sans-serif" }}>正在准备{isAssetGallery ? "资源陈列馆" : isChangelog ? "更新日志" : "叫叫"}…</p>}>
+    <Suspense fallback={<p className="page-loading">正在准备{isAssetGallery ? "资源陈列馆" : isChangelog ? "更新日志" : "叫叫"}…</p>}>
       <Page />
     </Suspense>
   </StrictMode>,

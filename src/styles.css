@@ -137,7 +137,7 @@ button {
 }
 
 .app-shell.is-desktop-device .camera-stage.is-landscape .welcome-panel {
-  padding: clamp(36px, 5vw, 72px);
+  --welcome-space: clamp(36px, 5vw, 72px);
 }
 
 .app-shell.is-desktop-device .camera-stage.is-landscape .welcome-icon {
@@ -402,7 +402,7 @@ button {
 .live-caption {
   position: absolute;
   z-index: 3;
-  top: calc(max(28px, calc(env(safe-area-inset-top) + 10px)) + 2%);
+  top: calc(max(28px, calc(var(--safe-top) + 10px)) + 2%);
   left: 50%;
   display: flex;
   flex-direction: column;
@@ -479,7 +479,7 @@ button {
   position: absolute;
   z-index: 4;
   left: 50%;
-  bottom: max(18px, calc(env(safe-area-inset-bottom) + 12px));
+  bottom: max(18px, calc(var(--safe-bottom) + 12px));
   width: min(calc(100% - 32px), 420px);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -704,7 +704,7 @@ button {
 .live-loading {
   position: absolute;
   z-index: 4;
-  top: max(108px, calc(env(safe-area-inset-top) + 90px));
+  top: max(108px, calc(var(--safe-top) + 90px));
   left: 16px;
   right: 16px;
   display: grid;
@@ -759,7 +759,7 @@ button {
 }
 
 .camera-stage.is-landscape .live-caption {
-  top: calc(max(24px, calc(env(safe-area-inset-top) + 12px)) + 2%);
+  top: calc(max(24px, calc(var(--safe-top) + 12px)) + 2%);
 }
 
 .camera-stage.is-landscape .character-caption-bubble {
@@ -923,20 +923,27 @@ button {
   inset: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  padding: clamp(24px, 7vw, 42px);
+  --welcome-space: clamp(24px, 7vw, 42px);
+  justify-content: flex-start;
+  padding: calc(var(--safe-top) + 72px) calc(var(--safe-right) + var(--welcome-space)) calc(var(--safe-bottom) + var(--welcome-space)) calc(var(--safe-left) + var(--welcome-space));
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: linear-gradient(180deg, rgba(18, 15, 8, 0.64) 0%, rgba(18, 15, 8, 0.7) 46%, rgba(18, 15, 8, 0.86) 100%);
 }
 
+.welcome-panel > * { flex-shrink: 0; }
+
 .welcome-copy {
+  margin-top: auto;
   position: relative;
   margin-bottom: 24px;
 }
 
 .welcome-corner-links {
   position: absolute;
-  top: max(10px, env(safe-area-inset-top));
-  right: max(16px, env(safe-area-inset-right));
+  z-index: 6;
+  top: calc(var(--safe-top) + 10px);
+  right: calc(var(--safe-right) + 16px);
   display: flex;
   align-items: center;
   gap: 3px;
@@ -1167,10 +1174,10 @@ button {
   display: grid;
   grid-template-rows: 1fr auto;
   padding:
-    max(var(--preview-close-radius), calc(env(safe-area-inset-top) + var(--preview-close-radius)))
-    max(var(--preview-close-radius), calc(env(safe-area-inset-right) + var(--preview-close-radius)))
+    max(var(--preview-close-radius), calc(var(--safe-top) + var(--preview-close-radius)))
+    max(var(--preview-close-radius), calc(var(--safe-right) + var(--preview-close-radius)))
     14px
-    max(14px, env(safe-area-inset-left));
+    max(14px, var(--safe-left));
   background: #17140d;
   animation: preview-in 320ms cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
@@ -1193,10 +1200,10 @@ button {
   flex-direction: column;
   min-width: 0;
   padding:
-    max(38px, calc(env(safe-area-inset-top) + 22px))
-    max(14px, env(safe-area-inset-right))
-    max(16px, env(safe-area-inset-bottom))
-    max(14px, env(safe-area-inset-left));
+    max(38px, calc(var(--safe-top) + 22px))
+    max(14px, var(--safe-right))
+    max(16px, var(--safe-bottom))
+    max(14px, var(--safe-left));
   background: #17140d;
   transform: translateY(var(--library-drag-y, 0px));
   transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -1630,7 +1637,7 @@ button {
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 18px;
-  padding: 18px 5px max(4px, env(safe-area-inset-bottom));
+  padding: 18px 5px max(4px, var(--safe-bottom));
 }
 
 .preview-actions div {
@@ -1890,7 +1897,7 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: env(safe-area-inset-top);
+  padding-top: var(--safe-top);
   background: #000;
 }
 
@@ -1898,7 +1905,7 @@ button {
   position: relative;
   inset: auto;
   width: 100%;
-  height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 146px);
+  height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 146px);
   max-width: none;
   aspect-ratio: auto;
   flex: 0 0 auto;
@@ -1910,12 +1917,12 @@ button {
   position: relative;
   inset: auto;
   width: 100%;
-  min-height: calc(146px + env(safe-area-inset-bottom));
+  min-height: calc(146px + var(--safe-bottom));
   flex: 1 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 16px max(10px, env(safe-area-inset-bottom));
+  padding: 8px 16px max(10px, var(--safe-bottom));
   background: #000;
 }
 
@@ -1940,7 +1947,7 @@ button {
 }
 
 .app-shell.is-mobile-device .camera-stage.is-live.is-portrait .camera-toast {
-  bottom: calc(122px + env(safe-area-inset-bottom));
+  bottom: calc(122px + var(--safe-bottom));
 }
 
 .app-shell.is-mobile-device .desktop-note {
@@ -1958,21 +1965,21 @@ button {
 
   .camera-stage.is-live.is-landscape .viewfinder {
     inset:
-      max(8px, env(safe-area-inset-top))
-      max(96px, calc(env(safe-area-inset-right) + 88px))
-      max(8px, env(safe-area-inset-bottom))
-      max(8px, env(safe-area-inset-left));
+      max(8px, var(--safe-top))
+      max(96px, calc(var(--safe-right) + 88px))
+      max(8px, var(--safe-bottom))
+      max(8px, var(--safe-left));
     border: 1px solid rgba(247, 248, 241, 0.14);
     border-radius: 18px;
   }
 
   .camera-stage.is-live.is-landscape .control-deck {
     inset: 0 0 0 auto;
-    width: max(88px, calc(env(safe-area-inset-right) + 80px));
+    width: max(88px, calc(var(--safe-right) + 80px));
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: max(12px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) 8px;
+    padding: max(12px, var(--safe-top)) max(8px, var(--safe-right)) max(12px, var(--safe-bottom)) 8px;
     background: #000;
   }
 
@@ -2043,7 +2050,7 @@ button {
 
 @media (max-height: 700px) {
   .app-shell.is-mobile-device .welcome-panel {
-    padding: 22px;
+    --welcome-space: 22px;
   }
 
   .app-shell.is-mobile-device .welcome-icon {
@@ -2087,12 +2094,12 @@ button {
   }
 }
 /* Camera play controls remain above the live canvas, inside the viewfinder. */
-.play-toolbar { position: absolute; top: max(18px, env(safe-area-inset-top)); left: 18px; right: 18px; z-index: 8; display: flex; justify-content: space-between; pointer-events: none; }
+.play-toolbar { position: absolute; top: 18px; left: 18px; right: 18px; z-index: 8; display: flex; justify-content: space-between; pointer-events: none; }
 .play-toolbar button, .play-picker, .play-composer, .play-text-active { pointer-events: auto; }
 .play-entry, .play-text-entry, .play-text-active { border: 0; color: #302500; background: #ffde55; box-shadow: 0 4px 18px #19130020; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border-radius: 24px; padding: 0 16px; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }
 .play-text-entry { width: 44px; padding: 0; background: #ffffffee; }
 .play-text-active { position: absolute; z-index: 31; right: 18px; bottom: 12px; width: 44px; padding: 0; }
-.play-picker { position: absolute; z-index: 12; top: 76px; left: 18px; width: min(290px, calc(100% - 36px)); padding: 18px; color: #302817; background: #fffef8; border: 1px solid #f0e7d2; border-radius: 24px; box-shadow: 0 14px 44px #241b0030; }
+.play-picker { position: absolute; z-index: 12; top: 76px; left: 18px; width: min(290px, calc(100% - 36px)); max-height: calc(100% - 94px); overflow-y: auto; overscroll-behavior: contain; padding: 18px; color: #302817; background: #fffef8; border: 1px solid #f0e7d2; border-radius: 24px; box-shadow: 0 14px 44px #241b0030; }
 .play-picker strong { display: block; margin: 0 0 12px; font-size: 17px; }
 .play-picker button { display: block; border: 0; text-align: left; width: 100%; border-radius: 14px; padding: 13px 12px; margin-bottom: 6px; background: #f6f3e9; color: inherit; cursor: pointer; }
 .play-picker button:hover { background: #ffed9e; }
@@ -2111,3 +2118,10 @@ button {
 .day-friends-link { border: 0; background: #ffedac; color: #493d21; padding: 12px; border-radius: 12px; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
 .play-toolbar button:focus-visible, .play-picker button:focus-visible, .play-composer button:focus-visible, .library-tabs button:focus-visible { outline: 3px solid #2279d4; outline-offset: 3px; }
 .shutter:disabled { opacity: .55; cursor: default; }
+
+/* Full-viewport sheets own their inset; viewfinder controls are already inside its safe frame. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .app-shell.is-mobile-device .welcome-icon { display: none; }
+  .app-shell.is-mobile-device .welcome-headline { font-size: clamp(24px, 4vw, 32px); }
+  .app-shell.is-mobile-device .welcome-copy { margin-bottom: 12px; }
+}

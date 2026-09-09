@@ -2,13 +2,13 @@
 .gameplay-overlay button{font:inherit;-webkit-tap-highlight-color:transparent;cursor:pointer}
 .gameplay-overlay button:disabled{cursor:default;opacity:.55}
 .gameplay-overlay button:focus-visible{outline:3px solid #35724a;outline-offset:3px}
-.gameplay-topbar{position:absolute;top:max(16px,env(safe-area-inset-top));left:18px;right:18px;display:flex;justify-content:space-between;align-items:center;z-index:4;pointer-events:none}
+.gameplay-topbar{position:absolute;top:16px;left:18px;right:18px;display:flex;justify-content:space-between;align-items:center;z-index:4;pointer-events:none}
 .gameplay-topbar>div{display:flex;flex-direction:column;gap:3px;padding:10px 16px;border-radius:20px;background:rgba(255,253,238,.93);box-shadow:0 3px 16px #00000012}
 .gameplay-eyebrow{font-size:10px;font-weight:700;letter-spacing:.09em;color:#75785c}
 .gameplay-topbar strong{font-size:19px;line-height:1.2}
 .gameplay-close{pointer-events:auto;border:0;border-radius:50%;background:#fffcee;width:44px;height:44px;font-size:29px!important;line-height:1;color:var(--play-ink);box-shadow:0 3px 16px #0002}
 .gameplay-panel{pointer-events:auto;position:absolute;z-index:5;bottom:16px;left:16px;right:16px;border:1px solid #fff8;border-radius:25px;padding:18px;background:rgba(255,253,241,.96);box-shadow:0 8px 35px #171b1824;backdrop-filter:blur(16px);max-height:50%;overflow:auto}
-.gameplay-feed .gameplay-panel{top:max(100px,calc(env(safe-area-inset-top) + 86px));bottom:auto;max-height:max(90px,min(240px,calc(100% - 270px)));transition:opacity .16s,transform .16s}
+.gameplay-feed .gameplay-panel{top:100px;bottom:auto;max-height:max(90px,min(240px,calc(100% - 270px)));transition:opacity .16s,transform .16s}
 .gameplay-feed[data-gameplay-phase="ready"] .gameplay-panel,.gameplay-feed[data-gameplay-phase="dragging"] .gameplay-panel,.gameplay-feed[data-gameplay-phase="returning"] .gameplay-panel,.gameplay-feed[data-gameplay-phase="eating"] .gameplay-panel{padding:13px 16px;border-radius:20px}
 .gameplay-feed[data-gameplay-phase="ready"] .gameplay-panel>p:not(.gameplay-error),.gameplay-feed[data-gameplay-phase="dragging"] .gameplay-panel>p:not(.gameplay-error),.gameplay-feed[data-gameplay-phase="returning"] .gameplay-panel>p:not(.gameplay-error),.gameplay-feed[data-gameplay-phase="eating"] .gameplay-panel>p:not(.gameplay-error){display:none}
 .gameplay-feed[data-gameplay-phase="dragging"] .gameplay-panel{opacity:0;transform:translateY(-8px);pointer-events:none}

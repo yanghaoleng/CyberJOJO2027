@@ -1,4 +1,4 @@
-body.changelog-body { margin: 0; background: #fff; color: #302e26; overflow: auto; }
+body.changelog-body { margin: 0; background: #fff; color: #302e26; overflow: auto; color-scheme: light; }
 .cl-page { --cl-muted: #817d71; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; -webkit-font-smoothing: antialiased; }
 .cl-page * { box-sizing: border-box; }
 .cl-page a { color: inherit; text-decoration: none; }
