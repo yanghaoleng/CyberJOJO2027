@@ -1,12 +1,14 @@
 import http from "node:http";
+import { randomUUID } from "node:crypto";
 import { WebSocketServer } from "ws";
-import { getArkConfig, inferCharacterResponse } from "./ark-command.js";
+import { getArkConfig, inferCharacterResponse, sanitizeConversationContext } from "./ark-command.js";
 import { correctBrandTranscript } from "./brand-lexicon.js";
 import { detectCharacterSwitchCommand } from "./character-switch-command.js";
 import { getVolcAsrConfig, VolcAsrSession } from "./volc-asr.js";
 import { getVolcTtsConfig, synthesizeSpeech } from "./volc-tts.js";
 import { createVisionRequestHandler } from "./vision-route.js";
 import { createSummaryRequestHandler } from "./summary-route.js";
+import { createGameplayRequestHandler } from "./gameplay-route.js";
 
 const PORT = Number(process.env.PORT || 8787);
 const MAX_SESSION_MS = Number(process.env.JOCAM_MAX_SESSION_MS || 5 * 60_000);
@@ -53,7 +55,9 @@ const handleVisionRequest = createVisionRequestHandler({
   },
 });
 const handleSummaryRequest = createSummaryRequestHandler({ allowedOrigins, arkConfig });
+const handleGameplayRequest = createGameplayRequestHandler({ allowedOrigins, arkConfig });
 const server = http.createServer(async (request, response) => {
+  if (await handleGameplayRequest(request, response)) return;
   if (await handleVisionRequest(request, response)) return;
   if (await handleSummaryRequest(request, response)) return;
   if (request.url === "/health") {
@@ -133,19 +137,41 @@ websocketServer.on("connection", (client) => {
   let started = false;
   let closed = false;
   let inferenceRunning = false;
-  let queuedPrompt = null;
+  const queuedPrompts = [];
   let lastInferenceAt = 0;
   let activeCharacter = "jiaojiao";
+  let interactionMode = "none";
+  let context = { entries: [], moments: [] };
+  let epoch = 0;
+  let inferenceController = null;
+  let queueTimer = null;
+  let lastLocalSpeechAt = 0;
+  let localSpeechSequence = 0;
+  let lastTextAt = 0;
+  const recentGameplayTranscripts = new Map();
+  const acceptedTextMessages = new Map();
+  const sessionId = randomUUID();
 
-  const sendSpeech = async (text, { opening = false, character = activeCharacter } = {}) => {
+  const cancelPending = () => {
+    epoch += 1;
+    queuedPrompts.length = 0;
+    clearTimeout(queueTimer);
+    inferenceController?.abort();
+    sendJson(client, { type: "ai", state: "idle" });
+  };
+
+  const sendSpeech = async (text, { opening = false, character = activeCharacter, local = false, expectedEpoch = epoch, expectedLocalSequence = localSpeechSequence } = {}) => {
     const speechCharacter = normalizeCharacter(character);
     const audio = await synthesizeSpeech(text, speechCharacter, ttsConfig);
+    if (closed || expectedEpoch !== epoch || (local && expectedLocalSequence !== localSpeechSequence)) return;
     if (!opening) sendJson(client, { type: "ai", state: "speaking" });
     sendJson(client, {
       type: "speech",
       text,
       character: speechCharacter,
       opening,
+      local,
+      sessionId,
       mime: "audio/mpeg",
       audio: audio.toString("base64"),
     });
@@ -153,36 +179,53 @@ websocketServer.on("connection", (client) => {
 
   const runInference = async (text, character = activeCharacter) => {
     const responseCharacter = normalizeCharacter(character);
-    if (!text) return;
+    if (!text || closed || interactionMode !== "none") return;
     if (inferenceRunning || Date.now() - lastInferenceAt < 1_200) {
-      queuedPrompt = { text, character: responseCharacter };
+      if (queuedPrompts.length >= 64) {
+        sendJson(client, { type: "error", code: "TURN_QUEUE_FULL", message: "我还在听前面的话，稍等一下再继续。" });
+        return;
+      }
+      queuedPrompts.push({ text: String(text).slice(0, 1000), character: responseCharacter });
+      if (!inferenceRunning) {
+        clearTimeout(queueTimer);
+        queueTimer = setTimeout(drainQueue, Math.max(20, 1_200 - (Date.now() - lastInferenceAt)));
+      }
       return;
     }
     inferenceRunning = true;
     lastInferenceAt = Date.now();
+    const expectedEpoch = epoch;
+    inferenceController = new AbortController();
     try {
       sendJson(client, { type: "ai", state: "thinking" });
-      const response = await inferCharacterResponse(text, responseCharacter, arkConfig);
+      const response = await inferCharacterResponse(text, responseCharacter, arkConfig, null, context, inferenceController.signal);
+      if (closed || expectedEpoch !== epoch || interactionMode !== "none") return;
       if (!response?.text) throw new Error("Ark returned an empty character response");
+      context.entries = [...context.entries, { role: "user", text: String(text).slice(0, 1000) }, { role: "assistant", text: response.text }].slice(-16);
       if (response.action) sendJson(client, { type: "action", action: response.action });
-      await sendSpeech(response.text, { character: responseCharacter });
+      await sendSpeech(response.text, { character: responseCharacter, expectedEpoch });
     } catch (error) {
-      console.error("Character response failed", { name: error.name, message: error.message });
+      if (expectedEpoch !== epoch || closed || error.name === "AbortError") return;
+      console.error("Character response failed", { name: error.name });
       sendJson(client, { type: "ai", state: "unavailable" });
       sendJson(client, { type: "ai", state: "idle" });
     } finally {
       inferenceRunning = false;
-      if (queuedPrompt) {
-        const next = queuedPrompt;
-        queuedPrompt = null;
-        setTimeout(() => runInference(next.text, next.character), 1_250).unref();
-      }
+      inferenceController = null;
+      if (queuedPrompts.length && !closed && interactionMode === "none") queueTimer = setTimeout(drainQueue, 1_250);
     }
   };
+
+  function drainQueue() {
+    if (inferenceRunning || closed || interactionMode !== "none") return;
+    const next = queuedPrompts.shift();
+    if (next) void runInference(next.text, next.character);
+  }
 
   const endSession = () => {
     if (closed) return;
     closed = true;
+    cancelPending();
     asr?.close();
     activeByIp.set(ip, Math.max(0, (activeByIp.get(ip) || 1) - 1));
     if (!activeByIp.get(ip)) activeByIp.delete(ip);
@@ -195,6 +238,7 @@ websocketServer.on("connection", (client) => {
   hardStop.unref();
 
   client.on("message", async (data, isBinary) => {
+    try {
     if (isBinary) {
       asr?.sendAudio(data);
       return;
@@ -205,8 +249,80 @@ websocketServer.on("connection", (client) => {
     } catch {
       return;
     }
+    if (!message || typeof message !== "object" || Array.isArray(message)) {
+      sendJson(client, { type: "error", code: "INVALID_MESSAGE", message: "这条消息没有识别成功，请再试一次。" });
+      return;
+    }
     if (message.type === "character") {
       activeCharacter = normalizeCharacter(message.character);
+      return;
+    }
+    if (message.type === "context") {
+      context = sanitizeConversationContext(message);
+      return;
+    }
+    if (message.type === "text") {
+      if (!started || closed) return;
+      const clientMessageId = /^[\w.:-]{1,80}$/.test(String(message.clientMessageId || "")) ? message.clientMessageId : "";
+      if (clientMessageId && acceptedTextMessages.has(clientMessageId)) {
+        sendJson(client, acceptedTextMessages.get(clientMessageId));
+        return;
+      }
+      if (Date.now() - lastTextAt < 700) {
+        sendJson(client, { type: "error", code: "TEXT_RATE_LIMIT", message: "等一下，再告诉我下一句。", clientMessageId });
+        return;
+      }
+      const text = String(message.text || "").replace(/\s+/g, " ").trim().slice(0, 1000);
+      if (!text) { sendJson(client, { type: "error", code: "INVALID_TEXT", message: "先写一句想说的话吧。", clientMessageId }); return; }
+      lastTextAt = Date.now();
+      const transcript = { type: "transcript", text, final: true, id: `dialogue-${clientMessageId || randomUUID()}`,
+        sessionId, clientMessageId, inputMode: "text", source: interactionMode === "none" ? "child_speech" : "gameplay" };
+      if (clientMessageId) {
+        acceptedTextMessages.set(clientMessageId, transcript);
+        if (acceptedTextMessages.size > 64) acceptedTextMessages.delete(acceptedTextMessages.keys().next().value);
+      }
+      sendJson(client, transcript);
+      if (interactionMode !== "none") {
+        recentGameplayTranscripts.set(transcript.id, { text, createdAt: Date.now() });
+        if (recentGameplayTranscripts.size > 8) recentGameplayTranscripts.delete(recentGameplayTranscripts.keys().next().value);
+        return;
+      }
+      const requestedCharacter = detectCharacterSwitchCommand(text);
+      if (requestedCharacter) { activeCharacter = requestedCharacter; sendJson(client, { type: "character_switch", character: requestedCharacter }); return; }
+      void runInference(text);
+      return;
+    }
+    if (message.type === "clear_memory") {
+      cancelPending();
+      context = { entries: [], moments: [] };
+      recentGameplayTranscripts.clear();
+      acceptedTextMessages.clear();
+      return;
+    }
+    if (message.type === "resume_conversation") {
+      if (!started || closed) return;
+      const entry = recentGameplayTranscripts.get(message.transcriptId);
+      if (!entry || Date.now() - entry.createdAt > 30_000) return;
+      recentGameplayTranscripts.delete(message.transcriptId);
+      cancelPending();
+      interactionMode = "none";
+      void runInference(entry.text);
+      return;
+    }
+    if (message.type === "cancel") { cancelPending(); return; }
+    if (message.type === "interaction_mode") {
+      if (!["none", "toy", "find", "feed"].includes(message.mode)) return;
+      cancelPending();
+      interactionMode = message.mode;
+      return;
+    }
+    if (message.type === "local_speech") {
+      if (!started || !["toy", "find", "feed"].includes(interactionMode) || Date.now() - lastLocalSpeechAt < 700) return;
+      const text = String(message.text || "").replace(/\s+/g, " ").trim().slice(0, 80);
+      if (!text) return;
+      lastLocalSpeechAt = Date.now();
+      localSpeechSequence += 1;
+      void sendSpeech(text, { local: true }).catch((error) => console.error("Interaction speech failed", { name: error.name }));
       return;
     }
     if (message.type === "interaction" && message.kind === "gesture") {
@@ -217,6 +333,10 @@ websocketServer.on("connection", (client) => {
     if (message.type !== "start" || started) return;
     started = true;
     activeCharacter = normalizeCharacter(message.character);
+    if (message.inputMode === "text" || message.textOnly === true) {
+      sendJson(client, { type: "ready", inputMode: "text", sessionId });
+      return;
+    }
     asr = new VolcAsrSession({
       config: asrConfig,
       onReady: () => {
@@ -227,7 +347,9 @@ websocketServer.on("connection", (client) => {
       },
       onTranscript: (transcript) => {
         const corrected = correctBrandTranscript(transcript.text);
-        const normalizedTranscript = { ...transcript, text: corrected.text };
+        const normalizedTranscript = { ...transcript, text: corrected.text.slice(0, 1000),
+          id: transcript.final ? `dialogue-${randomUUID()}` : undefined,
+          sessionId, source: interactionMode === "none" ? "child_speech" : "gameplay" };
         sendJson(client, { type: "transcript", ...normalizedTranscript });
         if (transcript.final && corrected.corrections.length) {
           const applied = corrected.corrections.reduce((sum, item) => sum + item.occurrences, 0);
@@ -238,6 +360,11 @@ websocketServer.on("connection", (client) => {
           });
         }
         if (transcript.final) {
+          if (interactionMode !== "none") {
+            recentGameplayTranscripts.set(normalizedTranscript.id, { text: normalizedTranscript.text, createdAt: Date.now() });
+            if (recentGameplayTranscripts.size > 8) recentGameplayTranscripts.delete(recentGameplayTranscripts.keys().next().value);
+            return;
+          }
           const requestedCharacter = detectCharacterSwitchCommand(corrected.text);
           if (requestedCharacter) {
             activeCharacter = requestedCharacter;
@@ -256,6 +383,10 @@ websocketServer.on("connection", (client) => {
       await asr.connect();
     } catch {
       client.close(1011);
+    }
+    } catch (error) {
+      console.error("Voice message rejected", { name: error.name });
+      sendJson(client, { type: "error", code: "INVALID_MESSAGE", message: "这条消息没有识别成功，请再试一次。" });
     }
   });
 

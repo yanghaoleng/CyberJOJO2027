@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import {
   ArrowClockwise,
@@ -8,6 +8,8 @@ import {
   Check,
   DownloadSimple,
   ImagesSquare,
+  Sparkle,
+  PaperPlaneRight,
   LockSimple,
   MagnifyingGlass,
   PictureInPicture,
@@ -59,23 +61,14 @@ import {
   loadMediaCaptures,
   storeMediaCapture,
 } from "./media-library.js";
-import {
-  CONVERSATION_ENTRY_LIMIT,
-  createConversationEntry,
-  loadConversationEntries,
-  loadConversationSummaries,
-  storeConversationEntry,
-  storeConversationSummary,
-} from "./conversation-journal.js";
-import {
-  createConversationFingerprint,
-  groupConversationEntriesByDay,
-  groupMediaCapturesByDay,
-} from "./daily-timeline.js";
-import {
-  createCaptureFingerprint,
-  createCaptureSummaryCollage,
-} from "./capture-summary.js";
+import useDailyJournal from "./journal/useDailyJournal.js";
+import JournalDay from "./journal/JournalDay.jsx";
+import { loadFriends } from "./friends/friend-store.js";
+import { requestGameplay } from "./gameplay/gameplay-api.js";
+import { createCharacterInteraction } from "./character-interaction.js";
+const GamePlayOverlay = lazy(() => import("./gameplay/GamePlayOverlay.jsx"));
+const FriendIntro = lazy(() => import("./friends/FriendIntro.jsx"));
+const FriendCollection = lazy(() => import("./friends/FriendCollection.jsx"));
 import { getContextualCaption } from "./contextual-caption.js";
 import { createShutterSamples } from "./camera-feedback.js";
 import { getFrontCameraPipRect, hasLiveVideoTrack } from "./dual-camera.js";
@@ -462,7 +455,7 @@ function getLoadAssets(rendererMode) {
 }
 const CHARACTERS = {
   jiaojiao: { label: "叫叫", path: "media/jiaojiao.riv" },
-  lvdou: { label: "绿豆", path: "media/lvdou.riv" },
+  lvdou: { label: "绿豆", path: "media/lvdou.riv?v=cb114cd3" },
 };
 const CHARACTER_TAP_WINDOW_MS = 720;
 const CHARACTER_EXIT_DURATION_MS = 300;
@@ -807,6 +800,13 @@ function App() {
   const voiceAudioGraphRef = useRef(null);
   const voicePcmMutedRef = useRef(false);
   const voiceIntentionalCloseRef = useRef(false);
+  const voiceReadyRef = useRef(false);
+  const voiceReadyPromiseRef = useRef(null);
+  const voiceReadyResolveRef = useRef(null);
+  const voiceSessionGenerationRef = useRef(0);
+  const pendingTextRef = useRef(null);
+  const textSendingRef = useRef(false);
+  const lastTextAttemptRef = useRef(null);
   const speechClearTimerRef = useRef(null);
   const speechTextRef = useRef("");
   const speechBubbleOverlayRef = useRef(null);
@@ -845,8 +845,14 @@ function App() {
   const cameraReadyRef = useRef(false);
   const mediaPreviewRef = useRef(null);
   const mediaLibraryRef = useRef([]);
-  const conversationEntriesRef = useRef([]);
-  const summaryNextRequestAtRef = useRef(0);
+  const gameplayModeRef = useRef("");
+  const gameplayTargetRef = useRef(null);
+  const characterInteractionRef = useRef(null);
+  const gameplayFrameCanvasRef = useRef(null);
+  const characterDrawRectRef = useRef(null);
+  const journalContextRef = useRef(() => ({ entries: [], moments: [] }));
+  const startGameplayRef = useRef(null);
+  const gameSpeechEpochRef = useRef(0);
   const mediaLibraryOpenRef = useRef(false);
   const mediaLibraryGridRef = useRef(null);
   const mediaLibraryCloseTimerRef = useRef(null);
@@ -950,9 +956,16 @@ function App() {
   const [mediaPreviewClosing, setMediaPreviewClosing] = useState(false);
   const [mediaPreviewDirection, setMediaPreviewDirection] = useState("open");
   const [mediaLibrary, setMediaLibrary] = useState([]);
-  const [conversationEntries, setConversationEntries] = useState([]);
-  const [conversationSummaries, setConversationSummaries] = useState({});
-  const [conversationSummaryStates, setConversationSummaryStates] = useState({});
+  const [friends, setFriends] = useState([]);
+  const [gameplayMode, setGameplayMode] = useState("");
+  const [gameplayMenuOpen, setGameplayMenuOpen] = useState(false);
+  const [gameplayTranscript, setGameplayTranscript] = useState(null);
+  const [gameplayCharacterRect, setGameplayCharacterRect] = useState(null);
+  const [libraryTab, setLibraryTab] = useState("days");
+  const [textComposerOpen, setTextComposerOpen] = useState(false);
+  const [textDraft, setTextDraft] = useState("");
+  const [textSending, setTextSending] = useState(false);
+  const [gameplayReaction, setGameplayReaction] = useState(null);
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
   const [mediaLibraryClosing, setMediaLibraryClosing] = useState(false);
   const [mediaLibraryDragY, setMediaLibraryDragY] = useState(0);
@@ -968,10 +981,6 @@ function App() {
   useEffect(() => {
     mediaLibraryRef.current = mediaLibrary;
   }, [mediaLibrary]);
-
-  useEffect(() => {
-    conversationEntriesRef.current = conversationEntries;
-  }, [conversationEntries]);
 
   useEffect(() => {
     mediaLibraryOpenRef.current = mediaLibraryOpen;
@@ -1005,42 +1014,29 @@ function App() {
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all([loadConversationEntries(), loadConversationSummaries()]).then(([entries, summaries]) => {
-      if (cancelled) return;
-      setConversationEntries((current) => {
-        const byId = new Map([...entries, ...current].map((entry) => [entry.id, entry]));
-        const next = [...byId.values()]
-          .sort((left, right) => Number(left.createdAt || 0) - Number(right.createdAt || 0))
-          .slice(-CONVERSATION_ENTRY_LIMIT);
-        conversationEntriesRef.current = next;
-        return next;
-      });
-      setConversationSummaries(Object.fromEntries(
-        summaries.filter((summary) => summary?.dayKey && summary?.summary)
-          .map((summary) => [summary.dayKey, summary]),
-      ));
-    }).catch((error) => {
-      console.warn("Local conversation journal unavailable", error);
-    });
-    return () => {
-      cancelled = true;
-    };
+  const clearCharacterSpeech = useCallback(() => {
+    gameSpeechEpochRef.current += 1;
+    synthesizedSpeechQueueRef.current = [];
+    guideAudioRef.current?.pause();
+    if (synthesizedAudioUrlRef.current) URL.revokeObjectURL(synthesizedAudioUrlRef.current);
+    synthesizedAudioUrlRef.current = "";
+    voicePcmMutedRef.current = false;
+    window.speechSynthesis?.cancel();
+    setAiState("idle");
   }, []);
-
-  const recordConversationMessage = useCallback((message) => {
-    const entry = createConversationEntry(message);
-    if (!entry) return;
-    setConversationEntries((current) => {
-      const next = [...current, entry].slice(-CONVERSATION_ENTRY_LIMIT);
-      conversationEntriesRef.current = next;
-      return next;
-    });
-    storeConversationEntry(entry).catch((error) => {
-      console.warn("Conversation message could not be saved locally", error);
-    });
-  }, []);
+  const handleMemoryChange = useCallback((context, { reset } = {}) => {
+    if (reset) clearCharacterSpeech();
+    const socket = voiceSocketRef.current;
+    if (socket?.readyState !== WebSocket.OPEN) return;
+    if (reset) socket.send(JSON.stringify({ type: "clear_memory" }));
+    socket.send(JSON.stringify({ type: "context", ...context }));
+  }, [clearCharacterSpeech]);
+  const journal = useDailyJournal({ captures: mediaLibrary, friends, libraryOpen: mediaLibraryOpen,
+    sessionActive: cameraState === "ready", onMemoryChange: handleMemoryChange });
+  const { entries: conversationEntries, records: conversationSummaries, states: conversationSummaryStates,
+    entriesByDay: conversationEntriesByDay, timeline: mediaTimeline, recordMessage: recordConversationMessage } = journal;
+  journalContextRef.current = journal.getContext;
+  useEffect(() => { let alive = true; loadFriends().then((records) => { if (alive) setFriends(records); }).catch(() => {}); return () => { alive = false; }; }, []);
 
   useEffect(() => {
     const orientationQuery = window.matchMedia("(orientation: landscape)");
@@ -1380,6 +1376,7 @@ function App() {
       || mediaPreviewRef.current
       || mediaLibraryOpenRef.current
       || characterSwitchingRef.current
+      || gameplayModeRef.current
     ) return;
 
     const action = GESTURE_ACTIONS[update.trigger];
@@ -1406,6 +1403,7 @@ function App() {
     recordConversationMessage({
       role: "assistant",
       text: reaction.text,
+      source: "scene_comment",
       character: reaction.character || activeCharacter,
     });
     if (reaction.audio) {
@@ -1417,7 +1415,7 @@ function App() {
   }, [activeCharacter, enqueueSynthesizedSpeech, recordConversationMessage]);
 
   const { visionState: sceneVisionState, sceneReaction } = useCameraSceneAnalysis({
-    enabled: cameraState === "ready" && !recording && !mediaPreview && !mediaLibraryOpen,
+    enabled: cameraState === "ready" && !recording && !mediaPreview && !mediaLibraryOpen && !gameplayMode,
     videoRef,
     activeCharacter,
     onReaction: handleSceneReaction,
@@ -1430,131 +1428,13 @@ function App() {
     fallbackMode: captionMode,
     day,
   }), [activeCharacter, activeGestureEffect, captionMode, day, sceneReaction]);
-  const mediaTimeline = useMemo(() => groupMediaCapturesByDay(mediaLibrary), [mediaLibrary]);
-  const conversationEntriesByDay = useMemo(
-    () => groupConversationEntriesByDay(conversationEntries),
-    [conversationEntries],
-  );
-
-  useEffect(() => {
-    if (!mediaLibraryOpen) return undefined;
-    const staleDays = mediaTimeline.map(({ dayKey, items }) => {
-      const entries = (conversationEntriesByDay.get(dayKey) || []).slice(-60);
-      const source = entries.length ? "dialogue" : "captures";
-      const fingerprint = source === "dialogue"
-        ? `dialogue:${createConversationFingerprint(entries)}`
-        : `captures:${createCaptureFingerprint(items)}`;
-      return conversationSummaries[dayKey]?.fingerprint === fingerprint
-        ? null
-        : { dayKey, entries, items, fingerprint, source };
-    }).filter(Boolean).slice(0, 3);
-    if (!staleDays.length) return undefined;
-
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      setConversationSummaryStates((current) => ({
-        ...current,
-        ...Object.fromEntries(staleDays.map(({ dayKey }) => [dayKey, "loading"])),
-      }));
-      const preparedDays = await Promise.all(staleDays.map(async (day) => {
-        if (day.source === "dialogue") return { ...day, image: "" };
-        const image = await createCaptureSummaryCollage(day.items).catch(() => "");
-        return { ...day, image };
-      }));
-      if (controller.signal.aborted) return;
-      const fallbackRecords = preparedDays.filter(({ source, image }) => source === "captures" && !image)
-        .map(({ dayKey, fingerprint }) => ({
-          dayKey,
-          fingerprint,
-          source: "captures",
-          summary: "这一天留下了几段影像，暂时没能看清具体内容。",
-          updatedAt: Date.now(),
-          usage: null,
-        }));
-      const requestDays = preparedDays.filter(({ source, image }) => source === "dialogue" || image);
-      if (!requestDays.length) {
-        setConversationSummaries((current) => ({
-          ...current,
-          ...Object.fromEntries(fallbackRecords.map((record) => [record.dayKey, record])),
-        }));
-        setConversationSummaryStates((current) => ({
-          ...current,
-          ...Object.fromEntries(fallbackRecords.map(({ dayKey }) => [dayKey, "ready"])),
-        }));
-        await Promise.allSettled(fallbackRecords.map(storeConversationSummary));
-        return;
-      }
-      summaryNextRequestAtRef.current = Date.now() + 2_500;
-      try {
-        const response = await fetch(getConversationSummaryApiUrl(), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            days: requestDays.map(({ dayKey, entries, image }) => ({
-              dayKey,
-              entries: entries.map(({ role, text, character, createdAt }) => ({
-                role,
-                text,
-                character,
-                createdAt,
-              })),
-              ...(image ? { image } : {}),
-            })),
-          }),
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error(`Conversation summary request failed (${response.status})`);
-        const result = await response.json();
-        if (!result?.ok || !Array.isArray(result.summaries)) {
-          throw new Error("Conversation summary response was not successful");
-        }
-        const returnedByDay = new Map(result.summaries.map((summary) => [summary.dayKey, summary]));
-        const records = requestDays.map(({ dayKey, fingerprint, source }) => ({
-          dayKey,
-          fingerprint,
-          source: returnedByDay.get(dayKey)?.source || source,
-          summary: String(returnedByDay.get(dayKey)?.summary || "").trim().slice(0, 120),
-          updatedAt: Date.now(),
-          usage: result.usage || null,
-        })).filter(({ summary }) => summary).concat(fallbackRecords);
-        setConversationSummaries((current) => ({
-          ...current,
-          ...Object.fromEntries(records.map((record) => [record.dayKey, record])),
-        }));
-        setConversationSummaryStates((current) => ({
-          ...current,
-          ...Object.fromEntries(requestDays.map(({ dayKey }) => [
-            dayKey,
-            returnedByDay.has(dayKey) ? "ready" : "error",
-          ]).concat(fallbackRecords.map(({ dayKey }) => [dayKey, "ready"]))),
-        }));
-        await Promise.allSettled(records.map(storeConversationSummary));
-      } catch (error) {
-        if (error.name === "AbortError") return;
-        console.warn("Daily conversation summary unavailable", error);
-        if (fallbackRecords.length) {
-          setConversationSummaries((current) => ({
-            ...current,
-            ...Object.fromEntries(fallbackRecords.map((record) => [record.dayKey, record])),
-          }));
-          await Promise.allSettled(fallbackRecords.map(storeConversationSummary));
-        }
-        setConversationSummaryStates((current) => ({
-          ...current,
-          ...Object.fromEntries(
-            requestDays.map(({ dayKey }) => [dayKey, "error"])
-              .concat(fallbackRecords.map(({ dayKey }) => [dayKey, "ready"])),
-          ),
-        }));
-      }
-    }, Math.max(420, summaryNextRequestAtRef.current - Date.now()));
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [conversationEntriesByDay, conversationSummaries, mediaLibraryOpen, mediaTimeline]);
-
   const stopVoiceSession = useCallback(() => {
+    voiceSessionGenerationRef.current += 1;
+    voiceReadyRef.current = false;
+    voiceReadyResolveRef.current?.(null);
+    voiceReadyResolveRef.current = null;
+    voiceReadyPromiseRef.current = null;
+    pendingTextRef.current?.finish(false, "连接已中断，文字还在，可以再试一次。");
     voiceIntentionalCloseRef.current = true;
     const graph = voiceAudioGraphRef.current;
     voiceAudioGraphRef.current = null;
@@ -1582,53 +1462,81 @@ function App() {
     setAiState("idle");
   }, []);
 
-  const startVoiceSession = useCallback(async (stream) => {
-    const audioTrack = stream.getAudioTracks()[0];
-    if (!audioTrack) {
-      setVoiceState("unavailable");
-      return;
-    }
+  const startVoiceSession = useCallback(async (stream, { textOnly = false } = {}) => {
+    const audioTrack = textOnly ? null : stream?.getAudioTracks?.()[0];
 
     stopVoiceSession();
+    const generation = voiceSessionGenerationRef.current;
     voiceIntentionalCloseRef.current = false;
     setVoiceState("connecting");
 
     try {
+      let processor = null;
+      let inputSampleRate = 16_000;
+      if (audioTrack) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (!AudioContextClass) throw new Error("Web Audio is unavailable");
       const context = new AudioContextClass();
       await context.resume();
+      if (generation !== voiceSessionGenerationRef.current) { void context.close(); return null; }
+      inputSampleRate = context.sampleRate;
       const source = context.createMediaStreamSource(new MediaStream([audioTrack]));
-      const processor = context.createScriptProcessor(4096, 1, 1);
+      processor = context.createScriptProcessor(4096, 1, 1);
       const silent = context.createGain();
       silent.gain.value = 0;
       source.connect(processor);
       processor.connect(silent);
       silent.connect(context.destination);
       voiceAudioGraphRef.current = { context, source, processor, silent };
+      }
 
       const socket = new WebSocket(getVoiceSocketUrl());
       socket.binaryType = "arraybuffer";
       voiceSocketRef.current = socket;
-      processor.onaudioprocess = (event) => {
+      let readyTimer = null;
+      let finishedReady = false;
+      const readyPromise = new Promise((resolve) => {
+        voiceReadyResolveRef.current = (value) => {
+          if (finishedReady) return;
+          finishedReady = true;
+          if (readyTimer) window.clearTimeout(readyTimer);
+          resolve(value);
+        };
+      });
+      const settleReady = voiceReadyResolveRef.current;
+      voiceReadyPromiseRef.current = readyPromise;
+      readyTimer = window.setTimeout(() => {
+        settleReady(null);
+        if (voiceSocketRef.current === socket) {
+          voiceReadyRef.current = false;
+          setVoiceState("unavailable");
+          socket.close(1000, "session readiness timeout");
+        }
+      }, 12_000);
+      if (processor) processor.onaudioprocess = (event) => {
         if (
           voicePcmMutedRef.current
           || socket.readyState !== WebSocket.OPEN
         ) return;
         const samples = event.inputBuffer.getChannelData(0);
-        const pcm = downsampleToPcm16(samples, context.sampleRate);
+        const pcm = downsampleToPcm16(samples, inputSampleRate);
         if (pcm.byteLength) socket.send(pcm.buffer);
       };
 
       socket.addEventListener("open", () => {
+        if (voiceSocketRef.current !== socket) return;
         socket.send(JSON.stringify({
           type: "start",
+          inputMode: audioTrack ? "voice" : "text",
           sampleRate: 16_000,
           language: "zh-CN",
           character: activeCharacter,
         }));
+        socket.send(JSON.stringify({ type: "context", ...journalContextRef.current() }));
+        socket.send(JSON.stringify({ type: "interaction_mode", mode: gameplayModeRef.current || "none" }));
       });
       socket.addEventListener("message", (event) => {
+        if (voiceSocketRef.current !== socket) return;
         if (typeof event.data !== "string") return;
         let message;
         try {
@@ -1637,21 +1545,35 @@ function App() {
           return;
         }
         if (message.type === "ready") {
+          voiceReadyRef.current = true;
+          settleReady(socket);
           setVoiceState("listening");
           return;
         }
         if (message.type === "transcript") {
-          const text = String(message.text || "").trim().slice(0, 42);
+          const text = String(message.text || "").trim().slice(0, 1000);
           if (!text) return;
           if (message.final) {
-            recordConversationMessage({
-              role: "user",
-              text,
-              character: activeCharacter,
-            });
+            if (message.clientMessageId && pendingTextRef.current?.id === message.clientMessageId) pendingTextRef.current.finish(true);
+            const stopRequested = /不玩了|退出游戏|退出玩法|停止游戏|停一下|我很难过|我想妈妈/.test(text);
+            const requestedMode = /喂.*(叫叫|你)|吃点东西|喂食/.test(text) ? "feed"
+              : /找一找|找东西|寻找挑战/.test(text) ? "find"
+                : /介绍.*(朋友|玩具)|认识.*(朋友|玩具)/.test(text) ? "toy" : "";
+            if (stopRequested && gameplayModeRef.current) {
+              startGameplayRef.current?.("");
+              if (/难过|想妈妈/.test(text)) {
+                recordConversationMessage({ ...message, role: "user", text, source: "child_speech", character: activeCharacter });
+                if (message.source === "gameplay" && message.id) socket.send(JSON.stringify({ type: "resume_conversation", transcriptId: message.id }));
+              }
+            } else if (requestedMode && !gameplayModeRef.current) startGameplayRef.current?.(requestedMode);
+            else {
+              recordConversationMessage({ ...message, role: "user", text,
+                source: message.source || (gameplayModeRef.current ? "gameplay" : "child_speech"), character: activeCharacter });
+              setGameplayTranscript({ ...message, id: message.id || crypto.randomUUID(), text, final: true });
+            }
           }
-          speechTextRef.current = text;
-          setSpeechText(text);
+          speechTextRef.current = text.slice(0, 42);
+          setSpeechText(text.slice(0, 42));
           if (speechClearTimerRef.current) window.clearTimeout(speechClearTimerRef.current);
           speechClearTimerRef.current = window.setTimeout(() => {
             speechTextRef.current = "";
@@ -1660,6 +1582,7 @@ function App() {
           return;
         }
         if (message.type === "action") {
+          if (gameplayModeRef.current) return;
           const action = VOICE_ACTIONS[message.action];
           if (!action || !rivePlayAnimationRef.current?.(action.animation)) return;
           showToast(action.toast);
@@ -1676,7 +1599,8 @@ function App() {
           return;
         }
         if (message.type === "speech") {
-          if (!message.opening) {
+          if (gameplayModeRef.current && !message.local) return;
+          if (!message.opening && !message.local) {
             recordConversationMessage({
               role: "assistant",
               text: message.text,
@@ -1687,17 +1611,33 @@ function App() {
           return;
         }
         if (message.type === "error") {
-          setVoiceState("unavailable");
+          if (message.clientMessageId && pendingTextRef.current?.id === message.clientMessageId) pendingTextRef.current.finish(false, message.message);
+          if (!["TEXT_RATE_LIMIT", "TURN_QUEUE_FULL", "INVALID_TEXT", "LOCAL_SPEECH_RATE_LIMIT"].includes(message.code)) setVoiceState("unavailable");
           showToast(message.message || "语音识别暂时不可用");
+          if (message.code === "ASR_UNAVAILABLE" && audioTrack) void startVoiceSession(stream, { textOnly: true });
         }
       });
-      socket.addEventListener("error", () => setVoiceState("unavailable"));
+      socket.addEventListener("error", () => {
+        if (voiceSocketRef.current !== socket) return;
+        voiceReadyRef.current = false;
+        settleReady(null);
+        pendingTextRef.current?.finish(false, "连接没有成功，文字还在，可以再试一次。");
+        setVoiceState("unavailable");
+      });
       socket.addEventListener("close", () => {
+        if (voiceSocketRef.current !== socket) return;
+        voiceReadyRef.current = false;
+        settleReady(null);
+        pendingTextRef.current?.finish(false, "连接已断开，文字还在，可以再试一次。");
         if (!voiceIntentionalCloseRef.current) setVoiceState("unavailable");
       });
+      return readyPromise;
     } catch (error) {
+      if (generation !== voiceSessionGenerationRef.current) return null;
       console.warn("Voice session unavailable", error);
       setVoiceState("unavailable");
+      if (audioTrack) return startVoiceSession(stream, { textOnly: true });
+      return null;
     }
   }, [activeCharacter, enqueueSynthesizedSpeech, recordConversationMessage, scheduleAutoCapture, showToast, stopVoiceSession]);
 
@@ -2028,6 +1968,17 @@ function App() {
       const riveHeight = RIVE_VISIBLE_SOURCE.height * scale;
       const riveX = -visibleTargetWidth * CHARACTER_LEFT_OVERFLOW_RATIO + characterOffsetXRef.current;
       const riveY = targetHeight - riveHeight - (isPortraitWelcome ? targetHeight * 0.12 : 0);
+      const cropDisplayX = 0; // The camera canvas uses object-position: left bottom.
+      const cropDisplayY = targetHeight * displayScale - displayHeight;
+      const anchor = characterInteractionRef.current?.getMouthAnchor?.();
+      const mouthSourceX = anchor ? anchor.x * RIVE_SOURCE_SIZE.width : (riveCropXRef.current + RIVE_VISIBLE_SOURCE.width * 0.53);
+      const mouthSourceY = anchor ? anchor.y * RIVE_SOURCE_SIZE.height : (RIVE_VISIBLE_SOURCE.y + RIVE_VISIBLE_SOURCE.height * 0.44);
+      characterDrawRectRef.current = {
+        x: riveX * displayScale - cropDisplayX, y: riveY * displayScale - cropDisplayY,
+        width: riveWidth * displayScale, height: riveHeight * displayScale,
+        mouthX: (riveX + (mouthSourceX - riveCropXRef.current) * scale) * displayScale - cropDisplayX,
+        mouthY: (riveY + (mouthSourceY - RIVE_VISIBLE_SOURCE.y) * scale) * displayScale - cropDisplayY,
+      };
       outputContext.drawImage(
         riveCanvas,
         riveCropXRef.current,
@@ -2227,6 +2178,8 @@ function App() {
           const useOffscreenRenderer = activeRiveRendererMode === "webgl2-offscreen";
           const existingInstance = riveRef.current;
           if (existingInstance) {
+            characterInteractionRef.current?.dispose();
+            characterInteractionRef.current = null;
             riveCharacterEventCleanupRef.current?.();
             riveCharacterEventCleanupRef.current = null;
             let settled = false;
@@ -2265,6 +2218,9 @@ function App() {
                 resolve(false);
                 return;
               }
+              characterInteractionRef.current?.dispose();
+              characterInteractionRef.current = createCharacterInteraction(instance);
+              characterInteractionRef.current.install();
               const animations = instance.animationNames || [];
               const talkingAnimations = animations.filter((name) => (
                 name.startsWith("TalkingEmotion") && !name.endsWith("表情")
@@ -2340,7 +2296,7 @@ function App() {
                   && !guideAudioRef.current.paused
                   && guideAudioRef.current.dataset.voiceKind === "synthesized";
                 const playbackAnimations = [RIVE_POSITION_ANIMATION, nextAnimation];
-                if (speaking) playbackAnimations.push(RIVE_MOUTH_ANIMATION);
+                if (speaking && gameplayModeRef.current !== "feed") playbackAnimations.push(RIVE_MOUTH_ANIMATION);
                 switchingAnimation = true;
                 try {
                   instance.stop();
@@ -2378,6 +2334,7 @@ function App() {
                   || switchingAnimation
                   || completionQueued
                   || !activeAnimationName
+                  || gameplayModeRef.current
                 ) return;
                 const completedAnimation = event.type === RiveEventType.Loop
                   ? event.data?.animation
@@ -2401,6 +2358,7 @@ function App() {
               };
 
               riveMouthPlaybackRef.current = (speaking) => {
+                if (gameplayModeRef.current === "feed") speaking = false;
                 const mouthAnimation = getActiveAnimation(RIVE_MOUTH_ANIMATION);
                 if (speaking && !mouthAnimation) {
                   instance.play(RIVE_MOUTH_ANIMATION);
@@ -2536,7 +2494,9 @@ function App() {
           riveCharacterEventCleanupRef.current?.();
           riveCharacterEventCleanupRef.current = null;
           try {
-            riveRef.current?.cleanup();
+            characterInteractionRef.current?.dispose();
+      characterInteractionRef.current = null;
+      riveRef.current?.cleanup();
           } catch (error) {
             console.warn("WebGL2 cleanup before Canvas fallback failed", error);
           }
@@ -2684,6 +2644,8 @@ function App() {
       riveCropTimeoutsRef.current = [];
       riveCharacterEventCleanupRef.current?.();
       riveCharacterEventCleanupRef.current = null;
+      characterInteractionRef.current?.dispose();
+      characterInteractionRef.current = null;
       riveRef.current?.cleanup();
       riveRef.current = null;
       riveLoadCharacterRef.current = null;
@@ -2944,11 +2906,8 @@ function App() {
           };
         }
       }
-      if (!microphoneUnavailable) startVoiceSession(stream);
-      else {
-        setVoiceState("unavailable");
-        showToast("相机已打开，允许麦克风后才会显示语音气泡");
-      }
+      startVoiceSession(stream, { textOnly: microphoneUnavailable });
+      if (microphoneUnavailable) showToast("相机已打开，也可以点右上角打字聊天");
       if (pipResult && !pipResult.ok) {
         showToast("当前设备暂不支持前后双摄，已保留后摄主画面");
       } else if (!segmenterReady) {
@@ -3074,7 +3033,7 @@ function App() {
   }, [activeCharacter, switchCharacterTo]);
 
   const handleCharacterTap = useCallback(() => {
-    if (characterSwitchingRef.current) return;
+    if (characterSwitchingRef.current || gameplayModeRef.current) return;
     const now = performance.now();
     if (now - characterLastTapAtRef.current > CHARACTER_TAP_WINDOW_MS) {
       characterTapCountRef.current = 0;
@@ -3477,6 +3436,125 @@ function App() {
   }, [captionMode, mediaPreview, paddedDay, playInterfaceSound]);
 
   const latestMedia = mediaLibrary[0] || null;
+  const captureGameplayFrame = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video?.videoWidth || !video.videoHeight || video.readyState < 2) throw new Error("相机还没准备好");
+    const output = outputCanvasRef.current;
+    const displayWidth = output.clientWidth, displayHeight = output.clientHeight;
+    if (!displayWidth || !displayHeight) throw new Error("相机还没准备好");
+    const scale = Math.min(1, 640 / Math.max(displayWidth, displayHeight));
+    const canvas = gameplayFrameCanvasRef.current || document.createElement("canvas");
+    gameplayFrameCanvasRef.current = canvas;
+    canvas.width = Math.round(displayWidth * scale); canvas.height = Math.round(displayHeight * scale);
+    const context = canvas.getContext("2d");
+    const displayScale = Math.max(displayWidth / output.width, displayHeight / output.height);
+    const cropBottom = output.height * displayScale - displayHeight;
+    // Match both the video's centered cover and the output canvas's left/bottom cover.
+    // The JPEG is already mirrored exactly as displayed, so later point mapping is direct.
+    context.setTransform(scale * displayScale, 0, 0, scale * displayScale, 0, -cropBottom * scale);
+    const rect = getCoverRect(video.videoWidth, video.videoHeight, output.width, output.height);
+    drawCameraSource(context, video, rect, output.width, shouldMirrorCamera(facingMode));
+    context.resetTransform();
+    let quality = 0.78;
+    let image = canvas.toDataURL("image/jpeg", quality);
+    while (image.length > 230_000 && quality > 0.3) { quality -= 0.1; image = canvas.toDataURL("image/jpeg", quality); }
+    const blob = await (await fetch(image)).blob();
+    return { image, blob, width: canvas.width, height: canvas.height, mirrored: false };
+  }, [facingMode]);
+
+  const startGameplay = useCallback(async (mode) => {
+    gameplayModeRef.current = mode;
+    clearCharacterSpeech();
+    setGameplayMenuOpen(false); setTextComposerOpen(false); setGameplayTranscript(null); setGameplayReaction(null);
+    gameplayTargetRef.current = null;
+    characterInteractionRef.current?.reset();
+    const socket = voiceSocketRef.current;
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "interaction_mode", mode: mode || "none" }));
+    if (mode === "feed" && activeCharacter !== "jiaojiao") await switchCharacterTo("jiaojiao");
+    if (gameplayModeRef.current !== mode) return;
+    setGameplayMode(mode);
+    if (mode) rivePlayAnimationRef.current?.("TalkingEmotion_Expectation");
+    else rivePlayAnimationRef.current?.("TalkingEmotion_Normal");
+  }, [activeCharacter, clearCharacterSpeech, switchCharacterTo]);
+  startGameplayRef.current = startGameplay;
+  useEffect(() => {
+    if (cameraState !== "ready") { gameplayModeRef.current = ""; setGameplayMode(""); setGameplayMenuOpen(false); }
+  }, [cameraState]);
+  useEffect(() => {
+    if (!gameplayMode) return undefined;
+    const sync = () => {
+      const next = characterDrawRectRef.current;
+      if (!next) return;
+      setGameplayCharacterRect((old) => !old || ["x", "y", "width", "height", "mouthX", "mouthY"].some((key) => Math.abs(next[key] - old[key]) > 1) ? { ...next } : old);
+    };
+    sync(); const timer = setInterval(sync, 100);
+    return () => clearInterval(timer);
+  }, [gameplayMode]);
+  const handleGameplayTarget = useCallback((target) => {
+    gameplayTargetRef.current = target;
+    const rect = characterDrawRectRef.current;
+    if (!target || !rect) { characterInteractionRef.current?.reset(); return; }
+    characterInteractionRef.current?.update({
+      x: clamp((target.x - rect.mouthX) / Math.max(rect.width * 0.45, 1), -1, 1),
+      y: clamp((target.y - rect.mouthY) / Math.max(rect.height * 0.4, 1), -1, 1),
+      mouthOpen: target.mouthOpen, chewing: target.chewing,
+    });
+  }, []);
+  const handleGameplayReaction = useCallback((value, actionName) => {
+    const reaction = typeof value === "string" ? { text: value, action: actionName || "happy" } : value;
+    if (!reaction?.text) return;
+    const action = VOICE_ACTIONS[reaction.action];
+    if (action && !gameplayTargetRef.current?.chewing) rivePlayAnimationRef.current?.(action.animation);
+    setGameplayReaction({ ...reaction, id: crypto.randomUUID(), character: activeCharacter });
+    const socket = voiceSocketRef.current;
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", text: reaction.text }));
+    else if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(reaction.text); utterance.lang = "zh-CN"; utterance.rate = 1;
+      window.speechSynthesis.speak(utterance);
+    }
+  }, [activeCharacter]);
+  const analyzeToy = useCallback((image, { signal } = {}) => requestGameplay({ source: "toy", image,
+    roundId: crypto.randomUUID(), frameId: crypto.randomUUID(), character: activeCharacter }, { signal }), [activeCharacter]);
+  const handleFriendSaved = useCallback((friend) => setFriends((current) => [friend, ...current.filter((item) => item.id !== friend.id)]), []);
+  const submitTypedMessage = useCallback(async (event) => {
+    event.preventDefault(); const text = textDraft.trim(); if (!text) return;
+    if (textSendingRef.current) return;
+    textSendingRef.current = true; setTextSending(true);
+    const attempt = lastTextAttemptRef.current?.text === text ? lastTextAttemptRef.current : { id: crypto.randomUUID(), text };
+    lastTextAttemptRef.current = attempt;
+    try {
+      let socket = voiceSocketRef.current;
+      if (!voiceReadyRef.current || socket?.readyState !== WebSocket.OPEN) {
+        const waitingSocket = socket;
+        if (socket && socket.readyState < WebSocket.CLOSING && voiceReadyPromiseRef.current) socket = await voiceReadyPromiseRef.current;
+        if (!socket || socket !== voiceSocketRef.current || socket.readyState !== WebSocket.OPEN || !voiceReadyRef.current) {
+          if (!cameraReadyRef.current) throw new Error("相机已关闭，文字还在。");
+          const connecting = voiceSocketRef.current;
+          socket = connecting && connecting !== waitingSocket && connecting.readyState < WebSocket.CLOSING && voiceReadyPromiseRef.current
+            ? await voiceReadyPromiseRef.current : await startVoiceSession(streamRef.current, { textOnly: true });
+        }
+      }
+      if (!socket || socket !== voiceSocketRef.current || socket.readyState !== WebSocket.OPEN || !voiceReadyRef.current) throw new Error("连接没有成功，文字还在，可以再试一次。");
+      await new Promise((resolve, reject) => {
+        const timer = window.setTimeout(() => pendingTextRef.current?.id === attempt.id && pendingTextRef.current.finish(false, "这句话还没送到，请再试一次。"), 8_000);
+        const pending = { id: attempt.id, finish: (ok, message) => {
+          window.clearTimeout(timer);
+          if (pendingTextRef.current === pending) pendingTextRef.current = null;
+          if (ok) resolve(); else reject(new Error(message || "发送没有成功，文字还在。"));
+        } };
+        pendingTextRef.current = pending;
+        try { socket.send(JSON.stringify({ type: "text", text, clientMessageId: attempt.id })); }
+        catch { pending.finish(false, "连接已断开，文字还在，可以再试一次。"); }
+      });
+      lastTextAttemptRef.current = null;
+      setTextDraft(""); setTextComposerOpen(false);
+    } catch (error) {
+      showToast(error.message || "这句话没有送到，文字还在。");
+      if (cameraReadyRef.current) setTextComposerOpen(true);
+    } finally { textSendingRef.current = false; setTextSending(false); }
+  }, [showToast, startVoiceSession, textDraft]);
+
   const formattedRecordingTime = `${String(Math.floor(recordingTime / 1000)).padStart(2, "0")}.${Math.floor((recordingTime % 1000) / 100)}`;
   const readyForCamera = engineState !== "error";
   const activeRivePlaybackRate = cameraState === "ready" ? CAMERA_RIVE_PLAYBACK_RATE : COVER_RIVE_PLAYBACK_RATE;
@@ -3489,6 +3567,7 @@ function App() {
       <section
         className={`camera-stage is-${frameOrientation} ${cameraState === "ready" ? "is-live" : ""} ${riveReady ? "is-rive-ready" : ""} ${characterSwitching ? "is-character-switching" : ""}`}
         data-frame-orientation={frameOrientation}
+        data-gameplay-mode={gameplayMode || "none"}
         data-rive-animation={riveAnimationName}
         data-rive-playback-rate={activeRivePlaybackRate}
         data-rive-renderer={riveRendererMode}
@@ -3558,7 +3637,33 @@ function App() {
               {speechText}
             </Calligraph>
           </div>
-          <CharacterCaptionBubble reaction={sceneReaction} canvasRendered={recording} />
+          {!gameplayMode && <CharacterCaptionBubble reaction={gameplayReaction || sceneReaction} canvasRendered={recording} />}
+          {cameraState === "ready" && !recording && !mediaLibraryOpen && !mediaPreview && <>
+            {!gameplayMode && <div className="play-toolbar">
+              <button type="button" className="play-entry" aria-expanded={gameplayMenuOpen} onClick={() => setGameplayMenuOpen(!gameplayMenuOpen)}><Sparkle size={19} weight="fill" />一起玩</button>
+              <button type="button" className="play-text-entry" aria-label="打字说句话" onClick={() => setTextComposerOpen(!textComposerOpen)}><ChatCircleText size={22} weight="bold" /></button>
+            </div>}
+            {gameplayMenuOpen && !gameplayMode && <div className="play-picker" role="dialog" aria-label="选择一个玩法">
+              <strong>今天想怎么玩？</strong>
+              <button type="button" onClick={() => startGameplay("feed")}><span>喂叫叫吃东西</span><small>拖一拖，啊呜一口</small></button>
+              <button type="button" onClick={() => startGameplay("find")}><span>找一找挑战</span><small>发现身边的小惊喜</small></button>
+              <button type="button" onClick={() => startGameplay("toy")}><span>介绍一个新朋友</span><small>给玩具做张小名片</small></button>
+              <a href="/assets/">逛逛资源陈列馆</a>
+            </div>}
+            {gameplayMode && <Suspense fallback={<div className="play-loading">玩法正在准备…</div>}>
+              {gameplayMode === "toy" ? <FriendIntro key={`toy-${facingMode}-${frameOrientation}`} captureFrame={captureGameplayFrame} analyzeToy={analyzeToy}
+                transcript={gameplayTranscript} onClose={() => startGameplay("")} onSaved={handleFriendSaved} onReaction={handleGameplayReaction} />
+                : <GamePlayOverlay mode={gameplayMode} captureFrame={captureGameplayFrame} character={activeCharacter}
+                  characterRect={gameplayCharacterRect} frameKey={`${facingMode}-${frameOrientation}-${cameraState}`}
+                  transcript={gameplayTranscript?.text || ""} onClose={() => startGameplay("")} onReaction={handleGameplayReaction} onTarget={handleGameplayTarget} />}
+            </Suspense>}
+            {gameplayMode && gameplayMode !== "toy" && <button className="play-text-active" type="button" aria-label="打字说句话" onClick={() => setTextComposerOpen(!textComposerOpen)}><ChatCircleText size={21} weight="bold" /></button>}
+            {textComposerOpen && <form className="play-composer" onSubmit={submitTypedMessage}>
+              <input aria-label="想和叫叫说的话" autoFocus maxLength={1000} disabled={textSending} placeholder="想说什么，写在这里" value={textDraft} onChange={(event) => setTextDraft(event.target.value)} />
+              <button type="submit" aria-label={textSending ? "正在发送" : "发送"} disabled={textSending || !textDraft.trim()}><PaperPlaneRight size={22} weight="fill" /></button>
+              <button type="button" aria-label="收起输入" onClick={() => setTextComposerOpen(false)}><X size={20} /></button>
+            </form>}
+          </>}
 
           {cameraState === "ready" && aiState === "thinking" && (
             <div
@@ -3585,7 +3690,7 @@ function App() {
             />
           )}
 
-          {cameraState === "ready" && (
+          {cameraState === "ready" && !gameplayMode && (
             <button
               className={`live-caption is-${contextualCaption.mode} ${recording ? "is-canvas-rendered" : ""}`}
               type="button"
@@ -3634,7 +3739,7 @@ function App() {
                   className={`media-library-entry ${latestMedia ? "has-media" : ""}`}
                   type="button"
                   disabled={recording}
-                  onClick={openMediaLibrary}
+                  onClick={() => { startGameplay(""); openMediaLibrary(); }}
                   aria-label={mediaLibrary.length ? `打开作品列表，共 ${mediaLibrary.length} 个作品` : "打开作品列表"}
                 >
                   {latestMedia ? (
@@ -3654,10 +3759,11 @@ function App() {
               </div>
 
               <div className="capture-controls">
-                <span className="capture-hint">轻点拍照 · 按住录像</span>
+                <span className="capture-hint">{gameplayMode ? "先完成这一轮，再来合影" : "轻点拍照 · 按住录像"}</span>
                 <button
                   className={`shutter ${recording ? "is-recording" : ""}`}
                   type="button"
+                  disabled={Boolean(gameplayMode)}
                   aria-label={recording ? "松开结束录像" : "轻点拍照，长按录像"}
                   onPointerDown={onShutterPointerDown}
                   onPointerUp={onShutterPointerUp}
@@ -3804,7 +3910,8 @@ function App() {
                 <X size={25} weight="bold" aria-hidden="true" />
               </button>
             </header>
-            {mediaLibrary.length ? (
+            <nav className="library-tabs" aria-label="相册分类"><button type="button" aria-pressed={libraryTab === "days"} onClick={() => setLibraryTab("days")}>时光小记</button><button type="button" aria-pressed={libraryTab === "friends"} onClick={() => setLibraryTab("friends")}>朋友收藏{friends.length ? ` · ${friends.length}` : ""}</button></nav>
+            {libraryTab === "friends" ? <div className="media-library-timeline" ref={mediaLibraryGridRef}><Suspense fallback={<p>朋友们正在到场…</p>}><FriendCollection friends={friends} onChange={setFriends} /></Suspense></div> : mediaTimeline.length ? (
               <div className="media-library-timeline" ref={mediaLibraryGridRef}>
                 {mediaTimeline.map(({ dayKey, items }, dayIndex) => {
                   const entries = conversationEntriesByDay.get(dayKey) || [];
@@ -3822,7 +3929,7 @@ function App() {
                         <span className="media-timeline-marker" aria-hidden="true" />
                         <div>
                           <strong>{formatTimelineDay(dayKey)}</strong>
-                          <span>{items.length} 个作品</span>
+                          <span>{items.length ? `${items.length} 个作品` : "今天聊过的小事"}</span>
                         </div>
                       </header>
                       <div className="media-day-grid">
@@ -3870,13 +3977,9 @@ function App() {
                           </button>
                         ))}
                       </div>
-                      <div className={`media-day-summary is-${summaryState}`} aria-live={summaryState === "loading" ? "polite" : "off"}>
-                        <ChatCircleText size={20} weight="duotone" aria-hidden="true" />
-                        <div>
-                          <span>当天小记</span>
-                          <p>{summaryText}</p>
-                        </div>
-                      </div>
+                      <JournalDay record={summaryRecord || { dayKey }} state={summaryState}
+                        onChange={journal.updateMoment} onForget={journal.forgetMoment} onRetry={() => journal.retry(dayKey)} />
+                      {friends.some((friend) => new Date(friend.createdAt).toLocaleDateString() === new Date(`${dayKey}T12:00:00`).toLocaleDateString()) && <button className="day-friends-link" type="button" onClick={() => setLibraryTab("friends")}>看看这天认识的新朋友 →</button>}
                     </section>
                   );
                 })}
@@ -3884,8 +3987,8 @@ function App() {
             ) : (
               <div className="media-library-empty">
                 <ImagesSquare size={42} weight="duotone" aria-hidden="true" />
-                <strong>还没有作品</strong>
-                <span>拍照、录像或做个手势试试</span>
+                <strong>把今天的小事留下来</strong>
+                <span>拍张照片，或和叫叫聊聊今天</span>
               </div>
             )}
           </div>

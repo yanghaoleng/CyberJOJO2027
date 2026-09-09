@@ -32,7 +32,7 @@ export function groupConversationEntriesByDay(entries = []) {
 export function createConversationFingerprint(entries = []) {
   let hash = 2166136261;
   for (const entry of entries) {
-    const value = `${entry.id || ""}|${entry.role || ""}|${entry.character || ""}|${entry.text || ""}|${entry.createdAt || 0}`;
+    const value = `${entry.id || ""}|${entry.role || ""}|${entry.source || ""}|${entry.character || ""}|${entry.text || ""}|${entry.createdAt || 0}`;
     for (let index = 0; index < value.length; index += 1) {
       hash ^= value.charCodeAt(index);
       hash = Math.imul(hash, 16777619);
@@ -41,3 +41,14 @@ export function createConversationFingerprint(entries = []) {
   return `${entries.length}-${(hash >>> 0).toString(36)}`;
 }
 
+export function mergeDailyTimeline(captures = [], entries = [], summaries = {}, friends = []) {
+  const days = new Map(groupMediaCapturesByDay(captures).map((day) => [day.dayKey, { ...day, friends: [] }]));
+  const ensure = (dayKey) => {
+    if (dayKey && !days.has(dayKey)) days.set(dayKey, { dayKey, items: [], friends: [] });
+    return days.get(dayKey);
+  };
+  for (const entry of entries) if (entry.role === "user" && entry.source !== "gameplay") ensure(getLocalDayKey(entry.createdAt));
+  for (const record of Object.values(summaries)) if (record.summary || record.moments?.length) ensure(record.dayKey);
+  for (const friend of friends) ensure(getLocalDayKey(friend.createdAt))?.friends.push(friend);
+  return [...days.values()].sort((a, b) => b.dayKey.localeCompare(a.dayKey));
+}

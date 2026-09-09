@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { arkInternals, getArkConfig, looksLikeJiaojiaoCommand } from "./ark-command.js";
+import { arkInternals, createCharacterInput, getArkConfig, looksLikeJiaojiaoCommand, sanitizeConversationContext } from "./ark-command.js";
 
 test("vision uses Mini with a separate credential and retains the Lite fallback", () => {
   const config = getArkConfig({ VOLC_ARK_API_KEY: "test-key" });
@@ -21,6 +21,26 @@ test("vision uses Mini with a separate credential and retains the Lite fallback"
   assert.equal(upgraded.visionFallbackModel, "doubao-seed-2-0-lite-260215");
   assert.equal(upgraded.summaryApiKey, "vision-key");
   assert.equal(upgraded.summaryModel, "doubao-seed-2-0-mini-260428");
+});
+
+test("conversation context remains bounded and preserves dates and the current utterance ending", () => {
+  const context = sanitizeConversationContext({ entries: Array.from({ length: 30 }, (_, i) => ({ role: "user", text: `第${i}次说话` })), moments: [
+    { dayKey: "2026-09-08", event: "搭了积木", feeling: "开心" }, { dayKey: "today", event: "bad date" },
+  ] });
+  assert.equal(context.entries.length, 16);
+  assert.equal(context.moments.length, 1);
+  const text = "搭积木".repeat(200) + "后来我想再试一次";
+  const input = createCharacterInput(text, "jiaojiao", context);
+  assert.equal(input.at(-1).content[0].text, text);
+  assert.ok(input[1].content[0].text.includes("2026-09-08"));
+  assert.ok(input.some((message) => message.content[0].text === "第29次说话"));
+});
+
+test("malformed context members are ignored without throwing", () => {
+  assert.deepEqual(sanitizeConversationContext(null), { entries: [], moments: [] });
+  assert.deepEqual(sanitizeConversationContext({ entries: [null, [], 4, { text: { toString: null } }, { role: "user", text: "保留有效原话" }], moments: [null, [], { dayKey: { toString: null } }] }), {
+    entries: [{ id: "", role: "user", text: "保留有效原话" }], moments: [],
+  });
 });
 
 test("command hints distinguish photo chat from action requests", () => {

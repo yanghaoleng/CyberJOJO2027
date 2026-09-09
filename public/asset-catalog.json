@@ -1,0 +1,713 @@
+{
+  "version": 1,
+  "generatedAt": "2026-09-09T08:04:00.575Z",
+  "publicFileCount": 48,
+  "totalBytes": 61853496,
+  "assets": [
+    {
+      "id": "apple-touch-icon.png",
+      "path": "apple-touch-icon.png",
+      "name": "iOS 主屏幕图标",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 64129,
+      "sha256": "a49239cc42591f385d66391bdf81e08712307fa05ee45cb9877aabbb4e817387",
+      "dimensions": [
+        180,
+        180
+      ]
+    },
+    {
+      "id": "audio/commands/curious.mp3",
+      "path": "audio/commands/curious.mp3",
+      "name": "语音指令 · 好奇",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 48064,
+      "sha256": "bf38df60af82dd96daa997d6dbc101fccc5c47d8c3122c26195616e172fb6b3b"
+    },
+    {
+      "id": "audio/commands/frighten.mp3",
+      "path": "audio/commands/frighten.mp3",
+      "name": "语音指令 · 害怕",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 45974,
+      "sha256": "049851e825c18e160b87f72406fc5318dd51b766d874c31ade22c7a77ec7b6c4"
+    },
+    {
+      "id": "audio/commands/happy.mp3",
+      "path": "audio/commands/happy.mp3",
+      "name": "语音指令 · 开心",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 43466,
+      "sha256": "bf193ca933230cf97c361bb8b0f91d26e782ed505404b438d6a00e497e84c05f"
+    },
+    {
+      "id": "audio/commands/praise.mp3",
+      "path": "audio/commands/praise.mp3",
+      "name": "语音指令 · 表扬",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 37615,
+      "sha256": "d629153dcd8ddc26c9a19ab51e0b11d4a946a7d5826cc2fde80dc9d343d2c64f"
+    },
+    {
+      "id": "audio/commands/surprised.mp3",
+      "path": "audio/commands/surprised.mp3",
+      "name": "语音指令 · 惊讶",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 32181,
+      "sha256": "d9bbe7555bd9e905bb9e4b7b3e750e024e4f63ae2073852d2279538fa8054500"
+    },
+    {
+      "id": "audio/commands/think.mp3",
+      "path": "audio/commands/think.mp3",
+      "name": "语音指令 · 思考",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 41377,
+      "sha256": "56ca3723935c306caefb089c4fdc148aa8eb7475da6ba092d360578858042299"
+    },
+    {
+      "id": "audio/gestures/heart.mp3",
+      "path": "audio/gestures/heart.mp3",
+      "name": "手势回应 · 比心",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 26330,
+      "sha256": "2a22b0c5d9e5cda937e85cbd22a22d4d3d5da8f8f4222bf5b47e395a8efffd77"
+    },
+    {
+      "id": "audio/gestures/ok.mp3",
+      "path": "audio/gestures/ok.mp3",
+      "name": "手势回应 · OK 手势",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 30928,
+      "sha256": "1382ffe6294b868fa644fc20224e3debe1bf4e678219622992405ff10138cdd6"
+    },
+    {
+      "id": "audio/guides/curious.mp3",
+      "path": "audio/guides/curious.mp3",
+      "name": "相机引导 · 好奇",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 28420,
+      "sha256": "d9bbc9094efe3655315e4019e6e42006a9e8fcb0bf5dd99cc9912cf18e6ef171"
+    },
+    {
+      "id": "audio/guides/encourage.mp3",
+      "path": "audio/guides/encourage.mp3",
+      "name": "相机引导 · 鼓励",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 36361,
+      "sha256": "daf48915036585ef35084b76ba2db7b855ed9064e437c9ad1e5801d7bb315a61"
+    },
+    {
+      "id": "audio/guides/enter.mp3",
+      "path": "audio/guides/enter.mp3",
+      "name": "相机引导 · 进入相机",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 58931,
+      "sha256": "25f9978ea4676687e1115d559c8ae2de961ea4ce2b05f64195bd6ab72a8f4dea"
+    },
+    {
+      "id": "audio/guides/frighten.mp3",
+      "path": "audio/guides/frighten.mp3",
+      "name": "相机引导 · 害怕",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 39705,
+      "sha256": "d3d4f3b4e49152c0b4d89c9c15ad0a745465c05f0dc495a8527ce0c19950ba68"
+    },
+    {
+      "id": "audio/guides/praise.mp3",
+      "path": "audio/guides/praise.mp3",
+      "name": "相机引导 · 表扬",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 35107,
+      "sha256": "f79de21af94472376adfa8bebe9bed942fb6ebef8f8ee46eedfd3d4525153408"
+    },
+    {
+      "id": "audio/guides/smile.mp3",
+      "path": "audio/guides/smile.mp3",
+      "name": "相机引导 · 微笑",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 25494,
+      "sha256": "2091ea045204f91de5c409d45618801c112b2c3bf6f4ed3be0f8a73f26e21192"
+    },
+    {
+      "id": "audio/guides/surprise.mp3",
+      "path": "audio/guides/surprise.mp3",
+      "name": "相机引导 · 惊喜",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 37197,
+      "sha256": "02ca40f98baad0896cf6df45d3c9c93cb6fab85bf760248e39df2e3301e4162c"
+    },
+    {
+      "id": "audio/guides/think.mp3",
+      "path": "audio/guides/think.mp3",
+      "name": "相机引导 · 思考",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 33017,
+      "sha256": "b45e5230040c3c1cde3137900bb502eb9bd033f2d72adea122bd3b74758db91b"
+    },
+    {
+      "id": "favicon-1024.png",
+      "path": "favicon-1024.png",
+      "name": "应用图标 · 1024 像素",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 1194017,
+      "sha256": "07f00daa89a5277a7311ef9f51e8af7c2edb69a2f6391fc672864e892f80f168",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "id": "favicon-16.png",
+      "path": "favicon-16.png",
+      "name": "应用图标 · 16 像素",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 1388,
+      "sha256": "4159876d326b765a2f47cd3e7e49ee4511b80cbf07070b9b65756419deb3c07a",
+      "dimensions": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "favicon-32.png",
+      "path": "favicon-32.png",
+      "name": "应用图标 · 32 像素",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 2952,
+      "sha256": "48658866b1cfc72a74ff7a5acde60876e3489445bb3fc056d69c0cc2c94252af",
+      "dimensions": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "favicon-512.png",
+      "path": "favicon-512.png",
+      "name": "应用图标 · 512 像素",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 421357,
+      "sha256": "d015c8fc99497dc6954511bb0ff6bba0079fdf2d2123f2f7c4c452114b8c2b05",
+      "dimensions": [
+        512,
+        512
+      ]
+    },
+    {
+      "id": "favicon-512.webp",
+      "path": "favicon-512.webp",
+      "name": "应用图标 · 512 像素",
+      "category": "icon",
+      "format": "WEBP",
+      "bytes": 67748,
+      "sha256": "e7753bcbde1737e10ff2d12ea44952077fec04d1bf7f341bc36d52a77ca6323d",
+      "dimensions": [
+        512,
+        512
+      ]
+    },
+    {
+      "id": "favicon.ico",
+      "path": "favicon.ico",
+      "name": "浏览器标签图标",
+      "category": "icon",
+      "format": "ICO",
+      "bytes": 32038,
+      "sha256": "a3c73a9184fc85e1e38f5612e99fa391c1337241bfbbb0ab22503330e7c9fef4",
+      "dimensions": [
+        64,
+        64
+      ]
+    },
+    {
+      "id": "favicon.svg",
+      "path": "favicon.svg",
+      "name": "应用图标 · 矢量版",
+      "category": "icon",
+      "format": "SVG",
+      "bytes": 487,
+      "sha256": "76d932ef8c4147c40950b88fd4bfafab977b189df586baed8280a6f313d7c1f7",
+      "dimensions": [
+        64,
+        64
+      ]
+    },
+    {
+      "id": "intro/assets/intro-hero.webp",
+      "path": "intro/assets/intro-hero.webp",
+      "name": "介绍页主视觉",
+      "category": "image",
+      "format": "WEBP",
+      "bytes": 102524,
+      "sha256": "101407415c0e319361abcea69660534bb4930388a0b523b437f7e5efaffd2e53",
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "id": "intro/assets/intro-logo.webp",
+      "path": "intro/assets/intro-logo.webp",
+      "name": "叫叫品牌标志",
+      "category": "icon",
+      "format": "WEBP",
+      "bytes": 6966,
+      "sha256": "c1e52bf21810091c3212ac36ac2c1d6e682bdb660695d548c7ccde5e2827f56c",
+      "dimensions": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "intro/index.html",
+      "path": "intro/index.html",
+      "name": "index.html",
+      "category": "other",
+      "format": "HTML",
+      "bytes": 26046,
+      "sha256": "d3eb4878761287187ac7380f43bdbe5d951b2a3268fea921ff820c26a602d8a3"
+    },
+    {
+      "id": "media/jiaojiao.riv",
+      "path": "media/jiaojiao.riv",
+      "name": "叫叫",
+      "category": "rive",
+      "format": "RIV",
+      "bytes": 10399115,
+      "sha256": "203a6f992698be770a4b49fb42f2632f095cef22490fa426bf933ed37c929233"
+    },
+    {
+      "id": "media/lvdou.riv",
+      "path": "media/lvdou.riv",
+      "name": "绿豆",
+      "category": "rive",
+      "format": "RIV",
+      "bytes": 1632399,
+      "sha256": "cb114cd3107aecf2cf9d5ee71d5f9a3f688dd2379c8ae6394862bac4b00de4fe",
+      "source": "https://rive.mikeywa.site/qdg",
+      "sourceLabel": "绿豆 3D · 0908 原文件"
+    },
+    {
+      "id": "media/MohrRounded-Bold.ttf",
+      "path": "media/MohrRounded-Bold.ttf",
+      "name": "MohrRounded-Bold.ttf",
+      "category": "font",
+      "format": "TTF",
+      "bytes": 10472,
+      "sha256": "48689bc7505a65c5ee735249ef0df29a2887ba30776e5d9560852d020d744d86"
+    },
+    {
+      "id": "media/MohrRounded-Medium.ttf",
+      "path": "media/MohrRounded-Medium.ttf",
+      "name": "MohrRounded-Medium.ttf",
+      "category": "font",
+      "format": "TTF",
+      "bytes": 10436,
+      "sha256": "9c6bef741592327bd73c21e1bc2f51afba890b52935f7dde9161ca5eed5ddf7b"
+    },
+    {
+      "id": "mediapipe/deeplab_v3.tflite",
+      "path": "mediapipe/deeplab_v3.tflite",
+      "name": "场景分割模型",
+      "category": "vision",
+      "format": "TFLITE",
+      "bytes": 2780176,
+      "sha256": "ff36e24d40547fe9e645e2f4e8745d1876d6e38b332d39a82f0bf0f5d1d561b3"
+    },
+    {
+      "id": "mediapipe/face_landmarker.task",
+      "path": "mediapipe/face_landmarker.task",
+      "name": "面部关键点模型",
+      "category": "vision",
+      "format": "TASK",
+      "bytes": 3758596,
+      "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff"
+    },
+    {
+      "id": "mediapipe/gesture_recognizer.task",
+      "path": "mediapipe/gesture_recognizer.task",
+      "name": "手势识别模型",
+      "category": "vision",
+      "format": "TASK",
+      "bytes": 8373440,
+      "sha256": "97952348cf6a6a4915c2ea1496b4b37ebabc50cbbf80571435643c455f2b0482"
+    },
+    {
+      "id": "mediapipe/selfie_segmenter.tflite",
+      "path": "mediapipe/selfie_segmenter.tflite",
+      "name": "人像分割模型",
+      "category": "vision",
+      "format": "TFLITE",
+      "bytes": 249537,
+      "sha256": "191ac9529ae506ee0beefa6b2c945a172dab9d07d1e802a290a4e4038226658b"
+    },
+    {
+      "id": "mediapipe/wasm/vision_wasm_internal.js",
+      "path": "mediapipe/wasm/vision_wasm_internal.js",
+      "name": "vision_wasm_internal.js",
+      "category": "runtime",
+      "format": "JS",
+      "bytes": 323377,
+      "sha256": "e170ee67dd4e16c1a6fcd8840a206687e5a59b22c20e4a902bc445b095454d73"
+    },
+    {
+      "id": "mediapipe/wasm/vision_wasm_internal.wasm",
+      "path": "mediapipe/wasm/vision_wasm_internal.wasm",
+      "name": "vision_wasm_internal.wasm",
+      "category": "runtime",
+      "format": "WASM",
+      "bytes": 11756954,
+      "sha256": "8da277a733926eacd0474b8704b36742d6ec3231c57a860c5b889dff8f1df886"
+    },
+    {
+      "id": "mediapipe/wasm/vision_wasm_nosimd_internal.js",
+      "path": "mediapipe/wasm/vision_wasm_nosimd_internal.js",
+      "name": "vision_wasm_nosimd_internal.js",
+      "category": "runtime",
+      "format": "JS",
+      "bytes": 323180,
+      "sha256": "e81d715a3d42cc3373602eb2f7aff795d164934db680e32496b65dab537f9658"
+    },
+    {
+      "id": "mediapipe/wasm/vision_wasm_nosimd_internal.wasm",
+      "path": "mediapipe/wasm/vision_wasm_nosimd_internal.wasm",
+      "name": "vision_wasm_nosimd_internal.wasm",
+      "category": "runtime",
+      "format": "WASM",
+      "bytes": 10960242,
+      "sha256": "a28483cd42e74e855bf5ebdb6b40d9b66a5b49e35e95020bc97669e6822a3192"
+    },
+    {
+      "id": "models/food/apple.glb",
+      "path": "models/food/apple.glb",
+      "name": "红苹果",
+      "category": "model",
+      "format": "GLB",
+      "bytes": 122828,
+      "sha256": "d353d47d43c6f0a90430b51ec296b999e7c86d0f0ff55899a66cbfc1c3692f52",
+      "foodId": "apple",
+      "description": "饱满果身、弯曲果梗和立体绿叶。",
+      "triangles": 3596,
+      "meshes": 4,
+      "materials": 4,
+      "dimensions": [
+        0.084,
+        0.095,
+        0.084
+      ],
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "models/food/cake.glb",
+      "path": "models/food/cake.glb",
+      "name": "草莓奶油蛋糕",
+      "category": "model",
+      "format": "GLB",
+      "bytes": 493780,
+      "sha256": "ad857939dd04db3dc22f8318ab2b6e3a37497a9ea73b5c63b4534325baefc2fd",
+      "foodId": "cake",
+      "description": "松软双层蛋糕，配草莓夹心、奶油和新鲜草莓。",
+      "triangles": 12404,
+      "meshes": 6,
+      "materials": 6,
+      "dimensions": [
+        0.149,
+        0.129,
+        0.115
+      ],
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "models/food/LICENSE.txt",
+      "path": "models/food/LICENSE.txt",
+      "name": "LICENSE.txt",
+      "category": "other",
+      "format": "TXT",
+      "bytes": 266,
+      "sha256": "b09671246c0ec86774138a49f1f2e03829c367ece7eb16548e99aebf29c5a1f8"
+    },
+    {
+      "id": "models/food/manifest.json",
+      "path": "models/food/manifest.json",
+      "name": "manifest.json",
+      "category": "other",
+      "format": "JSON",
+      "bytes": 1253,
+      "sha256": "9cd0345df874bd47c435259d7141e7a5b4d61c5740b5351d2bae5b0233519c25"
+    },
+    {
+      "id": "models/food/noodles.glb",
+      "path": "models/food/noodles.glb",
+      "name": "暖暖面条",
+      "category": "model",
+      "format": "GLB",
+      "bytes": 490920,
+      "sha256": "f973e46848af31d0e9c130afb47f0b4bcf55456f5a14b161dff0b894ff6e043f",
+      "foodId": "noodles",
+      "description": "圆润陶碗、卷曲面条、溏心蛋和小青菜。",
+      "triangles": 19476,
+      "meshes": 8,
+      "materials": 8,
+      "dimensions": [
+        0.221,
+        0.109,
+        0.221
+      ],
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "rive/canvas_fallback.wasm",
+      "path": "rive/canvas_fallback.wasm",
+      "name": "canvas_fallback.wasm",
+      "category": "runtime",
+      "format": "WASM",
+      "bytes": 1818434,
+      "sha256": "9dbe9ecf6405e12f3dcfe66c94e5f626e80e1dcb37e7e0722a368aec796c8ad2"
+    },
+    {
+      "id": "rive/canvas.wasm",
+      "path": "rive/canvas.wasm",
+      "name": "canvas.wasm",
+      "category": "runtime",
+      "format": "WASM",
+      "bytes": 1808114,
+      "sha256": "dc7353e9fba896985dc0265e3e50bb21a50995be687d61dfed7fc7f1306a8e92"
+    },
+    {
+      "id": "rive/rive_fallback.wasm",
+      "path": "rive/rive_fallback.wasm",
+      "name": "rive_fallback.wasm",
+      "category": "runtime",
+      "format": "WASM",
+      "bytes": 2015300,
+      "sha256": "e5dc87714ba92b0f6041273b4227ff3432ac1f7bc0a8629752396336faf33c16"
+    },
+    {
+      "id": "rive/rive.wasm",
+      "path": "rive/rive.wasm",
+      "name": "rive.wasm",
+      "category": "runtime",
+      "format": "WASM",
+      "bytes": 2004858,
+      "sha256": "dcc8ab8b251fd8dce795243074f6a16613f5ab86a5a87815e260be350dfa8445"
+    },
+    {
+      "id": "phosphor:ArrowClockwise",
+      "name": "重新开始",
+      "iconName": "ArrowClockwise",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "bold"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "phosphor:ArrowsLeftRight",
+      "name": "切换镜头",
+      "iconName": "ArrowsLeftRight",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "bold"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "phosphor:CaretDown",
+      "name": "展开",
+      "iconName": "CaretDown",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "bold"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "phosphor:ChatCircleText",
+      "name": "聊天",
+      "iconName": "ChatCircleText",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "bold"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "phosphor:Check",
+      "name": "确认",
+      "iconName": "Check",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "bold"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "phosphor:DownloadSimple",
+      "name": "下载",
+      "iconName": "DownloadSimple",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "bold"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "phosphor:ImagesSquare",
+      "name": "相册",
+      "iconName": "ImagesSquare",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "bold",
+        "duotone"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "phosphor:LockSimple",
+      "name": "锁定",
+      "iconName": "LockSimple",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "fill"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "phosphor:MagnifyingGlass",
+      "name": "搜索",
+      "iconName": "MagnifyingGlass",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "bold"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "phosphor:PaperPlaneRight",
+      "name": "发送",
+      "iconName": "PaperPlaneRight",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "fill"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "phosphor:PictureInPicture",
+      "name": "画中画",
+      "iconName": "PictureInPicture",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "regular"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "phosphor:PlayCircle",
+      "name": "播放",
+      "iconName": "PlayCircle",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "fill"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "phosphor:Sparkle",
+      "name": "灵感",
+      "iconName": "Sparkle",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "fill"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "phosphor:X",
+      "name": "关闭",
+      "iconName": "X",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "bold",
+        "regular"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    }
+  ]
+}

@@ -101,7 +101,7 @@ export function createSummaryRequestHandler({
       }, corsHeaders);
     } catch (error) {
       const status = Number(error.statusCode) || 502;
-      console.error("Conversation summary request failed", { name: error.name, message: error.message });
+      console.error("Conversation summary request failed", { name: error.name, status });
       sendJson(response, status, {
         ok: false,
         code: status < 500 ? "INVALID_SUMMARY_REQUEST" : "SUMMARY_UNAVAILABLE",

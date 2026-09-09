@@ -4,6 +4,7 @@ import {
   parseConversationSummaries,
   summarizeConversationDays,
   validateConversationDays,
+  validateJournalMoments,
 } from "./ark-summary.js";
 
 function createSseResponse(events, status = 200) {
@@ -17,7 +18,7 @@ test("conversation days are bounded and normalized", () => {
     entries: [{ role: "user", character: "jiaojiao", text: "  今天看小猫  ", createdAt: 12 }],
   }]), [{
     dayKey: "2026-09-01",
-    entries: [{ role: "user", character: "jiaojiao", text: "今天看小猫", createdAt: 12 }],
+    entries: [{ id: "2026-09-01-entry-0", role: "user", source: "child_speech", character: "jiaojiao", text: "今天看小猫", createdAt: 12 }],
     image: "",
     source: "dialogue",
   }]);
@@ -29,6 +30,35 @@ test("conversation days are bounded and normalized", () => {
     entries: [],
     image: "data:image/jpeg;base64,/9j/2Q==",
   }])[0].source, "captures");
+});
+
+test("journal moments require verbatim child evidence and never infer an unspoken feeling", () => {
+  const entries = [
+    { id: "child-1", role: "user", source: "child_speech", text: "今天积木倒了。我想再搭一次。" },
+    { id: "ai-1", role: "assistant", text: "你一定很难过吧" },
+    { id: "game-1", role: "user", source: "gameplay", text: "它叫今天积木倒了" },
+  ];
+  const result = validateJournalMoments([
+    { event: "今天积木倒了", feeling: "很难过", thought: "我想再搭一次", evidence_quote: entries[0].text, source_entry_ids: ["child-1", "ai-1"] },
+    { event: "你一定很难过", feeling: "难过", evidence_quote: entries[1].text, source_entry_ids: ["ai-1"] },
+    { event: "后来成功了", evidence_quote: entries[0].text, source_entry_ids: ["child-1"] },
+    { event: "今天积木倒了", evidence_quote: "今天积木倒了", source_entry_ids: ["missing-id", "game-1"] },
+  ], entries, "2026-09-09");
+  assert.equal(result.length, 1);
+  assert.equal(result[0].event, "今天积木倒了");
+  assert.equal(result[0].feeling, "");
+  assert.equal(result[0].thought, "我想再搭一次");
+  assert.deepEqual(result[0].sourceEntryIds, ["child-1"]);
+});
+
+test("summary input keeps long utterance endings and excludes forgotten or gameplay entries", () => {
+  const text = "今天" + "搭积木".repeat(200) + "后来我很开心";
+  const result = validateConversationDays([{ dayKey: "2026-09-09", suppressedEntryIds: ["forgotten"], entries: [
+    { id: "long", role: "user", text }, { id: "forgotten", text: "不要再提这件事" }, { id: "toy", source: "gameplay", text: "它叫球球" },
+  ] }]);
+  assert.equal(result[0].entries.length, 1);
+  assert.equal(result[0].entries[0].text, text);
+  assert.ok(result[0].entries[0].text.endsWith("后来我很开心"));
 });
 
 test("summary parser ignores unknown dates and empty text", () => {

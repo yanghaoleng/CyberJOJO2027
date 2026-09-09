@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "units": "metres",
+  "models": [
+    {
+      "id": "apple",
+      "name": "红苹果",
+      "description": "饱满果身、弯曲果梗和立体绿叶。",
+      "path": "models/food/apple.glb",
+      "bytes": 122828,
+      "triangles": 3596,
+      "meshes": 4,
+      "materials": 4,
+      "dimensions": [
+        0.084,
+        0.095,
+        0.084
+      ],
+      "format": "GLB",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "cake",
+      "name": "草莓奶油蛋糕",
+      "description": "松软双层蛋糕，配草莓夹心、奶油和新鲜草莓。",
+      "path": "models/food/cake.glb",
+      "bytes": 493780,
+      "triangles": 12404,
+      "meshes": 6,
+      "materials": 6,
+      "dimensions": [
+        0.149,
+        0.129,
+        0.115
+      ],
+      "format": "GLB",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "noodles",
+      "name": "暖暖面条",
+      "description": "圆润陶碗、卷曲面条、溏心蛋和小青菜。",
+      "path": "models/food/noodles.glb",
+      "bytes": 490920,
+      "triangles": 19476,
+      "meshes": 8,
+      "materials": 8,
+      "dimensions": [
+        0.221,
+        0.109,
+        0.221
+      ],
+      "format": "GLB",
+      "license": "CC0-1.0"
+    }
+  ]
+}

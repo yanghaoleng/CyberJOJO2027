@@ -2070,3 +2070,28 @@ button {
     background: rgba(31, 25, 12, 0.94);
   }
 }
+/* Camera play controls remain above the live canvas, inside the viewfinder. */
+.play-toolbar { position: absolute; top: max(18px, env(safe-area-inset-top)); left: 18px; right: 18px; z-index: 8; display: flex; justify-content: space-between; pointer-events: none; }
+.play-toolbar button, .play-picker, .play-composer, .play-text-active { pointer-events: auto; }
+.play-entry, .play-text-entry, .play-text-active { border: 0; color: #302500; background: #ffde55; box-shadow: 0 4px 18px #19130020; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border-radius: 24px; padding: 0 16px; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }
+.play-text-entry { width: 44px; padding: 0; background: #ffffffee; }
+.play-text-active { position: absolute; z-index: 31; right: 18px; bottom: 12px; width: 44px; padding: 0; }
+.play-picker { position: absolute; z-index: 12; top: 76px; left: 18px; width: min(290px, calc(100% - 36px)); padding: 18px; color: #302817; background: #fffef8; border: 1px solid #f0e7d2; border-radius: 24px; box-shadow: 0 14px 44px #241b0030; }
+.play-picker strong { display: block; margin: 0 0 12px; font-size: 17px; }
+.play-picker button { display: block; border: 0; text-align: left; width: 100%; border-radius: 14px; padding: 13px 12px; margin-bottom: 6px; background: #f6f3e9; color: inherit; cursor: pointer; }
+.play-picker button:hover { background: #ffed9e; }
+.play-picker button span { display: block; font-size: 16px; font-weight: 800; }
+.play-picker button small { display: block; margin-top: 5px; font-size: 12px; color: #756b56; }
+.play-picker a { display: inline-block; margin-top: 12px; font-size: 13px; color: #675929; }
+.play-composer { position: absolute; z-index: 40; left: 12px; right: 12px; bottom: 12px; display: flex; gap: 6px; align-items: center; padding: 8px; border-radius: 20px; background: #fffef8; border: 1px solid #d2c9b4; box-shadow: 0 8px 32px #241b0025; }
+.play-composer input { min-width: 0; flex: 1; border: 0; padding: 10px 4px; font: inherit; font-size: 16px; background: transparent; color: #302817; }
+.play-composer button { flex-shrink: 0; display: grid; place-items: center; width: 38px; height: 40px; border: 0; border-radius: 12px; background: #ffe16b; color: #302817; cursor: pointer; }
+.play-composer button:disabled { opacity: .45; }
+.play-composer button:last-child { background: #f1ede4; }
+.play-loading { position: absolute; z-index: 12; left: 20px; right: 20px; top: 90px; padding: 20px; border-radius: 20px; background: #fffbea; color: #3f320a; }
+.library-tabs { display: flex; gap: 8px; padding: 2px 24px 16px; flex-shrink: 0; }
+.library-tabs button { border: 0; border-radius: 12px; padding: 10px 14px; font: inherit; font-size: 14px; font-weight: 800; color: #796f58; background: #f1ede4; cursor: pointer; }
+.library-tabs button[aria-pressed="true"] { color: #382b0b; background: #ffdc55; }
+.day-friends-link { border: 0; background: #ffedac; color: #493d21; padding: 12px; border-radius: 12px; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.play-toolbar button:focus-visible, .play-picker button:focus-visible, .play-composer button:focus-visible, .library-tabs button:focus-visible { outline: 3px solid #2279d4; outline-offset: 3px; }
+.shutter:disabled { opacity: .55; cursor: default; }
