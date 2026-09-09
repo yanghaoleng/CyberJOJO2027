@@ -3,7 +3,7 @@ import { ArrowCounterClockwise, Pause, Play } from '@phosphor-icons/react';
 import { assetUrl, useInViewport } from './asset-utils.js';
 import './food-model.css';
 
-const foodNames = { apple: '红苹果', cake: '草莓奶油蛋糕', noodles: '暖暖面条' };
+const foodNames = { apple: '红苹果', cake: '草莓奶油蛋糕', noodles: '暖暖面条', drink: '果汁饮料', candy: '彩色糖果' };
 function disposeObject(object) {
   const geometries = new Set(); const materials = new Set(); const textures = new Set();
   object?.traverse((child) => {

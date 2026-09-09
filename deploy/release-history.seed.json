@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "releases": [
+    {
+      "id": "20260909-161524-gameplay",
+      "commit": "0464e9ed67a1c742ca003dac55da16b528cb1461",
+      "releasedAt": "2026-09-09T08:22:05Z",
+      "kind": "site"
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+body.changelog-body { margin: 0; background: #fff; color: #302e26; overflow: auto; }
+.cl-page { --cl-muted: #817d71; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; -webkit-font-smoothing: antialiased; }
+.cl-page * { box-sizing: border-box; }
+.cl-page a { color: inherit; text-decoration: none; }
+.cl-page a:hover { color: #95700c; }
+.cl-page a:focus-visible, .cl-page summary:focus-visible, .cl-page button:focus-visible { outline: 2px solid #c5a131; outline-offset: 5px; border-radius: 3px; }
+.cl-header { display: flex; align-items: center; justify-content: space-between; max-width: 1328px; padding: 24px 40px; margin: auto; }
+.cl-brand { display: inline-flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 650; }
+.cl-brand img { border-radius: 8px; }
+.cl-brand > span { color: var(--cl-muted); font-weight: 500; }
+.cl-header nav { display: flex; gap: 28px; font-size: 13px; }
+.cl-header nav a { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; }
+.cl-content { max-width: 980px; margin: auto; padding: 0 40px; }
+.cl-intro { padding: 58px 0 46px; border-bottom: 1px solid #eae8e1; }
+.cl-eyebrow { margin: 0 0 16px; font-size: 12px; letter-spacing: 2px; color: var(--cl-muted); }
+.cl-intro h1 { margin: 0 0 18px; font-size: clamp(38px, 5vw, 54px); line-height: 1.2; letter-spacing: -1.8px; }
+.cl-intro h1 span { color: #eac44a; padding-left: 5px; }
+.cl-intro > p:not(.cl-eyebrow) { color: #686456; font-size: 14px; line-height: 1.8; margin: 0; }
+.cl-intro .cl-rule { margin-top: 5px !important; font-size: 12px !important; color: #939083 !important; }
+.cl-day { display: grid; grid-template-columns: 155px minmax(0, 1fr); gap: 36px; padding: 38px 0; border-bottom: 1px solid #eae8e1; scroll-margin-top: 25px; }
+.cl-date { display: flex; flex-direction: column; gap: 12px; padding-top: 3px; font-size: 12px; color: #777265; font-variant-numeric: tabular-nums; }
+.cl-latest { width: fit-content; font-size: 10px; letter-spacing: 1px; color: #8b6b0b; }
+.cl-entry { min-width: 0; }
+.cl-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; min-height: 20px; color: #918b7e; font-size: 11px; }
+.cl-release-badge { color: #6c683e; background: #f3f2e5; padding: 3px 8px; border-radius: 4px; }
+.cl-entry h2 { margin: 13px 0 16px; font-size: 23px; letter-spacing: -.4px; font-weight: 650; line-height: 1.4; }
+.cl-highlights { margin: 0; padding: 0 0 0 17px; color: #686356; font-size: 14px; line-height: 1.9; }
+.cl-highlights li { padding-left: 3px; margin: 7px 0; overflow-wrap: anywhere; }
+.cl-highlights li::marker { color: #cfbf88; font-size: 9px; }
+.cl-details { margin-top: 19px; }
+.cl-details summary { display: inline-flex; align-items: center; gap: 12px; cursor: pointer; color: #8b8579; font-size: 11px; min-height: 32px; list-style: none; }
+.cl-details summary::-webkit-details-marker { display: none; }
+.cl-details[open] summary > span { transform: rotate(45deg); }
+.cl-details section { padding: 12px 0 0; }
+.cl-details h3 { color: #918b7e; font-size: 10px; font-weight: 500; letter-spacing: 1px; margin: 0 0 8px; }
+.cl-details ul { list-style: none; padding: 0; margin: 0; }
+.cl-details li { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 12px; padding: 8px 0; color: #777164; font-size: 11px; line-height: 1.65; border-top: 1px solid #f2f0eb; }
+.cl-details li > span { overflow-wrap: anywhere; }
+.cl-details time { color: #a19b8e; font-variant-numeric: tabular-nums; }
+.cl-details li > a { color: #8b7d57; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cl-status { padding: 50px 0; color: #807867; font-size: 14px; }
+.cl-status button { margin-left: 14px; padding: 10px 14px; border: 1px solid #ded7c4; border-radius: 8px; background: #fff; color: inherit; cursor: pointer; }
+.cl-release-notice { margin: 18px 0 0; font-size: 12px; color: #8a7b55; line-height: 1.8; }
+.cl-release-notice button { border: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline; padding: 8px; cursor: pointer; }
+.cl-footer { padding: 26px 0 50px; font-size: 10px; color: #999387; line-height: 1.9; }
+@media (max-width: 640px) { .cl-header { padding: 14px 22px; } .cl-brand { font-size: 12px; gap: 7px; } .cl-header nav { gap: 17px; font-size: 11px; } .cl-content { padding: 0 24px; } .cl-intro { padding: 42px 0 32px; } .cl-day { grid-template-columns: minmax(0, 1fr); gap: 13px; padding: 30px 0; } .cl-date { flex-direction: row; align-items: center; justify-content: space-between; font-size: 11px; } .cl-entry h2 { font-size: 21px; margin-top: 10px; } .cl-highlights { font-size: 13px; } .cl-details li { gap: 8px; } }
+@media (prefers-reduced-motion: reduce) { .cl-page * { scroll-behavior: auto; transition: none; } }

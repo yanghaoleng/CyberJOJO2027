@@ -4,7 +4,7 @@
 
 ## 生成资源
 
-- `node scripts/generate-food-models.mjs`：重新生成苹果、草莓奶油蛋糕、面条三个独立 GLB 和模型元信息。真实几何、PBR 材质，不依赖外部贴图；按材质合批并索引去重。模型以米为单位，尺寸参考真实食物，预览器自动居中缩放。
+- `node scripts/generate-food-models.mjs`：重新生成苹果、草莓奶油蛋糕、面条、果汁饮料、彩色糖果五个独立 GLB 和模型元信息。真实几何、PBR 材质，不依赖外部贴图；按材质合批并索引去重。模型以米为单位，尺寸参考真实食物，预览器自动居中缩放。
 - `node scripts/generate-asset-manifest.mjs`：遍历 `public/`，生成 `public/asset-catalog.json`，并从应用中真正使用的 Phosphor JSX 导入生成 `used-icons.js`。该页面自己的工具图标不计入应用图标清单。
 - 添加、替换或删除资源后，重新生成资源清单。生成器包含文件大小、SHA256、图片尺寸和模型实际三角面信息；不将资源目录里自己的总清单重复计算为资源。
 
@@ -12,7 +12,7 @@
 
 ```jsx
 <FoodModel
-  foodId="apple" // apple | cake | noodles
+  foodId="apple" // apple | cake | noodles | drink | candy
   className="gameplay-food-model"
   interactive={false}
   autoRotate={true}

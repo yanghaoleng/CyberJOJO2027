@@ -131,6 +131,18 @@ npm run dev
 
 浏览器访问 Vite 输出的本地地址。摄像头与麦克风在非 `localhost` 环境下需要 HTTPS。
 
+## 更新日志与发布记录
+
+封面右上角提供低调的「更新日志」「资源」入口。`/changelog/` 按北京时间每天合并变化，默认展示当天摘要，展开可查看主分支提交与真实发布时间。
+
+`npm run history:generate` 根据当前 `HEAD` 的主线历史生成 `public/changelog.json`，开发启动和构建会自动执行；文件无需提交。每日中文摘要可在 `src/changelog/notes.json` 维护，未编写摘要的日期显示真实提交标题。Git 不保留准确推送时间，因此代码记录使用提交时间，不把它冒充上线时间。
+
+发布前先提交并同步 `main`，再构建，确保日志包含本次代码。`deploy/install-static.sh` 用于前端发布，`deploy/install-cyberjojo.sh` 用于前后端一起发布；部署检查成功后，两者都通过 `deploy/record-release.py` 将实际 UTC 上线时间与构建 SHA 原子写入源站 `/var/www/jocam/release-history.json`。Nginx 提供同名只读 URL，页面按北京时间合并，多次发布在同一天内展开显示。旧发布记录缺少可信时间时不作推测。
+
+部署时须复制完整 `deploy/` 工具目录（包括 `record-release.py` 和 seed）。只更新前端时，将构建压缩为 `/tmp/cyberjojo-static-$RELEASE_TAG.tgz`，在源站以 root 执行 `RELEASE_TAG=... bash deploy/install-static.sh`。原有语音服务保持运行。全量发布的后端包须包含完整 `deploy/` 目录。
+
+资源页还提供果汁饮料和包装糖果两个日常食物模型，支持预览、旋转、缩放及 GLB 下载。
+
 ## 测试与构建
 
 ```bash

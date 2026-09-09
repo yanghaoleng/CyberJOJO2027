@@ -4,3 +4,7 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Generated from Git history for development and production builds.
+/public/changelog.json
+__pycache__/

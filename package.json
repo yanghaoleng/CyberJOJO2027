@@ -19,10 +19,13 @@
     "test:segmentation": "node --test src/subject-segmentation.test.js",
     "test:performance": "node --test src/vision-performance.test.js",
     "test:scene": "node --test src/scene-analysis.test.js",
-    "prebuild": "node scripts/generate-asset-manifest.mjs",
+    "prebuild": "node scripts/generate-changelog.mjs && node scripts/generate-asset-manifest.mjs",
     "assets:models": "node scripts/generate-food-models.mjs",
     "assets:catalog": "node scripts/generate-asset-manifest.mjs",
-    "test": "node --test src/*.test.js src/gameplay/*.test.js src/friends/*.test.js src/journal/*.test.js server/*.test.js"
+    "test": "node --test src/*.test.js src/gameplay/*.test.js src/friends/*.test.js src/journal/*.test.js src/changelog/*.test.js scripts/*.test.js server/*.test.js",
+    "predev": "node scripts/generate-changelog.mjs",
+    "history:generate": "node scripts/generate-changelog.mjs",
+    "test:history": "node --test scripts/changelog-data.test.js src/changelog/history.test.js"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "1.0.1",

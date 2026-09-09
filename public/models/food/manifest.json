@@ -52,6 +52,40 @@
       ],
       "format": "GLB",
       "license": "CC0-1.0"
+    },
+    {
+      "id": "drink",
+      "name": "果汁饮料",
+      "description": "圆润果汁纸盒，配弯曲吸管和立体橙片图案。",
+      "path": "models/food/drink.glb",
+      "bytes": 243392,
+      "triangles": 6060,
+      "meshes": 6,
+      "materials": 6,
+      "dimensions": [
+        0.067,
+        0.161,
+        0.054
+      ],
+      "format": "GLB",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "candy",
+      "name": "彩色糖果",
+      "description": "明亮条纹的单颗糖果，包着两端扭结的青绿色糖纸。",
+      "path": "models/food/candy.glb",
+      "bytes": 215520,
+      "triangles": 10272,
+      "meshes": 4,
+      "materials": 4,
+      "dimensions": [
+        0.097,
+        0.03,
+        0.03
+      ],
+      "format": "GLB",
+      "license": "CC0-1.0"
     }
   ]
 }

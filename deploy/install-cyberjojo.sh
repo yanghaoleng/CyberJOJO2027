@@ -47,6 +47,7 @@ systemctl is-active --quiet jocam-voice.service
 systemctl reload nginx
 curl --fail --silent --show-error --retry 8 --retry-connrefused --retry-delay 1 http://127.0.0.1:8787/health >/dev/null
 curl --fail --silent --show-error --resolve cyberjojo.mikeywa.site:443:127.0.0.1 https://cyberjojo.mikeywa.site/assets/ >/dev/null
+python3 "$voice_dir/deploy/record-release.py" --history /var/www/jocam/release-history.json --catalog "$static_dir/changelog.json" --seed "$voice_dir/deploy/release-history.seed.json" --tag "$RELEASE_TAG"
 trap - ERR
 echo "Released $RELEASE_TAG"
 echo "Previous static: $previous_static"

@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Reproducible, texture-free PBR assets. Units are metres; no external files needed.
@@ -144,6 +145,97 @@ function noodles() {
   }
   return group;
 }
+function drink() {
+  const group = new THREE.Group(); group.name = 'Orange juice carton';
+  const carton = material('Apricot orange paper carton', '#ff9b42', 0.54);
+  const paper = material('Warm white carton and straw', '#fff8e6', 0.46);
+  const orange = material('Juicy orange segments', '#ffaf30', 0.38);
+  const peel = material('Tangerine orange peel', '#f36e28', 0.43);
+  const strawInside = material('Inside of drinking straw', '#91633b', 0.74);
+  mesh(group, 'Rounded juice carton', new RoundedBoxGeometry(0.66, 1.06, 0.46, 4, 0.035), carton, [0, 0.53, 0]);
+  // A folded triangular gable runs across the top of the carton.
+  const roofShape = new THREE.Shape(); roofShape.moveTo(-0.23, 0); roofShape.lineTo(0.23, 0); roofShape.lineTo(0, 0.22); roofShape.closePath();
+  const roof = mesh(group, 'Folded paper gable', new THREE.ExtrudeGeometry(roofShape, { depth: 0.61, bevelEnabled: true, bevelSegments: 3, bevelSize: 0.013, bevelThickness: 0.013, steps: 1 }), paper, [-0.305, 1.035, 0]); roof.rotation.y = Math.PI / 2;
+  mesh(group, 'Sealed top fold', new RoundedBoxGeometry(0.65, 0.055, 0.038, 3, 0.012), carton, [0, 1.276, 0]);
+  mesh(group, 'Front cream label', new RoundedBoxGeometry(0.48, 0.64, 0.026, 4, 0.012), paper, [0, 0.56, 0.232]);
+  // The label is embossed geometry, with no brand, lettering, or texture file.
+  const slice = mesh(group, 'Orange peel emblem', new THREE.CylinderGeometry(0.171, 0.171, 0.024, 40), peel, [0, 0.55, 0.257]); slice.rotation.x = Math.PI / 2;
+  const pith = mesh(group, 'Orange pith emblem', new THREE.CylinderGeometry(0.15, 0.15, 0.028, 40), paper, [0, 0.55, 0.268]); pith.rotation.x = Math.PI / 2;
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4 + 0.055; const end = (i + 1) * Math.PI / 4 - 0.055;
+    const segment = new THREE.Shape(); segment.moveTo(Math.cos(a) * 0.025, Math.sin(a) * 0.025); segment.lineTo(Math.cos(a) * 0.134, Math.sin(a) * 0.134); segment.absarc(0, 0, 0.134, a, end, false); segment.lineTo(Math.cos(end) * 0.025, Math.sin(end) * 0.025); segment.closePath();
+    mesh(group, 'Orange segment', new THREE.ExtrudeGeometry(segment, { depth: 0.008, bevelEnabled: true, bevelSegments: 2, bevelSize: 0.003, bevelThickness: 0.002, curveSegments: 6, steps: 1 }), orange, [0, 0.55, 0.283]);
+  }
+  const emblemLeaf = mesh(group, 'Small green label leaf', new THREE.SphereGeometry(1, 16, 10), mats.green, [0.075, 0.758, 0.257], [0.095, 0.036, 0.015]); emblemLeaf.rotation.z = 0.4;
+  mesh(group, 'Label lower accent', new RoundedBoxGeometry(0.21, 0.027, 0.014, 3, 0.006), carton, [0, 0.315, 0.257]);
+  tube(group, 'Bent paper straw', [[0.18, 1.15, 0.085], [0.18, 1.4, 0.085], [0.2, 1.51, 0.085], [0.33, 1.59, 0.085]], 0.021, paper, 28, 12);
+  for (let i = 0; i < 4; i++) {
+    mesh(group, 'Straw orange stripe', new THREE.CylinderGeometry(0.022, 0.022, 0.028, 12), peel, [0.18, 1.19 + i * 0.055, 0.085]);
+  }
+  const tip = mesh(group, 'Open straw tip', new THREE.CircleGeometry(0.016, 16), strawInside, [0.331, 1.591, 0.085]);
+  tip.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0.13, 0.08, 0).normalize());
+  return group;
+}
+function candy() {
+  const group = new THREE.Group(); group.name = 'Twist-wrapped striped candy';
+  const wrapper = material('Butter yellow candy wrapper', '#ffe07a', 0.3);
+  const stripe = material('Raspberry candy stripes', '#ef6588', 0.3);
+  const ends = material('Turquoise twisted wrapper', '#57c5c2', 0.32);
+  const ties = material('Soft mint wrapper neck', '#a4e6d8', 0.34);
+  mesh(group, 'Plump wrapped candy', new THREE.SphereGeometry(1, 48, 28), wrapper, [0, 0.34, 0], [0.55, 0.32, 0.32]);
+  // Raised diagonal ribbons follow the ellipsoid rather than floating above it.
+  for (const offset of [-0.29, 0, 0.29]) {
+    const positions = []; const indices = []; const segments = 64;
+    for (let i = 0; i <= segments; i++) {
+      const angle = i / segments * Math.PI * 2;
+      for (let edge = 0; edge < 2; edge++) {
+        const x = offset + Math.sin(angle) * 0.09 + (edge - 0.5) * 0.09;
+        const radius = Math.sqrt(1 - (x / 0.55) ** 2) * 0.33;
+        positions.push(x, 0.34 + Math.cos(angle) * radius, Math.sin(angle) * radius);
+      }
+      if (i < segments) { const n = i * 2; indices.push(n, n + 2, n + 1, n + 1, n + 2, n + 3); }
+    }
+    const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); geometry.setIndex(indices); geometry.computeVertexNormals();
+    mesh(group, 'Diagonal raspberry ribbon', geometry, stripe);
+  }
+  for (const direction of [-1, 1]) {
+    // A thick folded sheet narrows into a twist and opens into a scalloped fan.
+    const positions = []; const indices = []; const rings = 16; const radial = 48;
+    for (let layer = 0; layer < 2; layer++) {
+      for (let ring = 0; ring <= rings; ring++) {
+        const t = ring / rings;
+        const radius = t < 0.3 ? THREE.MathUtils.lerp(0.21, 0.086, t / 0.3) : THREE.MathUtils.lerp(0.086, 0.3, ((t - 0.3) / 0.7) ** 0.8);
+        for (let i = 0; i <= radial; i++) {
+          const angle = i / radial * Math.PI * 2; const turn = angle + direction * t * 1.2;
+          const fold = 1 + 0.12 * Math.cos(angle * 8) * (0.4 + t * 0.6);
+          const r = radius * fold - layer * 0.014;
+          positions.push(direction * (0.44 + t * 0.61 + Math.cos(angle * 8) * 0.024 * t ** 3), 0.34 + Math.cos(turn) * r, Math.sin(turn) * r * 0.8);
+        }
+      }
+    }
+    const stride = radial + 1; const surface = (rings + 1) * stride;
+    for (let layer = 0; layer < 2; layer++) {
+      for (let ring = 0; ring < rings; ring++) {
+        for (let i = 0; i < radial; i++) {
+          const a = layer * surface + ring * stride + i; const b = a + stride;
+          const face = [a, a + 1, b, a + 1, b + 1, b];
+          if ((direction === -1) !== (layer === 1)) face.reverse();
+          indices.push(...face);
+        }
+      }
+    }
+    for (const ring of [0, rings]) {
+      for (let i = 0; i < radial; i++) {
+        const a = ring * stride + i; const b = a + surface; const face = [a, b, a + 1, a + 1, b, b + 1];
+        if ((direction === -1) !== (ring === 0)) face.reverse(); indices.push(...face);
+      }
+    }
+    const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); geometry.setIndex(indices); geometry.computeVertexNormals();
+    mesh(group, 'Folded twist wrapper', geometry, ends);
+    const tie = mesh(group, 'Twisted wrapper neck', new THREE.TorusGeometry(0.091, 0.018, 8, 24), ties, [direction * 0.628, 0.34, 0], [1, 0.86, 1]); tie.rotation.y = Math.PI / 2;
+  }
+  return group;
+}
 function optimize(group) {
   group.updateMatrixWorld(true);
   const batches = new Map();
@@ -165,6 +257,8 @@ const definitions = [
   { id: 'apple', name: '红苹果', description: '饱满果身、弯曲果梗和立体绿叶。', make: apple, metreScale: 0.055 },
   { id: 'cake', name: '草莓奶油蛋糕', description: '松软双层蛋糕，配草莓夹心、奶油和新鲜草莓。', make: cake, metreScale: 0.09 },
   { id: 'noodles', name: '暖暖面条', description: '圆润陶碗、卷曲面条、溏心蛋和小青菜。', make: noodles, metreScale: 0.115 },
+  { id: 'drink', name: '果汁饮料', description: '圆润果汁纸盒，配弯曲吸管和立体橙片图案。', make: drink, metreScale: 0.1 },
+  { id: 'candy', name: '彩色糖果', description: '明亮条纹的单颗糖果，包着两端扭结的青绿色糖纸。', make: candy, metreScale: 0.045 },
 ];
 const models = [];
 for (const { make, metreScale, ...definition } of definitions) {

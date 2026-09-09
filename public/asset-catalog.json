@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-09T08:04:00.575Z",
-  "publicFileCount": 48,
-  "totalBytes": 61853496,
+  "generatedAt": "2026-09-09T09:45:47.035Z",
+  "publicFileCount": 50,
+  "totalBytes": 62313220,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -438,6 +438,46 @@
       "license": "CC0-1.0"
     },
     {
+      "id": "models/food/candy.glb",
+      "path": "models/food/candy.glb",
+      "name": "彩色糖果",
+      "category": "model",
+      "format": "GLB",
+      "bytes": 215520,
+      "sha256": "574e217b0897fb021d55183a855fe2631cbfc51173fc1368f60f7222c21fa3ca",
+      "foodId": "candy",
+      "description": "明亮条纹的单颗糖果，包着两端扭结的青绿色糖纸。",
+      "triangles": 10272,
+      "meshes": 4,
+      "materials": 4,
+      "dimensions": [
+        0.097,
+        0.03,
+        0.03
+      ],
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "models/food/drink.glb",
+      "path": "models/food/drink.glb",
+      "name": "果汁饮料",
+      "category": "model",
+      "format": "GLB",
+      "bytes": 243392,
+      "sha256": "b17c681d9336dd82d29a74d897ab133ef953c37a07d5af403152a5bdf47f8189",
+      "foodId": "drink",
+      "description": "圆润果汁纸盒，配弯曲吸管和立体橙片图案。",
+      "triangles": 6060,
+      "meshes": 6,
+      "materials": 6,
+      "dimensions": [
+        0.067,
+        0.161,
+        0.054
+      ],
+      "license": "CC0-1.0"
+    },
+    {
       "id": "models/food/LICENSE.txt",
       "path": "models/food/LICENSE.txt",
       "name": "LICENSE.txt",
@@ -452,8 +492,8 @@
       "name": "manifest.json",
       "category": "other",
       "format": "JSON",
-      "bytes": 1253,
-      "sha256": "9cd0345df874bd47c435259d7141e7a5b4d61c5740b5351d2bae5b0233519c25"
+      "bytes": 2065,
+      "sha256": "7fc617a20c6db3c48a0af5d97efaca2ea0c15bec60d42d6046dc7d53af97d284"
     },
     {
       "id": "models/food/noodles.glb",
