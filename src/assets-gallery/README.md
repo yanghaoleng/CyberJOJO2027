@@ -28,8 +28,10 @@ Rive 必须点击载入才请求文件；只有可见卡片保留运行实例，
 
 绿豆文件来自 https://rive.mikeywa.site/qdg，原名为 `ai叫叫学伴_源文件_绿豆_3d（0908）.riv`。页面展示原始 Rive 画板构图，并提供原文件下载。
 
+叫叫文件来自 https://rive.mikeywa.site/ZHc，原名为 `ai叫叫学伴_源文件_叫叫_（黑）.riv`，包含 47 条时间轴与 1 个状态机（共 48 项）。主相机的闭嘴采样和缺失回应适配见 `src/character-interaction.js`、`src/character-animations.js`；原文件下载保持来源文件的完整字节。
+
 ## 参考与验证
 
 - Three.js [GLTFExporter](https://threejs.org/docs/pages/GLTFExporter.html)、[GLTFLoader](https://threejs.org/docs/pages/GLTFLoader.html)、[OrbitControls](https://threejs.org/docs/pages/OrbitControls.html)。
 - Rive [运行时参数和清理 API](https://rive.app/docs/runtimes/web/rive-parameters)。
-- 本地浏览器已检查 1440px、390px、320px 布局；3D 可见性加载与分类卸载；叫叫 100 项、绿豆 89 项原文件动画/状态机读取与播放；搜索空状态；同源资源地址。
+- 原版资源页曾检查 1440px、390px、320px 布局，3D 可见性加载与分类卸载、搜索空状态和同源资源地址。ZHc 替换后的检查见 `docs/rive-ZHc-validation-2026-09-11.md`；叫叫现为 48 项，绿豆仍为 89 项。

@@ -168,10 +168,12 @@ npm run voice-server
 
 ## 模型与角色资源
 
-- 叫叫 Rive：SHA-256 `203a6f992698be770a4b49fb42f2632f095cef22490fa426bf933ed37c929233`
+- 叫叫 Rive：SHA-256 `a4301637d7200e00f3f43b2d3145a75801891443d07d9fd2a24a6948cfe65287`
 - 绿豆 Rive：SHA-256 `cb114cd3107aecf2cf9d5ee71d5f9a3f688dd2379c8ae6394862bac4b00de4fe`
 - MediaPipe 手势模型：SHA-256 `97952348cf6a6a4915c2ea1496b4b37ebabc50cbbf80571435643c455f2b0482`
 - MediaPipe DeepLab V3：SHA-256 `ff36e24d40547fe9e645e2f4e8745d1876d6e38b332d39a82f0bf0f5d1d561b3`
+
+当前 `public/media/jiaojiao.riv` 来自[叫叫原文件页面 ZHc](https://rive.mikeywa.site/ZHc)，原文件名为 `ai叫叫学伴_源文件_叫叫_（黑）.riv`，大小 6,447,356 字节。该导出保留 47 条时间轴；闭嘴使用 `Talking_Normal` 的第 0 帧，缺少的期待、受惊、OK 动作分别使用好奇、惊讶、夸赞动作。相比旧版，随机表情种类减少，详见 `docs/rive-ZHc-validation-2026-09-11.md`。
 
 当前 `public/media/lvdou.riv` 来自[绿豆原文件页面](https://rive.mikeywa.site/qdg)，原文件名为 `ai叫叫学伴_源文件_绿豆_3d（0908）.riv`，大小 1,632,399 字节。上面的校验和对应仓库中的这份文件；替换素材后应同步更新资源清单与校验信息。具体预览和资源维护方式见 `src/assets-gallery/README.md`。
 

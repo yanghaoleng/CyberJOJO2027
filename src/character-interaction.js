@@ -65,7 +65,9 @@ export function createCharacterInteraction(instance) {
   };
   // Only a fixed mouth shape is sampled. No speech animation is played or advanced.
   const openPose = makePose("Talking_Normal", 0.5);
-  const closedPose = makePose("Talking_Normal_close", 0);
+  // The ZHc export closes its mouth at Talking_Normal's first frame and omits
+  // the separate close timeline. Keep using the explicit pose when available.
+  const closedPose = makePose("Talking_Normal_close", 0) || makePose("Talking_Normal", 0);
   const capabilities = Object.freeze({
     eyes: Boolean(eyes), head: Boolean(head), mouth: Boolean(mouth && openPose && closedPose),
     chewing: Boolean(mouth && openPose && closedPose), anchor: Boolean(mouthAnchor),

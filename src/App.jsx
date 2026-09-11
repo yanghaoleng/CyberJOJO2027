@@ -66,6 +66,7 @@ import JournalDay from "./journal/JournalDay.jsx";
 import { loadFriends } from "./friends/friend-store.js";
 import { requestGameplay } from "./gameplay/gameplay-api.js";
 import { createCharacterInteraction } from "./character-interaction.js";
+import { resolveCharacterAnimation } from "./character-animations.js";
 const GamePlayOverlay = lazy(() => import("./gameplay/GamePlayOverlay.jsx"));
 const FriendIntro = lazy(() => import("./friends/FriendIntro.jsx"));
 const FriendCollection = lazy(() => import("./friends/FriendCollection.jsx"));
@@ -412,7 +413,7 @@ const PERSON_FEATHER_RANGE_PX = 5;
 const LONG_PRESS_MS = 430;
 const MAX_RECORDING_MS = 15_000;
 const CORE_LOAD_ASSETS = [
-  { key: "riveFile", path: "media/jiaojiao.riv", bytes: 10_399_115, retain: true },
+  { key: "riveFile", path: "media/jiaojiao.riv?v=a4301637", bytes: 6_447_356, retain: true },
   { key: "visionWasm", path: "mediapipe/wasm/vision_wasm_internal.wasm", bytes: 11_756_954, retain: false },
   { key: "visionLoader", path: "mediapipe/wasm/vision_wasm_internal.js", bytes: 323_377, retain: false },
   { key: "segmentModel", path: "mediapipe/selfie_segmenter.tflite", bytes: 249_537, retain: true },
@@ -454,7 +455,7 @@ function getLoadAssets(rendererMode) {
   return [CORE_LOAD_ASSETS[0], ...RIVE_RUNTIME_ASSETS[runtimeKey], ...CORE_LOAD_ASSETS.slice(1)];
 }
 const CHARACTERS = {
-  jiaojiao: { label: "叫叫", path: "media/jiaojiao.riv" },
+  jiaojiao: { label: "叫叫", path: "media/jiaojiao.riv?v=a4301637" },
   lvdou: { label: "绿豆", path: "media/lvdou.riv?v=cb114cd3" },
 };
 const CHARACTER_TAP_WINDOW_MS = 720;
@@ -2457,7 +2458,8 @@ function App() {
                 return true;
               };
               rivePlayAnimationRef.current = (animationName) => {
-                const animationIndex = riveAnimationsRef.current.indexOf(animationName);
+                const resolvedName = resolveCharacterAnimation(animationName, riveAnimationsRef.current);
+                const animationIndex = riveAnimationsRef.current.indexOf(resolvedName);
                 if (animationIndex < 0) return false;
                 playAtIndex(animationIndex);
                 return true;

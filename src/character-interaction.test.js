@@ -36,3 +36,28 @@ test("controller installs after regular advancement, restores nodes and never st
   assert.equal(nodes.get("controller_eyeball_location").x, 0); assert.equal(nodes.get("IP_CJ_mouth_Y").scaleY, 1);
   controller.dispose(); assert.equal(instance.advanceAndReportChanges, original);
 });
+
+test("ZHc feeding samples a closed first frame without starting the speech timeline", () => {
+  const mouth = { x: 0, y: 0, scaleX: 1, scaleY: 1 };
+  const applied = [];
+  class Pose { apply() { applied.push(this.time); } delete() {} }
+  const instance = {
+    runtime: { LinearAnimationInstance: Pose },
+    artboard: {
+      node: (name) => name === "IP_CJ_mouth_Y" ? mouth : null,
+      animationByName: (name) => name === "Talking_Normal" ? {} : null,
+      advance() {},
+    },
+    play() { assert.fail("Feeding must not play the speech timeline"); },
+  };
+  const controller = createCharacterInteraction(instance);
+  assert.equal(controller.capabilities.mouth, true);
+  assert.equal(controller.capabilities.chewing, true);
+  controller.update({ mouthOpen: true }, 10);
+  controller.afterAdvance(10);
+  assert.equal(applied.at(-1), 0.5);
+  controller.update({ mouthOpen: false }, 20);
+  controller.afterAdvance(20);
+  assert.equal(applied.at(-1), 0);
+  controller.dispose();
+});

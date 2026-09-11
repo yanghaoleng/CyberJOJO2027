@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-09T09:45:47.035Z",
+  "generatedAt": "2026-09-11T08:36:23.236Z",
   "publicFileCount": 50,
-  "totalBytes": 62313220,
+  "totalBytes": 58361461,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -293,8 +293,10 @@
       "name": "叫叫",
       "category": "rive",
       "format": "RIV",
-      "bytes": 10399115,
-      "sha256": "203a6f992698be770a4b49fb42f2632f095cef22490fa426bf933ed37c929233"
+      "bytes": 6447356,
+      "sha256": "a4301637d7200e00f3f43b2d3145a75801891443d07d9fd2a24a6948cfe65287",
+      "source": "https://rive.mikeywa.site/ZHc",
+      "sourceLabel": "叫叫 · 黑版原文件"
     },
     {
       "id": "media/lvdou.riv",

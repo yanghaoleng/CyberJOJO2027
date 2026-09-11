@@ -1,0 +1,834 @@
+[
+  {
+    "animations": 47,
+    "capabilities": {
+      "anchor": true,
+      "chewing": true,
+      "chewingMethod": "procedural-jaw",
+      "eyes": true,
+      "head": true,
+      "method": "verified-rive-control-nodes",
+      "mouth": true
+    },
+    "controls": [
+      {
+        "anchor": {
+          "x": 0.35618258745242387,
+          "y": 0.6169886955848107
+        },
+        "eyes": {
+          "x": -109.8600082397461,
+          "y": 0
+        },
+        "hash": 833071533,
+        "head": {
+          "x": -818.2171020507812,
+          "y": 140.977783203125
+        },
+        "label": "left",
+        "mouthScale": 1,
+        "opaque": 31689
+      },
+      {
+        "anchor": {
+          "x": 0.4302075312687801,
+          "y": 0.61698867724492
+        },
+        "eyes": {
+          "x": 109.9262466430664,
+          "y": 0
+        },
+        "hash": 2171358562,
+        "head": {
+          "x": -760.1414184570312,
+          "y": 140.977783203125
+        },
+        "label": "right",
+        "mouthScale": 1,
+        "opaque": 30694
+      },
+      {
+        "anchor": {
+          "x": 0.3943185561742538,
+          "y": 0.5561125874519348
+        },
+        "eyes": {
+          "x": 0.036876145750284195,
+          "y": -79.97315979003906
+        },
+        "hash": 317662879,
+        "head": {
+          "x": -787.4449462890625,
+          "y": 120.12483978271484
+        },
+        "label": "up",
+        "mouthScale": 1,
+        "opaque": 30907
+      },
+      {
+        "anchor": {
+          "x": 0.3924781701503656,
+          "y": 0.6914037557748649
+        },
+        "eyes": {
+          "x": 0.000012370569493214134,
+          "y": 79.94633483886719
+        },
+        "hash": 1297778247,
+        "head": {
+          "x": -788.8685302734375,
+          "y": 160.7434844970703
+        },
+        "label": "down",
+        "mouthScale": 1,
+        "opaque": 31090
+      },
+      {
+        "anchor": {
+          "x": 0.39261627197265625,
+          "y": 0.6212324729332558
+        },
+        "eyes": {
+          "x": 4.149863563895906e-9,
+          "y": 0.026819007471203804
+        },
+        "hash": 1259650660,
+        "head": {
+          "x": -788.9427490234375,
+          "y": 142.0083465576172
+        },
+        "label": "closed",
+        "mouthScale": 1,
+        "opaque": 31312
+      },
+      {
+        "anchor": {
+          "x": 0.3926276671580779,
+          "y": 0.6180195900110099
+        },
+        "eyes": {
+          "x": 1.3921241546685505e-12,
+          "y": 8.996774340630509e-6
+        },
+        "hash": 2493748450,
+        "head": {
+          "x": -788.9466552734375,
+          "y": 141.03150939941406
+        },
+        "label": "open",
+        "mouthScale": 1.7999999523162842,
+        "opaque": 31343
+      },
+      {
+        "anchor": {
+          "x": 0.3926285376915565,
+          "y": 0.6239189092929547
+        },
+        "eyes": {
+          "x": 4.670056332984685e-16,
+          "y": 3.018081784489368e-9
+        },
+        "hash": 623078865,
+        "head": {
+          "x": -788.9468383789062,
+          "y": 142.8017120361328
+        },
+        "label": "chew-start",
+        "mouthScale": 0.42655646800994873,
+        "opaque": 31296
+      },
+      {
+        "anchor": {
+          "x": 0.392619861700596,
+          "y": 0.6079493852762077
+        },
+        "eyes": {
+          "x": 2.958980793701887e-20,
+          "y": 1.9122778447538957e-13
+        },
+        "hash": 3445895205,
+        "head": {
+          "x": -788.9468383789062,
+          "y": 138.84027099609375
+        },
+        "label": "chew-open",
+        "mouthScale": 0.7655120491981506,
+        "opaque": 31375
+      }
+    ],
+    "installed": true,
+    "mode": "canvas",
+    "reactions": [
+      {
+        "requested": "TalkingEmotion_Expectation",
+        "resolved": "TalkingEmotion_Curious"
+      },
+      {
+        "requested": "TalkingEmotion_Frighten",
+        "resolved": "TalkingEmotion_Surprised"
+      },
+      {
+        "requested": "TalkingEmotion_Sure",
+        "resolved": "TalkingEmotion_Praise"
+      }
+    ],
+    "reset": {
+      "hash": 1554172288,
+      "label": "reset",
+      "opaque": 31347
+    },
+    "sweep": [
+      {
+        "hash": 4164571365,
+        "label": "Phone",
+        "opaque": 31112
+      },
+      {
+        "hash": 389153445,
+        "label": "Ipad",
+        "opaque": 31114
+      },
+      {
+        "hash": 2984370725,
+        "label": "Talking_Normal",
+        "opaque": 31114
+      },
+      {
+        "hash": 389153445,
+        "label": "Empty",
+        "opaque": 31114
+      },
+      {
+        "hash": 4045048348,
+        "label": "TalkingEmotion_Normal",
+        "opaque": 31114
+      },
+      {
+        "hash": 950935825,
+        "label": "TalkingEmotion_Beckoning",
+        "opaque": 31114
+      },
+      {
+        "hash": 3369772866,
+        "label": "TalkingEmotion_Sad",
+        "opaque": 31090
+      },
+      {
+        "hash": 1175425430,
+        "label": "TalkingEmotion_Excited",
+        "opaque": 31114
+      },
+      {
+        "hash": 2544170259,
+        "label": "TalkingEmotion_Curious",
+        "opaque": 31309
+      },
+      {
+        "hash": 1062291721,
+        "label": "TalkingEmotion_Surprised",
+        "opaque": 31856
+      },
+      {
+        "hash": 2895368395,
+        "label": "TalkingEmotion_Nervous",
+        "opaque": 31052
+      },
+      {
+        "hash": 2940484787,
+        "label": "TalkingEmotion_Shake",
+        "opaque": 31052
+      },
+      {
+        "hash": 3964065089,
+        "label": "Exit_Normal 2",
+        "opaque": 31052
+      },
+      {
+        "hash": 3964065089,
+        "label": "Exit_Normal",
+        "opaque": 31052
+      },
+      {
+        "hash": 1316759375,
+        "label": "Thinking_Normal_loop",
+        "opaque": 32107
+      },
+      {
+        "hash": 788621543,
+        "label": "Thinking_Normal_NEW",
+        "opaque": 31052
+      },
+      {
+        "hash": 551762311,
+        "label": "Thinking_Normal_in",
+        "opaque": 31052
+      },
+      {
+        "hash": 4032713192,
+        "label": "Listening_Normal_NEW",
+        "opaque": 31052
+      },
+      {
+        "hash": 3640168549,
+        "label": "Listening_Normal",
+        "opaque": 31052
+      },
+      {
+        "hash": 4234168373,
+        "label": "Start_Answer",
+        "opaque": 30097
+      },
+      {
+        "hash": 2889961539,
+        "label": "Start_Dial",
+        "opaque": 36720
+      },
+      {
+        "hash": 3972847252,
+        "label": "NoTracking",
+        "opaque": 31052
+      },
+      {
+        "hash": 3516203845,
+        "label": "FaceTracking_X_max",
+        "opaque": 30639
+      },
+      {
+        "hash": 1075934705,
+        "label": "FaceTracking_X_min",
+        "opaque": 31379
+      },
+      {
+        "hash": 534736147,
+        "label": "FaceTracking_Y_max",
+        "opaque": 30977
+      },
+      {
+        "hash": 1583564286,
+        "label": "FaceTracking_Y_min",
+        "opaque": 31347
+      },
+      {
+        "hash": 1583564286,
+        "label": "IPadSize_max",
+        "opaque": 31347
+      },
+      {
+        "hash": 1583564286,
+        "label": "IPadSize_min",
+        "opaque": 31347
+      },
+      {
+        "hash": 1583564286,
+        "label": "Talking_Empty",
+        "opaque": 31347
+      },
+      {
+        "hash": 280698461,
+        "label": "TalkingEmotion_Smile",
+        "opaque": 31347
+      },
+      {
+        "hash": 1583564286,
+        "label": "eyeball_track_Y",
+        "opaque": 31347
+      },
+      {
+        "hash": 1583564286,
+        "label": "eyeball_track_X",
+        "opaque": 31347
+      },
+      {
+        "hash": 280698461,
+        "label": "TalkingEmotion_Focused",
+        "opaque": 31347
+      },
+      {
+        "hash": 1583564286,
+        "label": "face_track_Y",
+        "opaque": 31347
+      },
+      {
+        "hash": 687123325,
+        "label": "TalkingEmotion_Think",
+        "opaque": 31347
+      },
+      {
+        "hash": 930720291,
+        "label": "TalkingEmotion_Happy",
+        "opaque": 31347
+      },
+      {
+        "hash": 1583564286,
+        "label": "face_track_X",
+        "opaque": 31347
+      },
+      {
+        "hash": 1713413435,
+        "label": "TalkingEmotion_Serious",
+        "opaque": 31347
+      },
+      {
+        "hash": 1583564286,
+        "label": "eyeball_Y",
+        "opaque": 31347
+      },
+      {
+        "hash": 1048363867,
+        "label": "TalkingEmotion_Silent",
+        "opaque": 31347
+      },
+      {
+        "hash": 1583564286,
+        "label": "eyeball_X",
+        "opaque": 31347
+      },
+      {
+        "hash": 2027399111,
+        "label": "TalkingEmotion_Praise",
+        "opaque": 31347
+      },
+      {
+        "hash": 1583564286,
+        "label": "face_Y",
+        "opaque": 31347
+      },
+      {
+        "hash": 1583564286,
+        "label": "face_X",
+        "opaque": 31347
+      },
+      {
+        "hash": 1429531454,
+        "label": "TalkingEmotion_Encourage",
+        "opaque": 31347
+      },
+      {
+        "hash": 2027399111,
+        "label": "TalkingEmotion_Doubt",
+        "opaque": 31347
+      },
+      {
+        "hash": 2027399111,
+        "label": "TalkingEmotion_Proud",
+        "opaque": 31347
+      }
+    ]
+  },
+  {
+    "animations": 47,
+    "capabilities": {
+      "anchor": true,
+      "chewing": true,
+      "chewingMethod": "procedural-jaw",
+      "eyes": true,
+      "head": true,
+      "method": "verified-rive-control-nodes",
+      "mouth": true
+    },
+    "controls": [
+      {
+        "anchor": {
+          "x": 0.35618258745242387,
+          "y": 0.6169886955848107
+        },
+        "eyes": {
+          "x": -109.8600082397461,
+          "y": 0
+        },
+        "hash": 1036471275,
+        "head": {
+          "x": -818.2171020507812,
+          "y": 140.977783203125
+        },
+        "label": "left",
+        "mouthScale": 1,
+        "opaque": 31679
+      },
+      {
+        "anchor": {
+          "x": 0.4302075312687801,
+          "y": 0.61698867724492
+        },
+        "eyes": {
+          "x": 109.9262466430664,
+          "y": 0
+        },
+        "hash": 3854509180,
+        "head": {
+          "x": -760.1414184570312,
+          "y": 140.977783203125
+        },
+        "label": "right",
+        "mouthScale": 1,
+        "opaque": 30674
+      },
+      {
+        "anchor": {
+          "x": 0.3943185561742538,
+          "y": 0.5561125874519348
+        },
+        "eyes": {
+          "x": 0.036876145750284195,
+          "y": -79.97315979003906
+        },
+        "hash": 3354719659,
+        "head": {
+          "x": -787.4449462890625,
+          "y": 120.12483978271484
+        },
+        "label": "up",
+        "mouthScale": 1,
+        "opaque": 30892
+      },
+      {
+        "anchor": {
+          "x": 0.3924781701503656,
+          "y": 0.6914037557748649
+        },
+        "eyes": {
+          "x": 0.000012370569493214134,
+          "y": 79.94633483886719
+        },
+        "hash": 2082399400,
+        "head": {
+          "x": -788.8685302734375,
+          "y": 160.7434844970703
+        },
+        "label": "down",
+        "mouthScale": 1,
+        "opaque": 31078
+      },
+      {
+        "anchor": {
+          "x": 0.39261627197265625,
+          "y": 0.6212324729332558
+        },
+        "eyes": {
+          "x": 4.149863563895906e-9,
+          "y": 0.026819007471203804
+        },
+        "hash": 1870712857,
+        "head": {
+          "x": -788.9427490234375,
+          "y": 142.0083465576172
+        },
+        "label": "closed",
+        "mouthScale": 1,
+        "opaque": 31305
+      },
+      {
+        "anchor": {
+          "x": 0.3926276671580779,
+          "y": 0.6180195900110099
+        },
+        "eyes": {
+          "x": 1.3921241546685505e-12,
+          "y": 8.996774340630509e-6
+        },
+        "hash": 21992990,
+        "head": {
+          "x": -788.9466552734375,
+          "y": 141.03150939941406
+        },
+        "label": "open",
+        "mouthScale": 1.7999999523162842,
+        "opaque": 31335
+      },
+      {
+        "anchor": {
+          "x": 0.3926285376915565,
+          "y": 0.6239189092929547
+        },
+        "eyes": {
+          "x": 4.670056332984685e-16,
+          "y": 3.018081784489368e-9
+        },
+        "hash": 4003178513,
+        "head": {
+          "x": -788.9468383789062,
+          "y": 142.8017120361328
+        },
+        "label": "chew-start",
+        "mouthScale": 0.42655646800994873,
+        "opaque": 31285
+      },
+      {
+        "anchor": {
+          "x": 0.392619861700596,
+          "y": 0.6079493852762077
+        },
+        "eyes": {
+          "x": 2.958980793701887e-20,
+          "y": 1.9122778447538957e-13
+        },
+        "hash": 1402654813,
+        "head": {
+          "x": -788.9468383789062,
+          "y": 138.84027099609375
+        },
+        "label": "chew-open",
+        "mouthScale": 0.7655120491981506,
+        "opaque": 31368
+      }
+    ],
+    "installed": true,
+    "mode": "webgl2",
+    "reactions": [
+      {
+        "requested": "TalkingEmotion_Expectation",
+        "resolved": "TalkingEmotion_Curious"
+      },
+      {
+        "requested": "TalkingEmotion_Frighten",
+        "resolved": "TalkingEmotion_Surprised"
+      },
+      {
+        "requested": "TalkingEmotion_Sure",
+        "resolved": "TalkingEmotion_Praise"
+      }
+    ],
+    "reset": {
+      "hash": 3410325612,
+      "label": "reset",
+      "opaque": 31333
+    },
+    "sweep": [
+      {
+        "hash": 1042697000,
+        "label": "Phone",
+        "opaque": 31103
+      },
+      {
+        "hash": 4285915491,
+        "label": "Ipad",
+        "opaque": 31105
+      },
+      {
+        "hash": 2258936593,
+        "label": "Talking_Normal",
+        "opaque": 31105
+      },
+      {
+        "hash": 4285915491,
+        "label": "Empty",
+        "opaque": 31105
+      },
+      {
+        "hash": 2922234935,
+        "label": "TalkingEmotion_Normal",
+        "opaque": 31105
+      },
+      {
+        "hash": 1496332009,
+        "label": "TalkingEmotion_Beckoning",
+        "opaque": 31105
+      },
+      {
+        "hash": 1215011851,
+        "label": "TalkingEmotion_Sad",
+        "opaque": 31087
+      },
+      {
+        "hash": 4245600630,
+        "label": "TalkingEmotion_Excited",
+        "opaque": 31105
+      },
+      {
+        "hash": 3114585854,
+        "label": "TalkingEmotion_Curious",
+        "opaque": 31293
+      },
+      {
+        "hash": 3292069835,
+        "label": "TalkingEmotion_Surprised",
+        "opaque": 31841
+      },
+      {
+        "hash": 2274384327,
+        "label": "TalkingEmotion_Nervous",
+        "opaque": 31042
+      },
+      {
+        "hash": 3263154956,
+        "label": "TalkingEmotion_Shake",
+        "opaque": 31042
+      },
+      {
+        "hash": 3506788315,
+        "label": "Exit_Normal 2",
+        "opaque": 31042
+      },
+      {
+        "hash": 3506788315,
+        "label": "Exit_Normal",
+        "opaque": 31042
+      },
+      {
+        "hash": 3863873318,
+        "label": "Thinking_Normal_loop",
+        "opaque": 32096
+      },
+      {
+        "hash": 1503972477,
+        "label": "Thinking_Normal_NEW",
+        "opaque": 31042
+      },
+      {
+        "hash": 48409883,
+        "label": "Thinking_Normal_in",
+        "opaque": 31042
+      },
+      {
+        "hash": 433435678,
+        "label": "Listening_Normal_NEW",
+        "opaque": 31042
+      },
+      {
+        "hash": 756429049,
+        "label": "Listening_Normal",
+        "opaque": 31042
+      },
+      {
+        "hash": 1725868236,
+        "label": "Start_Answer",
+        "opaque": 30086
+      },
+      {
+        "hash": 3568050177,
+        "label": "Start_Dial",
+        "opaque": 36704
+      },
+      {
+        "hash": 4126569402,
+        "label": "NoTracking",
+        "opaque": 31042
+      },
+      {
+        "hash": 506280065,
+        "label": "FaceTracking_X_max",
+        "opaque": 30627
+      },
+      {
+        "hash": 3798801615,
+        "label": "FaceTracking_X_min",
+        "opaque": 31363
+      },
+      {
+        "hash": 574210002,
+        "label": "FaceTracking_Y_max",
+        "opaque": 30963
+      },
+      {
+        "hash": 539404354,
+        "label": "FaceTracking_Y_min",
+        "opaque": 31333
+      },
+      {
+        "hash": 539404354,
+        "label": "IPadSize_max",
+        "opaque": 31333
+      },
+      {
+        "hash": 539404354,
+        "label": "IPadSize_min",
+        "opaque": 31333
+      },
+      {
+        "hash": 539404354,
+        "label": "Talking_Empty",
+        "opaque": 31333
+      },
+      {
+        "hash": 3294867210,
+        "label": "TalkingEmotion_Smile",
+        "opaque": 31333
+      },
+      {
+        "hash": 539404354,
+        "label": "eyeball_track_Y",
+        "opaque": 31333
+      },
+      {
+        "hash": 539404354,
+        "label": "eyeball_track_X",
+        "opaque": 31333
+      },
+      {
+        "hash": 3294867210,
+        "label": "TalkingEmotion_Focused",
+        "opaque": 31333
+      },
+      {
+        "hash": 539404354,
+        "label": "face_track_Y",
+        "opaque": 31333
+      },
+      {
+        "hash": 2652825926,
+        "label": "TalkingEmotion_Think",
+        "opaque": 31333
+      },
+      {
+        "hash": 68076221,
+        "label": "TalkingEmotion_Happy",
+        "opaque": 31333
+      },
+      {
+        "hash": 539404354,
+        "label": "face_track_X",
+        "opaque": 31333
+      },
+      {
+        "hash": 514324120,
+        "label": "TalkingEmotion_Serious",
+        "opaque": 31333
+      },
+      {
+        "hash": 539404354,
+        "label": "eyeball_Y",
+        "opaque": 31333
+      },
+      {
+        "hash": 918436232,
+        "label": "TalkingEmotion_Silent",
+        "opaque": 31333
+      },
+      {
+        "hash": 539404354,
+        "label": "eyeball_X",
+        "opaque": 31333
+      },
+      {
+        "hash": 812746462,
+        "label": "TalkingEmotion_Praise",
+        "opaque": 31333
+      },
+      {
+        "hash": 539404354,
+        "label": "face_Y",
+        "opaque": 31333
+      },
+      {
+        "hash": 539404354,
+        "label": "face_X",
+        "opaque": 31333
+      },
+      {
+        "hash": 2178128549,
+        "label": "TalkingEmotion_Encourage",
+        "opaque": 31333
+      },
+      {
+        "hash": 812746462,
+        "label": "TalkingEmotion_Doubt",
+        "opaque": 31333
+      },
+      {
+        "hash": 812746462,
+        "label": "TalkingEmotion_Proud",
+        "opaque": 31333
+      }
+    ]
+  }
+]
