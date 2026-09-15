@@ -6,9 +6,9 @@ import {
   truncateBubbleText,
 } from "./speech-bubble-layout.js";
 
-test("long user transcripts stay on one line with an ellipsis", () => {
+test("long user transcripts stay on one line with a leading ellipsis so the newest words remain visible", () => {
   const context = { measureText: (text) => ({ width: [...text].length * 10 }) };
-  assert.equal(truncateBubbleText(context, "我今天和叫叫一起看了一本很长很长的故事书", 70), "我今天和叫叫…");
+  assert.equal(truncateBubbleText(context, "我今天和叫叫一起看了一本很长很长的故事书", 70), "…很长的故事书");
 });
 
 const BASE_LAYOUT = {

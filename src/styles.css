@@ -258,10 +258,11 @@ button {
   display: flex !important;
   flex-wrap: nowrap;
   align-content: center;
-  justify-content: center;
+  justify-content: flex-end;
   width: 100%;
   overflow: hidden;
   white-space: nowrap;
+  text-align: right;
   text-overflow: ellipsis;
 }
 
@@ -311,7 +312,7 @@ button {
   position: absolute;
   z-index: 3;
   left: 50%;
-  bottom: clamp(138px, 22%, 258px);
+  bottom: clamp(86px, 11%, 148px);
   width: max-content;
   max-width: min(calc(100% - 32px), 430px);
   padding: 12px 17px 13px;
@@ -349,18 +350,27 @@ button {
   display: block !important;
   max-height: none;
   overflow: visible;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
 }
 
 .character-caption-bubble.is-speech {
-  max-width: min(calc(100% - 32px), 430px);
-  padding: 10px 15px 11px;
+  max-width: min(80%, 344px);
+  padding: 8px 13px 9px;
   border: 1px solid rgba(142, 94, 16, 0.25);
   background: #fff1b8;
   color: #513512;
-  font-size: clamp(18px, 4vw, 24px);
+  font-size: clamp(15px, 3.5vw, 20px);
+  line-height: 1.22;
   box-shadow: 0 7px 16px rgba(81, 53, 18, 0.23);
-  animation: speech-bubble-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: character-bubble-pop-in 320ms cubic-bezier(0.18, 1.45, 0.38, 1) both;
+}
+
+.character-caption-bubble.is-thinking {
+  max-width: min(80%, 300px);
+}
+
+.character-caption-bubble.is-leaving {
+  animation: character-bubble-pop-out 150ms cubic-bezier(0.55, 0, 0.8, 0.4) both;
 }
 
 .character-caption-bubble.is-speech::after {
@@ -782,9 +792,32 @@ button {
 
 .camera-stage.is-landscape .character-caption-bubble {
   left: 50%;
-  bottom: max(96px, 18%);
+  bottom: max(70px, 12%);
   max-width: min(calc(100% - 32px), 520px);
   font-size: clamp(17px, 2.1vw, 23px);
+}
+
+.character-thinking-indicator {
+  left: 50% !important;
+  bottom: clamp(86px, 11%, 148px) !important;
+  transform: translateX(-50%);
+  overflow: visible;
+}
+
+.character-thinking-indicator .amicro-typing-indicator {
+  padding: 9px 15px;
+  border: 1px solid rgba(142, 94, 16, 0.25);
+  border-radius: 999px;
+  background: #fff1b8;
+  box-shadow: 0 7px 16px rgba(81, 53, 18, 0.2);
+  backdrop-filter: none;
+}
+
+.character-thinking-indicator .amicro-typing-dot {
+  width: 7px;
+  height: 7px;
+  background: #513512;
+  box-shadow: 0 0 6px rgba(81, 53, 18, 0.34);
 }
 
 .app-shell.is-tablet-device .camera-stage.is-landscape .character-caption-bubble {
@@ -1826,6 +1859,17 @@ button {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
   }
+}
+
+@keyframes character-bubble-pop-in {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.16); }
+  68% { opacity: 1; transform: translateX(-50%) scale(1.08); }
+  100% { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+@keyframes character-bubble-pop-out {
+  0% { opacity: 1; transform: translateX(-50%) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.16); }
 }
 
 @keyframes speech-tail-in {

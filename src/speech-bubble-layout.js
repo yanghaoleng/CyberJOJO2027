@@ -6,7 +6,7 @@ export function getUserSpeechBubbleSizing({ targetWidth, targetHeight, isTabletD
   const isLandscape = targetWidth > targetHeight;
   const baseFontSize = clamp(targetWidth * (isLandscape ? 0.021 : 0.038), 22, 31);
   const fontSize = baseFontSize * (isTabletDevice ? 0.78 : 1);
-  const baseMaxBubbleWidth = clamp(targetWidth * (isLandscape ? 0.42 : 0.68), 330, 610);
+  const baseMaxBubbleWidth = clamp(targetWidth * (isLandscape ? 0.336 : 0.544), 264, 488);
   return {
     fontSize,
     maxBubbleWidth: baseMaxBubbleWidth * (isTabletDevice ? 0.84 : 1),
@@ -20,11 +20,11 @@ export function truncateBubbleText(context, text, maxWidth) {
   if (!content || context.measureText(content).width <= maxWidth) return content;
   const suffix = "…";
   let visible = "";
-  for (const character of content) {
-    if (context.measureText(`${visible}${character}${suffix}`).width > maxWidth) break;
-    visible += character;
+  for (const character of [...content].reverse()) {
+    if (context.measureText(`${suffix}${character}${visible}`).width > maxWidth) break;
+    visible = character + visible;
   }
-  return `${visible || content[0]}${suffix}`;
+  return `${suffix}${visible || content.at(-1)}`;
 }
 
 export function getUserSpeechBubblePlacement({

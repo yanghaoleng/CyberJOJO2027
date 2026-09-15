@@ -895,14 +895,6 @@ function App() {
   const [characterBubble, setCharacterBubble] = useState(null);
   const [welcomeHeadlineIndex, setWelcomeHeadlineIndex] = useState(0);
 
-  useEffect(() => {
-    if (!WAITING_VOICE_LINES[aiState]) return;
-    const socket = voiceSocketRef.current;
-    if (socket?.readyState !== WebSocket.OPEN) return;
-    const lines = WAITING_VOICE_LINES[aiState];
-    socket.send(JSON.stringify({ type: "local_speech", text: lines[Math.floor(Math.random() * lines.length)] }));
-  }, [aiState]);
-
   const scheduleNextWelcomeHeadline = useCallback(() => {
     if (welcomeHeadlineTimerRef.current) window.clearTimeout(welcomeHeadlineTimerRef.current);
     welcomeHeadlineTimerRef.current = window.setTimeout(() => {
@@ -1028,14 +1020,26 @@ function App() {
     setCharacterBubble(null);
     setAiState("idle");
   }, []);
-  const replaceCharacterBubble = useCallback((text, character = activeCharacter) => {
+  const replaceCharacterBubble = useCallback((text, character = activeCharacter, tone = "speech") => {
     const content = String(text || "").trim();
     if (!content) return;
-    const rect = characterDrawRectRef.current;
-    const canvas = outputCanvasRef.current;
     // A new key removes the old line before replaying the entrance motion.
-    setCharacterBubble({ id: crypto.randomUUID(), text: content, character, tone: "speech" });
+    setCharacterBubble({ id: crypto.randomUUID(), text: content, character, tone });
   }, [activeCharacter]);
+  useEffect(() => {
+    if (aiState !== "thinking") {
+      setCharacterBubble((current) => current?.tone === "thinking" ? null : current);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => {
+      const lines = WAITING_VOICE_LINES.thinking;
+      const text = lines[Math.floor(Math.random() * lines.length)];
+      replaceCharacterBubble(text, activeCharacter, "thinking");
+      const socket = voiceSocketRef.current;
+      if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", text }));
+    }, 620);
+    return () => window.clearTimeout(timer);
+  }, [activeCharacter, aiState, replaceCharacterBubble]);
   const speakCharacterFallback = useCallback((text) => {
     if (!window.speechSynthesis || !text) return;
     window.speechSynthesis.cancel();
@@ -1914,11 +1918,11 @@ function App() {
     context.shadowColor = "transparent";
     if (includeCanvasText) {
       context.fillStyle = "#111111";
-      context.textAlign = "center";
+      context.textAlign = "right";
       context.textBaseline = "middle";
       lines.forEach((line, index) => {
         const y = bubbleY + (index - (lines.length - 1) / 2) * lineHeight;
-        context.fillText(line, bubbleX, y, textWidth);
+        context.fillText(line, bubbleX + textWidth / 2, y, textWidth);
       });
     }
 
@@ -3750,7 +3754,7 @@ function App() {
             </div>
           )}
 
-          {cameraState === "ready" && ["recognizing", "thinking"].includes(aiState) && (
+          {cameraState === "ready" && ["recognizing", "thinking"].includes(aiState) && !characterBubble && (
             <div
               className="character-thinking-indicator"
               data-character={activeCharacter}

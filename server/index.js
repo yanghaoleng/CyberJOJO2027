@@ -340,7 +340,7 @@ websocketServer.on("connection", (client) => {
       return;
     }
     if (message.type === "local_speech") {
-      if (!started || !["toy", "find", "feed"].includes(interactionMode) || Date.now() - lastLocalSpeechAt < 700) return;
+      if (!started || Date.now() - lastLocalSpeechAt < 700) return;
       const text = String(message.text || "").replace(/\s+/g, " ").trim().slice(0, 80);
       if (!text) return;
       lastLocalSpeechAt = Date.now();
