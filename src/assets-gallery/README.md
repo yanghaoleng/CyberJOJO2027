@@ -26,7 +26,7 @@
 
 Rive 必须点击载入才请求文件；只有可见卡片保留运行实例，切分类或离开页面会清理。动画选项读取原文件中的真实 `animationNames` / `stateMachineNames`，优先用 `TalkingEmotion_Normal` 预览，原文件变化通过 SHA256 参数避免复用旧 URL 缓存。
 
-绿豆文件来自 https://rive.mikeywa.site/qdg，原名为 `ai叫叫学伴_源文件_绿豆_3d（0908）.riv`。页面展示原始 Rive 画板构图，并提供原文件下载。
+绿豆文件来自 https://rive.mikeywa.site/4KM，原名为 `ai叫叫学伴_源文件_绿豆_（黑).riv`。页面展示原始 Rive 画板构图，并提供原文件下载。
 
 叫叫文件来自 https://rive.mikeywa.site/ZHc，原名为 `ai叫叫学伴_源文件_叫叫_（黑）.riv`，包含 47 条时间轴与 1 个状态机（共 48 项）。主相机的闭嘴采样和缺失回应适配见 `src/character-interaction.js`、`src/character-animations.js`；原文件下载保持来源文件的完整字节。
 

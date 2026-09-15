@@ -456,7 +456,7 @@ function getLoadAssets(rendererMode) {
 }
 const CHARACTERS = {
   jiaojiao: { label: "叫叫", path: "media/jiaojiao.riv?v=a4301637" },
-  lvdou: { label: "绿豆", path: "media/lvdou.riv?v=cb114cd3" },
+  lvdou: { label: "绿豆", path: "media/lvdou.riv?v=b7105cd1" },
 };
 const CHARACTER_TAP_WINDOW_MS = 720;
 const CHARACTER_EXIT_DURATION_MS = 300;

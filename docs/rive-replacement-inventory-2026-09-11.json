@@ -1,0 +1,1375 @@
+{
+  "date": "2026-09-11",
+  "codeCommit": "14ec07b238a1a8fc14831604ecfd1e1f4e0a1a19",
+  "files": [
+    {
+      "name": "48n",
+      "bytes": 6448754,
+      "defaultArtboard": "叫叫",
+      "assets": [
+        {
+          "name": "像素替换图",
+          "isImage": true,
+          "isFont": false,
+          "isAudio": false,
+          "bytes": 312
+        }
+      ],
+      "artboards": [
+        {
+          "name": "叫叫",
+          "bounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 2048,
+            "maxY": 1664
+          },
+          "frameOrigin": true,
+          "animations": [
+            {
+              "name": "Phone",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "Ipad",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "Talking_Normal",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 0,
+              "workEnd": 145
+            },
+            {
+              "name": "Empty",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "TalkingEmotion_Normal",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 420
+            },
+            {
+              "name": "TalkingEmotion_Beckoning",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 394
+            },
+            {
+              "name": "TalkingEmotion_Sad",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 481
+            },
+            {
+              "name": "TalkingEmotion_Excited",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 312
+            },
+            {
+              "name": "TalkingEmotion_Curious",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 438
+            },
+            {
+              "name": "TalkingEmotion_Surprised",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 360
+            },
+            {
+              "name": "TalkingEmotion_Nervous",
+              "fps": 30,
+              "duration": 900,
+              "workStart": 30,
+              "workEnd": 138
+            },
+            {
+              "name": "TalkingEmotion_Shake",
+              "fps": 30,
+              "duration": 450,
+              "workStart": 30,
+              "workEnd": 189
+            },
+            {
+              "name": "Exit_Normal 2",
+              "fps": 30,
+              "duration": 900,
+              "workStart": 30,
+              "workEnd": 360
+            },
+            {
+              "name": "Exit_Normal",
+              "fps": 30,
+              "duration": 900,
+              "workStart": 30,
+              "workEnd": 360
+            },
+            {
+              "name": "Thinking_Normal_loop",
+              "fps": 30,
+              "duration": 450,
+              "workStart": 85,
+              "workEnd": 249
+            },
+            {
+              "name": "Thinking_Normal_NEW",
+              "fps": 30,
+              "duration": 450,
+              "workStart": 110,
+              "workEnd": 306
+            },
+            {
+              "name": "Thinking_Normal_in",
+              "fps": 30,
+              "duration": 300,
+              "workStart": 30,
+              "workEnd": 120
+            },
+            {
+              "name": "Listening_Normal_NEW",
+              "fps": 30,
+              "duration": 600,
+              "workStart": 30,
+              "workEnd": 244
+            },
+            {
+              "name": "Listening_Normal",
+              "fps": 30,
+              "duration": 600,
+              "workStart": 30,
+              "workEnd": 244
+            },
+            {
+              "name": "Start_Answer",
+              "fps": 30,
+              "duration": 600,
+              "workStart": 31,
+              "workEnd": 240
+            },
+            {
+              "name": "Start_Dial",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 427
+            },
+            {
+              "name": "NoTracking",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "FaceTracking_X_max",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "FaceTracking_X_min",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "FaceTracking_Y_max",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "FaceTracking_Y_min",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "IPadSize_max",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "IPadSize_min",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "Talking_Empty",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "TalkingEmotion_Smile",
+              "fps": 30,
+              "duration": 300,
+              "workStart": 30,
+              "workEnd": 170
+            },
+            {
+              "name": "eyeball_track_Y",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "eyeball_track_X",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "TalkingEmotion_Focused",
+              "fps": 30,
+              "duration": 300,
+              "workStart": 30,
+              "workEnd": 226
+            },
+            {
+              "name": "face_track_Y",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "TalkingEmotion_Think",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 432
+            },
+            {
+              "name": "TalkingEmotion_Happy",
+              "fps": 30,
+              "duration": 750,
+              "workStart": 30,
+              "workEnd": 173
+            },
+            {
+              "name": "face_track_X",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "TalkingEmotion_Serious",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 365
+            },
+            {
+              "name": "eyeball_Y",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "TalkingEmotion_Silent",
+              "fps": 30,
+              "duration": 450,
+              "workStart": 30,
+              "workEnd": 215
+            },
+            {
+              "name": "eyeball_X",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "TalkingEmotion_Praise",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 405
+            },
+            {
+              "name": "face_Y",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "face_X",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "TalkingEmotion_Encourage",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 385
+            },
+            {
+              "name": "TalkingEmotion_Doubt",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 463
+            },
+            {
+              "name": "TalkingEmotion_Proud",
+              "fps": 30,
+              "duration": 900,
+              "workStart": 30,
+              "workEnd": 172
+            }
+          ],
+          "machines": [
+            {
+              "name": "ai叫叫动画状态机",
+              "inputs": [
+                {
+                  "name": "FaceTracking_switch",
+                  "type": 59
+                },
+                {
+                  "name": "CanvasSize",
+                  "type": 56
+                },
+                {
+                  "name": "FaceTracking_Y",
+                  "type": 56
+                },
+                {
+                  "name": "FaceTracking_X",
+                  "type": 56
+                },
+                {
+                  "name": "TalkingEmotion",
+                  "type": 56
+                },
+                {
+                  "name": "TalkingEmotion_switch",
+                  "type": 58
+                },
+                {
+                  "name": "StateSwitching",
+                  "type": 59
+                },
+                {
+                  "name": "SpecialTrigger",
+                  "type": 56
+                },
+                {
+                  "name": "Talk",
+                  "type": 59
+                }
+              ]
+            }
+          ],
+          "nodes": [
+            {
+              "name": "controller_eyeball_location",
+              "exists": true
+            },
+            {
+              "name": "controller_faceq",
+              "exists": true
+            },
+            {
+              "name": "IP_CJ_mouth_Y",
+              "exists": true
+            },
+            {
+              "name": "IP_CJ_mouth1",
+              "exists": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4KM",
+      "bytes": 1465175,
+      "defaultArtboard": "绿豆",
+      "assets": [
+        {
+          "name": "iwEcAqNwbmcDAQTRCAAF0QaABrC0J_iYQQyQnwg7L3tLQdEAB9IfxkBdCAAJomltCgAL0gABWYY",
+          "isImage": true,
+          "isFont": false,
+          "isAudio": false,
+          "bytes": 18092
+        }
+      ],
+      "artboards": [
+        {
+          "name": "绿豆",
+          "bounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 2048,
+            "maxY": 1664
+          },
+          "frameOrigin": true,
+          "animations": [
+            {
+              "name": "Phone",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "Ipad",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "Talking_Normal_close",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 0,
+              "workEnd": 1
+            },
+            {
+              "name": "Talking_Normal",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 0,
+              "workEnd": 186
+            },
+            {
+              "name": "TalkingEmotion_Normalbeifen",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 505
+            },
+            {
+              "name": "TalkingEmotion_Silent_表情",
+              "fps": 60,
+              "duration": 900,
+              "workStart": 60,
+              "workEnd": 283
+            },
+            {
+              "name": "TalkingEmotion_Silent",
+              "fps": 60,
+              "duration": 900,
+              "workStart": 60,
+              "workEnd": 270
+            },
+            {
+              "name": "Empty",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "Talking_Empty",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "TalkingEmotion_Doubt_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 313
+            },
+            {
+              "name": "TalkingEmotion_Doubt",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 320
+            },
+            {
+              "name": "TalkingEmotion_Surprised_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 30,
+              "workEnd": 279
+            },
+            {
+              "name": "TalkingEmotion_Surprised",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 30,
+              "workEnd": 270
+            },
+            {
+              "name": "TalkingEmotion_Encourage_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 30,
+              "workEnd": 270
+            },
+            {
+              "name": "TalkingEmotion_Encourage",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 30,
+              "workEnd": 260
+            },
+            {
+              "name": "眨眼",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 0,
+              "workEnd": 40
+            },
+            {
+              "name": "TalkingEmotion_Normal_2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 421
+            },
+            {
+              "name": "TalkingEmotion_Normal",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 421
+            },
+            {
+              "name": "Start_Dial",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 369
+            },
+            {
+              "name": "Start_Answer",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 63,
+              "workEnd": 371
+            },
+            {
+              "name": "Listening_Normal",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 609
+            },
+            {
+              "name": "Listening_Normal_NEW",
+              "fps": 60,
+              "duration": 1200,
+              "workStart": 60,
+              "workEnd": 480
+            },
+            {
+              "name": "Thinking_Normal_in",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 210
+            },
+            {
+              "name": "Thinking_Normal_loop",
+              "fps": 60,
+              "duration": 900,
+              "workStart": 180,
+              "workEnd": 660
+            },
+            {
+              "name": "Thinking_Normal_NEW",
+              "fps": 60,
+              "duration": 900,
+              "workStart": 180,
+              "workEnd": 660
+            },
+            {
+              "name": "Exit_Normal",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 420
+            },
+            {
+              "name": "Exit_Normal 2",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 420
+            },
+            {
+              "name": "TalkingEmotion_Witty_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 307
+            },
+            {
+              "name": "TalkingEmotion_Witty",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 260
+            },
+            {
+              "name": "TalkingEmotion_Sad_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 345
+            },
+            {
+              "name": "TalkingEmotion_Sad",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 330
+            },
+            {
+              "name": "TalkingEmotion_Expectation_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 265
+            },
+            {
+              "name": "TalkingEmotion_Expectation",
+              "fps": 60,
+              "duration": 480,
+              "workStart": 60,
+              "workEnd": 185
+            },
+            {
+              "name": "TalkingEmotion_Concerned_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 360
+            },
+            {
+              "name": "TalkingEmotion_Concerned",
+              "fps": 60,
+              "duration": 480,
+              "workStart": 60,
+              "workEnd": 250
+            },
+            {
+              "name": "TalkingEmotion_Excited_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 275
+            },
+            {
+              "name": "TalkingEmotion_Excited",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 214
+            },
+            {
+              "name": "TalkingEmotion_Serious_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 240
+            },
+            {
+              "name": "TalkingEmotion_Serious",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 250
+            },
+            {
+              "name": "TalkingEmotion_Naughty‌_表情",
+              "fps": 60,
+              "duration": 480,
+              "workStart": 60,
+              "workEnd": 364
+            },
+            {
+              "name": "NoTracking",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "TalkingEmotion_Naughty‌",
+              "fps": 60,
+              "duration": 480,
+              "workStart": 60,
+              "workEnd": 303
+            },
+            {
+              "name": "TalkingEmotion_Naughty2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 300
+            },
+            {
+              "name": "TalkingEmotion_Naughty2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 300
+            },
+            {
+              "name": "TalkingEmotion_Focused_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 120,
+              "workEnd": 400
+            },
+            {
+              "name": "TalkingEmotion_Focused",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 120,
+              "workEnd": 399
+            },
+            {
+              "name": "TalkingEmotion_Focused2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 324
+            },
+            {
+              "name": "TalkingEmotion_Focused2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 310
+            },
+            {
+              "name": "TalkingEmotion_Think_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 262
+            },
+            {
+              "name": "IPadSize_max",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "IPadSize_min",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295
+            },
+            {
+              "name": "TalkingEmotion_Think",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 273
+            },
+            {
+              "name": "TalkingEmotion_Think2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 342
+            },
+            {
+              "name": "TalkingEmotion_Think2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 290
+            },
+            {
+              "name": "TalkingEmotion_Happy_表情",
+              "fps": 60,
+              "duration": 1500,
+              "workStart": 60,
+              "workEnd": 300
+            },
+            {
+              "name": "TalkingEmotion_Happy",
+              "fps": 60,
+              "duration": 1500,
+              "workStart": 60,
+              "workEnd": 268
+            },
+            {
+              "name": "TalkingEmotion_Happy2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 235
+            },
+            {
+              "name": "TalkingEmotion_Happy2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 286
+            },
+            {
+              "name": "TalkingEmotion_Proud2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 280
+            },
+            {
+              "name": "TalkingEmotion_Proud2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 195
+            },
+            {
+              "name": "TalkingEmotion_Proud_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 212
+            },
+            {
+              "name": "TalkingEmotion_Proud",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 198
+            },
+            {
+              "name": "TalkingEmotion_Praise_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 241
+            },
+            {
+              "name": "TalkingEmotion_Praise",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 241
+            },
+            {
+              "name": "TalkingEmotion_Praise2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 345
+            },
+            {
+              "name": "TalkingEmotion_Praise2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 302
+            },
+            {
+              "name": "TalkingEmotion_Curious_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 285
+            },
+            {
+              "name": "TalkingEmotion_Superexcited_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 237
+            },
+            {
+              "name": "TalkingEmotion_Curious",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 231
+            },
+            {
+              "name": "TalkingEmotion_Superexcited",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 205
+            },
+            {
+              "name": "TalkingEmotion_Curious2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 301
+            },
+            {
+              "name": "TalkingEmotion_Curious2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 240
+            },
+            {
+              "name": "TalkingEmotion_Confused_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 330
+            },
+            {
+              "name": "TalkingEmotion_Confused",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 210
+            },
+            {
+              "name": "TalkingEmotion_Low_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 324
+            },
+            {
+              "name": "TalkingEmotion_Low",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 253
+            },
+            {
+              "name": "TalkingEmotion_Smile_表情",
+              "fps": 60,
+              "duration": 1500,
+              "workStart": 60,
+              "workEnd": 249
+            },
+            {
+              "name": "TalkingEmotion_Smile",
+              "fps": 60,
+              "duration": 1500,
+              "workStart": 60,
+              "workEnd": 240
+            },
+            {
+              "name": "TalkingEmotion_Frighten_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 30,
+              "workEnd": 239
+            },
+            {
+              "name": "TalkingEmotion_Frighten",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 30,
+              "workEnd": 260
+            },
+            {
+              "name": "TalkingEmotion_Amazed_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 343
+            },
+            {
+              "name": "TalkingEmotion_Amazed",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 274
+            },
+            {
+              "name": "TalkingEmotion_Sure_表情",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 244
+            },
+            {
+              "name": "TalkingEmotion_Sure",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 244
+            },
+            {
+              "name": "TalkingEmotion_Entangled_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 308
+            },
+            {
+              "name": "TalkingEmotion_Entangled",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 311
+            },
+            {
+              "name": "TalkingEmotion_Shake_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 249
+            },
+            {
+              "name": "TalkingEmotion_Shake",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 270
+            }
+          ],
+          "machines": [
+            {
+              "name": "ai绿豆动画状态机",
+              "inputs": [
+                {
+                  "name": "CanvasSize",
+                  "type": 56
+                },
+                {
+                  "name": "TalkingEmotion",
+                  "type": 56
+                },
+                {
+                  "name": "TalkingEmotion_switch",
+                  "type": 58
+                },
+                {
+                  "name": "StateSwitching",
+                  "type": 59
+                },
+                {
+                  "name": "SpecialTrigger",
+                  "type": 56
+                },
+                {
+                  "name": "Talk",
+                  "type": 59
+                },
+                {
+                  "name": "v2",
+                  "type": 58
+                },
+                {
+                  "name": "v1",
+                  "type": 58
+                }
+              ]
+            }
+          ],
+          "nodes": [
+            {
+              "name": "controller_eyeball_location",
+              "exists": false
+            },
+            {
+              "name": "controller_faceq",
+              "exists": false
+            },
+            {
+              "name": "IP_CJ_mouth_Y",
+              "exists": false
+            },
+            {
+              "name": "IP_CJ_mouth1",
+              "exists": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "delete": {
+    "48n": [
+      "Phone",
+      "Empty",
+      "Exit_Normal 2",
+      "Exit_Normal",
+      "Thinking_Normal_loop",
+      "Thinking_Normal_NEW",
+      "Thinking_Normal_in",
+      "Listening_Normal_NEW",
+      "Listening_Normal",
+      "Start_Answer",
+      "NoTracking",
+      "FaceTracking_X_max",
+      "FaceTracking_X_min",
+      "FaceTracking_Y_max",
+      "FaceTracking_Y_min",
+      "IPadSize_max",
+      "IPadSize_min",
+      "Talking_Empty",
+      "eyeball_track_Y",
+      "eyeball_track_X",
+      "face_track_Y",
+      "face_track_X",
+      "eyeball_Y",
+      "eyeball_X",
+      "face_Y",
+      "face_X"
+    ],
+    "4KM": [
+      "Phone",
+      "TalkingEmotion_Silent_表情",
+      "Empty",
+      "Talking_Empty",
+      "TalkingEmotion_Doubt_表情",
+      "TalkingEmotion_Surprised_表情",
+      "TalkingEmotion_Encourage_表情",
+      "眨眼",
+      "Start_Answer",
+      "Listening_Normal",
+      "Listening_Normal_NEW",
+      "Thinking_Normal_in",
+      "Thinking_Normal_loop",
+      "Thinking_Normal_NEW",
+      "Exit_Normal",
+      "Exit_Normal 2",
+      "TalkingEmotion_Witty_表情",
+      "TalkingEmotion_Sad_表情",
+      "TalkingEmotion_Expectation_表情",
+      "TalkingEmotion_Concerned_表情",
+      "TalkingEmotion_Excited_表情",
+      "TalkingEmotion_Serious_表情",
+      "TalkingEmotion_Naughty‌_表情",
+      "NoTracking",
+      "TalkingEmotion_Naughty2_表情",
+      "TalkingEmotion_Focused_表情",
+      "TalkingEmotion_Focused2_表情",
+      "TalkingEmotion_Think_表情",
+      "IPadSize_max",
+      "IPadSize_min",
+      "TalkingEmotion_Think2_表情",
+      "TalkingEmotion_Happy_表情",
+      "TalkingEmotion_Happy2_表情",
+      "TalkingEmotion_Proud2_表情",
+      "TalkingEmotion_Proud_表情",
+      "TalkingEmotion_Praise_表情",
+      "TalkingEmotion_Praise2_表情",
+      "TalkingEmotion_Curious_表情",
+      "TalkingEmotion_Superexcited_表情",
+      "TalkingEmotion_Curious2_表情",
+      "TalkingEmotion_Confused_表情",
+      "TalkingEmotion_Low_表情",
+      "TalkingEmotion_Smile_表情",
+      "TalkingEmotion_Frighten_表情",
+      "TalkingEmotion_Amazed_表情",
+      "TalkingEmotion_Sure_表情",
+      "TalkingEmotion_Entangled_表情",
+      "TalkingEmotion_Shake_表情"
+    ],
+    "currentJiaojiao": [
+      "Phone",
+      "TalkingEmotion_Smile_表情",
+      "TalkingEmotion_Beckoning_表情",
+      "TalkingEmotion_Focused_表情",
+      "TalkingEmotion_Think_表情",
+      "TalkingEmotion_Happy_表情",
+      "TalkingEmotion_Silent_表情",
+      "TalkingEmotion_Serious_表情",
+      "TalkingEmotion_Proud_表情",
+      "Empty",
+      "TalkingEmotion_Doubt_表情",
+      "TalkingEmotion_Excited_表情",
+      "TalkingEmotion_Curious_表情",
+      "TalkingEmotion_Surprised_表情",
+      "TalkingEmotion_Encourage_表情",
+      "TalkingEmotion_Praise_表情",
+      "TalkingEmotion_Shake_表情",
+      "TalkingEmotion_Nervous_表情",
+      "TalkingEmotion_Sad_表情",
+      "Listening_Normal_无调整",
+      "NoTracking",
+      "FaceTracking_X_max",
+      "FaceTracking_X_min",
+      "FaceTracking_Y_max",
+      "FaceTracking_Y_min",
+      "IPadSize_max",
+      "IPadSize_min",
+      "Talking_Empty",
+      "eyeball_track_Y",
+      "eyeball_track_X",
+      "Start_Answer",
+      "TalkingEmotion_Expectation_表情",
+      "face_track_Y",
+      "Listening_Normal",
+      "TalkingEmotion_Think_v2_表情",
+      "TalkingEmotion_Regret_表情",
+      "Listening_Normal_NEW",
+      "face_track_X",
+      "TalkingEmotion_Concerned_表情",
+      "eyeball_Y",
+      "Thinking_Normal_in",
+      "TalkingEmotion_Focused_v2_表情",
+      "Thinking_Normal_loop",
+      "TalkingEmotion_Grievance_表情",
+      "Thinking_Normal_NEW",
+      "eyeball_X",
+      "TalkingEmotion_Amazed_表情",
+      "TalkingEmotion_Happy_v2_表情",
+      "face_Y",
+      "TalkingEmotion_Excited_v2_表情",
+      "TalkingEmotion_Entangled_表情",
+      "face_X",
+      "Exit_Normal",
+      "TalkingEmotion_Superexcited_表情",
+      "TalkingEmotion_Surprised_v2_表情",
+      "TalkingEmotion_Sure_表情",
+      "Exit_Normal 2",
+      "TalkingEmotion_Curious_v2_表情",
+      "TalkingEmotion_Frighten_表情",
+      "TalkingEmotion_Envy_表情"
+    ]
+  },
+  "missingRequired48n": [
+    "Talking_Normal_close",
+    "TalkingEmotion_Expectation",
+    "TalkingEmotion_Frighten",
+    "TalkingEmotion_Sure"
+  ],
+  "missingRandom48n": [
+    "TalkingEmotion_Normal_无调整",
+    "TalkingEmotion_Regret",
+    "TalkingEmotion_Grievance",
+    "TalkingEmotion_Think_v2",
+    "TalkingEmotion_Concerned",
+    "TalkingEmotion_Focused_v2",
+    "TalkingEmotion_Happy_v2",
+    "TalkingEmotion_Amazed",
+    "TalkingEmotion_Superexcited",
+    "TalkingEmotion_Entangled",
+    "TalkingEmotion_Excited_v2",
+    "TalkingEmotion_Envy",
+    "TalkingEmotion_Surprised_v2",
+    "TalkingEmotion_Curious_v2"
+  ],
+  "runtimeCapabilities": [
+    {
+      "capabilities": {
+        "anchor": true,
+        "chewing": false,
+        "chewingMethod": "procedural-jaw",
+        "eyes": true,
+        "head": true,
+        "method": "verified-rive-control-nodes",
+        "mouth": false
+      },
+      "code": "48n",
+      "mode": "canvas",
+      "state": false
+    },
+    {
+      "capabilities": {
+        "anchor": true,
+        "chewing": false,
+        "chewingMethod": "procedural-jaw",
+        "eyes": true,
+        "head": true,
+        "method": "verified-rive-control-nodes",
+        "mouth": false
+      },
+      "code": "48n",
+      "mode": "canvas",
+      "state": true
+    },
+    {
+      "capabilities": {
+        "anchor": false,
+        "chewing": false,
+        "chewingMethod": "procedural-jaw",
+        "eyes": false,
+        "head": false,
+        "method": "verified-rive-control-nodes",
+        "mouth": false
+      },
+      "code": "4KM",
+      "mode": "canvas",
+      "state": false
+    },
+    {
+      "capabilities": {
+        "anchor": true,
+        "chewing": false,
+        "chewingMethod": "procedural-jaw",
+        "eyes": true,
+        "head": true,
+        "method": "verified-rive-control-nodes",
+        "mouth": false
+      },
+      "code": "48n",
+      "mode": "webgl2",
+      "state": false
+    },
+    {
+      "capabilities": {
+        "anchor": true,
+        "chewing": false,
+        "chewingMethod": "procedural-jaw",
+        "eyes": true,
+        "head": true,
+        "method": "verified-rive-control-nodes",
+        "mouth": false
+      },
+      "code": "48n",
+      "mode": "webgl2",
+      "state": true
+    },
+    {
+      "capabilities": {
+        "anchor": false,
+        "chewing": false,
+        "chewingMethod": "procedural-jaw",
+        "eyes": false,
+        "head": false,
+        "method": "verified-rive-control-nodes",
+        "mouth": false
+      },
+      "code": "4KM",
+      "mode": "webgl2",
+      "state": false
+    }
+  ]
+}

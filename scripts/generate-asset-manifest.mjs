@@ -71,7 +71,7 @@ for (const file of await walk(publicRoot)) {
     sha256: createHash('sha256').update(buffer).digest('hex'),
     ...(imageDimensions(buffer, extension) ? { dimensions: imageDimensions(buffer, extension) } : {}),
     ...(model ? { foodId: model.id, description: model.description, triangles: model.triangles, meshes: model.meshes, materials: model.materials, dimensions: model.dimensions, license: model.license } : {}),
-    ...(relative === 'media/lvdou.riv' ? { source: 'https://rive.mikeywa.site/qdg', sourceLabel: '绿豆 3D · 0908 原文件' } : {}),
+    ...(relative === 'media/lvdou.riv' ? { source: 'https://rive.mikeywa.site/4KM', sourceLabel: '绿豆 · 黑版原文件' } : {}),
     ...(relative === 'media/jiaojiao.riv' ? { source: 'https://rive.mikeywa.site/ZHc', sourceLabel: '叫叫 · 黑版原文件' } : {}),
   });
 }

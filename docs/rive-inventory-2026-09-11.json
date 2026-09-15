@@ -1,0 +1,1709 @@
+{
+  "auditedAt": "2026-09-11",
+  "codeCommit": "14ec07b238a1a8fc14831604ecfd1e1f4e0a1a19",
+  "runtime": "@rive-app/canvas 2.40.1",
+  "productionCatalogMatches": true,
+  "files": [
+    {
+      "name": "jiaojiao",
+      "bytes": 10399115,
+      "defaultArtboard": "叫叫",
+      "assets": [
+        {
+          "name": "像素替换图",
+          "isImage": true,
+          "isFont": false,
+          "isAudio": false,
+          "bytes": 260
+        }
+      ],
+      "artboards": [
+        {
+          "name": "叫叫",
+          "bounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 2048,
+            "maxY": 1664
+          },
+          "frameOrigin": true,
+          "animations": [
+            {
+              "name": "Phone",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "Ipad",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "保守保留"
+            },
+            {
+              "name": "Talking_Normal_close",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 0,
+              "workEnd": 1,
+              "classification": "保守保留"
+            },
+            {
+              "name": "Talking_Normal",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 0,
+              "workEnd": 130,
+              "classification": "保守保留"
+            },
+            {
+              "name": "TalkingEmotion_Smile_表情",
+              "fps": 60,
+              "duration": 900,
+              "workStart": 60,
+              "workEnd": 772,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Smile",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 340,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Beckoning_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 394,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Beckoning",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 394,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Focused_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 526,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Focused",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 526,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Think_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 337,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Think",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 285,
+              "classification": "保守保留"
+            },
+            {
+              "name": "TalkingEmotion_Happy_表情",
+              "fps": 60,
+              "duration": 1500,
+              "workStart": 60,
+              "workEnd": 346,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Happy",
+              "fps": 60,
+              "duration": 1500,
+              "workStart": 60,
+              "workEnd": 346,
+              "classification": "保守保留"
+            },
+            {
+              "name": "TalkingEmotion_Silent_表情",
+              "fps": 60,
+              "duration": 900,
+              "workStart": 60,
+              "workEnd": 430,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Silent",
+              "fps": 60,
+              "duration": 900,
+              "workStart": 60,
+              "workEnd": 430,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Serious_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 365,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Serious",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 365,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Proud_表情",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 344,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Proud",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 344,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "Empty",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Doubt_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 463,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Doubt",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 463,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Excited_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 312,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Excited",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 312,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Curious_表情",
+              "fps": 60,
+              "duration": 1200,
+              "workStart": 60,
+              "workEnd": 1084,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Curious",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 484,
+              "classification": "保守保留"
+            },
+            {
+              "name": "TalkingEmotion_Surprised_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 360,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Surprised",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 360,
+              "classification": "保守保留"
+            },
+            {
+              "name": "TalkingEmotion_Encourage_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 385,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Encourage",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 385,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Praise_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 405,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Praise",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 405,
+              "classification": "保守保留"
+            },
+            {
+              "name": "TalkingEmotion_Shake_表情",
+              "fps": 60,
+              "duration": 900,
+              "workStart": 60,
+              "workEnd": 378,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Shake",
+              "fps": 60,
+              "duration": 900,
+              "workStart": 60,
+              "workEnd": 378,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Nervous_表情",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 276,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Nervous",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 276,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Sad_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 481,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Sad",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 480,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Normal",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 420,
+              "classification": "保守保留"
+            },
+            {
+              "name": "TalkingEmotion_Normal_无调整",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 420,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "Listening_Normal_无调整",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 499,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "NoTracking",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "FaceTracking_X_max",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "FaceTracking_X_min",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "FaceTracking_Y_max",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "FaceTracking_Y_min",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "IPadSize_max",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "IPadSize_min",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "Talking_Empty",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Expectation",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 540,
+              "classification": "保守保留"
+            },
+            {
+              "name": "Start_Dial",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 427,
+              "classification": "保守保留"
+            },
+            {
+              "name": "eyeball_track_Y",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "eyeball_track_X",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "Start_Answer",
+              "fps": 60,
+              "duration": 1200,
+              "workStart": 62,
+              "workEnd": 480,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Expectation_表情",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 540,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "face_track_Y",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Regret",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 477,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "Listening_Normal",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 498,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Think_v2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 348,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Regret_表情",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 477,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "Listening_Normal_NEW",
+              "fps": 60,
+              "duration": 1200,
+              "workStart": 60,
+              "workEnd": 488,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "face_track_X",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Grievance",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 458,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Concerned_表情",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 516,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "eyeball_Y",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Think_v2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 348,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "Thinking_Normal_in",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 240,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Focused_v2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 526,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "Thinking_Normal_loop",
+              "fps": 60,
+              "duration": 900,
+              "workStart": 170,
+              "workEnd": 498,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Grievance_表情",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 458,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Concerned",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 516,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "Thinking_Normal_NEW",
+              "fps": 60,
+              "duration": 900,
+              "workStart": 220,
+              "workEnd": 655,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "eyeball_X",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Focused_v2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 526,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Amazed_表情",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 480,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Happy_v2_表情",
+              "fps": 60,
+              "duration": 1500,
+              "workStart": 60,
+              "workEnd": 455,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Happy_v2",
+              "fps": 60,
+              "duration": 1500,
+              "workStart": 60,
+              "workEnd": 455,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Amazed",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 480,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "face_Y",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Superexcited",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 426,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Excited_v2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 386,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Entangled_表情",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 512,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "face_X",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Entangled",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 512,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "Exit_Normal",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 720,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Superexcited_表情",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 426,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Excited_v2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 386,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Surprised_v2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 453,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Sure_表情",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 375,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Envy",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 513,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Sure",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 375,
+              "classification": "保守保留"
+            },
+            {
+              "name": "Exit_Normal 2",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 720,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Surprised_v2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 453,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Curious_v2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 415,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Frighten_表情",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 495,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Curious_v2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 415,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Envy_表情",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 513,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Frighten",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 495,
+              "classification": "保守保留"
+            }
+          ],
+          "machines": [
+            {
+              "name": "ai叫叫动画状态机",
+              "inputs": [
+                {
+                  "name": "FaceTracking_switch",
+                  "type": 59,
+                  "typeName": "Boolean"
+                },
+                {
+                  "name": "CanvasSize",
+                  "type": 56,
+                  "typeName": "Number"
+                },
+                {
+                  "name": "FaceTracking_Y",
+                  "type": 56,
+                  "typeName": "Number"
+                },
+                {
+                  "name": "FaceTracking_X",
+                  "type": 56,
+                  "typeName": "Number"
+                },
+                {
+                  "name": "TalkingEmotion",
+                  "type": 56,
+                  "typeName": "Number"
+                },
+                {
+                  "name": "TalkingEmotion_switch",
+                  "type": 58,
+                  "typeName": "Trigger"
+                },
+                {
+                  "name": "StateSwitching",
+                  "type": 59,
+                  "typeName": "Boolean"
+                },
+                {
+                  "name": "SpecialTrigger",
+                  "type": 56,
+                  "typeName": "Number"
+                },
+                {
+                  "name": "Talk",
+                  "type": 59,
+                  "typeName": "Boolean"
+                },
+                {
+                  "name": "v2",
+                  "type": 58,
+                  "typeName": "Trigger"
+                },
+                {
+                  "name": "v1",
+                  "type": 58,
+                  "typeName": "Trigger"
+                }
+              ],
+              "applicationUsage": "主相机未启用；资源陈列页可手动选择预览"
+            }
+          ],
+          "nodes": [
+            {
+              "name": "controller_eyeball_location",
+              "exists": true
+            },
+            {
+              "name": "controller_faceq",
+              "exists": true
+            },
+            {
+              "name": "IP_CJ_mouth_Y",
+              "exists": true
+            },
+            {
+              "name": "IP_CJ_mouth1",
+              "exists": true
+            }
+          ]
+        }
+      ],
+      "sha256": "203a6f992698be770a4b49fb42f2632f095cef22490fa426bf933ed37c929233"
+    },
+    {
+      "name": "lvdou",
+      "bytes": 1632399,
+      "defaultArtboard": "绿豆",
+      "assets": [
+        {
+          "name": "iwEcAqNwbmcDAQTRCAAF0QaABrC0J_iYQQyQnwg7L3tLQdEAB9IfxkBdCAAJomltCgAL0gABWYY",
+          "isImage": true,
+          "isFont": false,
+          "isAudio": false,
+          "bytes": 18092
+        }
+      ],
+      "artboards": [
+        {
+          "name": "绿豆",
+          "bounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 2048,
+            "maxY": 1664
+          },
+          "frameOrigin": true,
+          "animations": [
+            {
+              "name": "Phone",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "Ipad",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "保守保留"
+            },
+            {
+              "name": "Talking_Normal_close",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 0,
+              "workEnd": 1,
+              "classification": "保守保留"
+            },
+            {
+              "name": "Talking_Normal",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 0,
+              "workEnd": 186,
+              "classification": "保守保留"
+            },
+            {
+              "name": "TalkingEmotion_Normalbeifen",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 505,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Silent_表情",
+              "fps": 60,
+              "duration": 900,
+              "workStart": 60,
+              "workEnd": 283,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Silent",
+              "fps": 60,
+              "duration": 900,
+              "workStart": 60,
+              "workEnd": 270,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "Empty",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "Talking_Empty",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Doubt_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 313,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Doubt",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 320,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Surprised_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 30,
+              "workEnd": 279,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Surprised",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 30,
+              "workEnd": 270,
+              "classification": "保守保留"
+            },
+            {
+              "name": "TalkingEmotion_Encourage_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 30,
+              "workEnd": 270,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Encourage",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 30,
+              "workEnd": 260,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "眨眼",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 0,
+              "workEnd": 40,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Normal_2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 421,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Normal",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 421,
+              "classification": "保守保留"
+            },
+            {
+              "name": "Start_Dial",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 369,
+              "classification": "保守保留"
+            },
+            {
+              "name": "Start_Answer",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 63,
+              "workEnd": 371,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "Listening_Normal",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 609,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "Listening_Normal_NEW",
+              "fps": 60,
+              "duration": 1200,
+              "workStart": 60,
+              "workEnd": 480,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "Thinking_Normal_in",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 210,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "Thinking_Normal_loop",
+              "fps": 60,
+              "duration": 900,
+              "workStart": 180,
+              "workEnd": 660,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "Thinking_Normal_NEW",
+              "fps": 60,
+              "duration": 900,
+              "workStart": 180,
+              "workEnd": 660,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "Exit_Normal",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 420,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "Exit_Normal 2",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 420,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Witty_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 307,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Witty",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 260,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Sad_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 345,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Sad",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 330,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Expectation_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 265,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Expectation",
+              "fps": 60,
+              "duration": 480,
+              "workStart": 60,
+              "workEnd": 185,
+              "classification": "保守保留"
+            },
+            {
+              "name": "TalkingEmotion_Concerned_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 360,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Concerned",
+              "fps": 60,
+              "duration": 480,
+              "workStart": 60,
+              "workEnd": 250,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Excited_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 275,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Excited",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 214,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Serious_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 240,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Serious",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 250,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Naughty‌_表情",
+              "fps": 60,
+              "duration": 480,
+              "workStart": 60,
+              "workEnd": 364,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "NoTracking",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Naughty‌",
+              "fps": 60,
+              "duration": 480,
+              "workStart": 60,
+              "workEnd": 303,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Naughty2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 300,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Naughty2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 300,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Focused_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 120,
+              "workEnd": 400,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Focused",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 120,
+              "workEnd": 399,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Focused2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 324,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Focused2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 310,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Think_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 262,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "IPadSize_max",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "IPadSize_min",
+              "fps": 60,
+              "duration": 60,
+              "workStart": 4294967295,
+              "workEnd": 4294967295,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Think",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 273,
+              "classification": "保守保留"
+            },
+            {
+              "name": "TalkingEmotion_Think2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 342,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Think2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 290,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Happy_表情",
+              "fps": 60,
+              "duration": 1500,
+              "workStart": 60,
+              "workEnd": 300,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Happy",
+              "fps": 60,
+              "duration": 1500,
+              "workStart": 60,
+              "workEnd": 268,
+              "classification": "保守保留"
+            },
+            {
+              "name": "TalkingEmotion_Happy2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 235,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Happy2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 286,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Proud2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 280,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Proud2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 195,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Proud_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 212,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Proud",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 198,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Praise_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 241,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Praise",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 241,
+              "classification": "保守保留"
+            },
+            {
+              "name": "TalkingEmotion_Praise2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 345,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Praise2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 302,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Curious_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 285,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Superexcited_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 237,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Curious",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 231,
+              "classification": "保守保留"
+            },
+            {
+              "name": "TalkingEmotion_Superexcited",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 205,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Curious2_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 301,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Curious2",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 240,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Confused_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 330,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Confused",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 210,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Low_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 324,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Low",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 253,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Smile_表情",
+              "fps": 60,
+              "duration": 1500,
+              "workStart": 60,
+              "workEnd": 249,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Smile",
+              "fps": 60,
+              "duration": 1500,
+              "workStart": 60,
+              "workEnd": 240,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Frighten_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 30,
+              "workEnd": 239,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Frighten",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 30,
+              "workEnd": 260,
+              "classification": "保守保留"
+            },
+            {
+              "name": "TalkingEmotion_Amazed_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 343,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Amazed",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 274,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Sure_表情",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 244,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Sure",
+              "fps": 60,
+              "duration": 1800,
+              "workStart": 60,
+              "workEnd": 244,
+              "classification": "保守保留"
+            },
+            {
+              "name": "TalkingEmotion_Entangled_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 308,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Entangled",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 311,
+              "classification": "可选-当前自动轮播"
+            },
+            {
+              "name": "TalkingEmotion_Shake_表情",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 249,
+              "classification": "未被当前业务调用-清理候选"
+            },
+            {
+              "name": "TalkingEmotion_Shake",
+              "fps": 60,
+              "duration": 600,
+              "workStart": 60,
+              "workEnd": 270,
+              "classification": "可选-当前自动轮播"
+            }
+          ],
+          "machines": [
+            {
+              "name": "ai绿豆动画状态机",
+              "inputs": [
+                {
+                  "name": "CanvasSize",
+                  "type": 56,
+                  "typeName": "Number"
+                },
+                {
+                  "name": "TalkingEmotion",
+                  "type": 56,
+                  "typeName": "Number"
+                },
+                {
+                  "name": "TalkingEmotion_switch",
+                  "type": 58,
+                  "typeName": "Trigger"
+                },
+                {
+                  "name": "StateSwitching",
+                  "type": 59,
+                  "typeName": "Boolean"
+                },
+                {
+                  "name": "SpecialTrigger",
+                  "type": 56,
+                  "typeName": "Number"
+                },
+                {
+                  "name": "Talk",
+                  "type": 59,
+                  "typeName": "Boolean"
+                },
+                {
+                  "name": "v2",
+                  "type": 58,
+                  "typeName": "Trigger"
+                },
+                {
+                  "name": "v1",
+                  "type": 58,
+                  "typeName": "Trigger"
+                }
+              ],
+              "applicationUsage": "主相机未启用；资源陈列页可手动选择预览"
+            }
+          ],
+          "nodes": [
+            {
+              "name": "controller_eyeball_location",
+              "exists": false
+            },
+            {
+              "name": "controller_faceq",
+              "exists": false
+            },
+            {
+              "name": "IP_CJ_mouth_Y",
+              "exists": false
+            },
+            {
+              "name": "IP_CJ_mouth1",
+              "exists": false
+            }
+          ]
+        }
+      ],
+      "sha256": "cb114cd3107aecf2cf9d5ee71d5f9a3f688dd2379c8ae6394862bac4b00de4fe"
+    }
+  ]
+}

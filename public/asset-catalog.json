@@ -2,7 +2,7 @@
   "version": 1,
   "generatedAt": "2026-09-11T08:36:23.236Z",
   "publicFileCount": 50,
-  "totalBytes": 58361461,
+  "totalBytes": 58194237,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -304,10 +304,10 @@
       "name": "绿豆",
       "category": "rive",
       "format": "RIV",
-      "bytes": 1632399,
-      "sha256": "cb114cd3107aecf2cf9d5ee71d5f9a3f688dd2379c8ae6394862bac4b00de4fe",
-      "source": "https://rive.mikeywa.site/qdg",
-      "sourceLabel": "绿豆 3D · 0908 原文件"
+      "bytes": 1465175,
+      "sha256": "b7105cd123574ff3e611d2364296a37927a14d9807db845756edc612870ea6db",
+      "source": "https://rive.mikeywa.site/4KM",
+      "sourceLabel": "绿豆 · 黑版原文件"
     },
     {
       "id": "media/MohrRounded-Bold.ttf",
