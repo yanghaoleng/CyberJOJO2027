@@ -67,6 +67,7 @@ import { CHARACTER_TIMELINES, resolveCharacterAnimation } from "./character-anim
 import { drawHeartFeedback, HEART_FEEDBACK_DURATION_MS } from "./heart-feedback.js";
 const FriendCollection = lazy(() => import("./friends/FriendCollection.jsx"));
 import { getContextualCaption } from "./contextual-caption.js";
+import { getRecentConversationTopic } from "./conversation-topic.js";
 import { createShutterSamples } from "./camera-feedback.js";
 import { getFrontCameraPipRect, hasLiveVideoTrack } from "./dual-camera.js";
 import {
@@ -111,10 +112,11 @@ const WELCOME_HEADLINES = [
 const WELCOME_CHARACTER_DELAY_MS = 76;
 const WELCOME_ANIMATION_SETTLE_MS = 420;
 const WELCOME_HEADLINE_HOLD_MS = 3_000;
+const THINKING_VOICE_DELAY_MS = 2_200;
 
 const WAITING_VOICE_LINES = {
   recognizing: ["我听到你说的了，让我想想", "收到啦，我先听清楚这句话"],
-  thinking: ["我想想"],
+  thinking: ["我想想", "嗯，我听到了", "嗯，等我一下"],
 };
 
 function ProgressiveCalligraphLine({ text, start, lineIndex, onComplete }) {
@@ -1037,7 +1039,7 @@ function App() {
       replaceCharacterBubble(text, activeCharacter, "thinking");
       const socket = voiceSocketRef.current;
       if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", text }));
-    }, 620);
+    }, THINKING_VOICE_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [activeCharacter, aiState, replaceCharacterBubble]);
   const speakCharacterFallback = useCallback((text) => {
@@ -1457,13 +1459,18 @@ function App() {
     onReaction: handleSceneReaction,
   });
 
+  const recentConversationTopic = useMemo(
+    () => getRecentConversationTopic(conversationEntries),
+    [conversationEntries],
+  );
   const contextualCaption = useMemo(() => getContextualCaption({
     gesture: activeGestureEffect,
     sceneReaction,
     characterLabel: CHARACTERS[activeCharacter].label,
+    conversationTopic: recentConversationTopic,
     fallbackMode: captionMode,
     day,
-  }), [activeCharacter, activeGestureEffect, captionMode, day, sceneReaction]);
+  }), [activeCharacter, activeGestureEffect, captionMode, day, recentConversationTopic, sceneReaction]);
   const stopVoiceSession = useCallback(() => {
     voiceSessionGenerationRef.current += 1;
     voiceReadyRef.current = false;

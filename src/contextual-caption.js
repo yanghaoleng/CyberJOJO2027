@@ -28,14 +28,29 @@ function createDefaultCaption(characterLabel) {
   };
 }
 
+function createConversationCaption(characterLabel, topic) {
+  const firstLine = `我和${characterLabel}一起`;
+  return {
+    kind: "subject",
+    mode: "contextual",
+    firstLine,
+    secondLine: topic,
+    text: `${firstLine}${topic}`,
+  };
+}
+
 export function getContextualCaption({
   gesture,
   sceneReaction,
   characterLabel = "叫叫",
+  conversationTopic = "",
   fallbackMode = "together",
   day,
 } = {}) {
   if (gesture === "thumbs_up" || gesture === "heart") return createDayCaption(day);
+
+  const topic = cleanSubject(conversationTopic);
+  if (topic) return createConversationCaption(characterLabel, topic);
 
   const subject = cleanSubject(sceneReaction?.subject);
   const category = String(sceneReaction?.category || "");
