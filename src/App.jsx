@@ -1573,8 +1573,13 @@ function App() {
         }
       }, 12_000);
       if (processor) processor.onaudioprocess = (event) => {
-        if (socket.readyState !== WebSocket.OPEN || isCharacterEchoGateActive(characterEchoGateUntilRef.current, performance.now())) return;
-        const samples = event.inputBuffer.getChannelData(0);
+        if (socket.readyState !== WebSocket.OPEN) return;
+        // Keep the ASR transport alive while character speech is gated. Sending
+        // silence, rather than pausing packets, prevents the provider's idle
+        // timeout without letting the character's own audio become a transcript.
+        const samples = isCharacterEchoGateActive(characterEchoGateUntilRef.current, performance.now())
+          ? new Float32Array(event.inputBuffer.length)
+          : event.inputBuffer.getChannelData(0);
         const pcm = downsampleToPcm16(samples, inputSampleRate);
         if (pcm.byteLength) socket.send(pcm.buffer);
       };
