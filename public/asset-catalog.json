@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-15T09:00:32.615Z",
+  "generatedAt": "2026-09-15T09:15:20.385Z",
   "publicFileCount": 50,
-  "totalBytes": 58194237,
+  "totalBytes": 58194333,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -284,8 +284,8 @@
       "name": "index.html",
       "category": "other",
       "format": "HTML",
-      "bytes": 26046,
-      "sha256": "d3eb4878761287187ac7380f43bdbe5d951b2a3268fea921ff820c26a602d8a3"
+      "bytes": 26142,
+      "sha256": "20e2a3e60d1fb71491d655603f3a098339a33e5bb6293527c7b5484da86ae400"
     },
     {
       "id": "media/jiaojiao.riv",

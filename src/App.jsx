@@ -95,11 +95,11 @@ import { useCameraSceneAnalysis } from "./use-camera-scene-analysis.js";
 const BASE_URL = import.meta.env.BASE_URL;
 
 const WELCOME_HEADLINES = [
-  ["和叫叫一起", "分享快乐阅读时光"],
-  ["和叫叫一起", "打卡今天的美食"],
-  ["和叫叫一起", "收藏今天的笑脸"],
-  ["和叫叫一起", "把日常变成作品"],
-  ["和赛博朋友一起", "记录闪闪发光的生活"],
+  ["今天有没有一件", "想跟我说说的事？"],
+  ["一件开心的事", "也值得慢慢说完"],
+  ["把你发现的", "带给叫叫看看"],
+  ["看不清的时候", "我们一起靠近一点"],
+  ["一个小小手势", "也会有回应"],
 ];
 
 const WELCOME_CHARACTER_DELAY_MS = 76;
@@ -3913,7 +3913,7 @@ function App() {
               {cameraState === "opening" ? (
                 <><span className="button-loader" />正在打开相机</>
               ) : (
-                <><MagnifyingGlass size={21} weight="bold" />进入赛博叫叫2027</>
+                <><MagnifyingGlass size={21} weight="bold" />开始和叫叫聊聊</>
               )}
             </button>
 
@@ -3924,7 +3924,7 @@ function App() {
             {engineState === "loading" && (
               <div className="load-progress" role="progressbar" aria-label="页面资源加载进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow={loadProgress}>
                 <div className="load-progress-copy">
-                  <span>准备合拍素材</span>
+                  <span>准备和叫叫聊聊</span>
                   <strong>{loadProgress}%</strong>
                 </div>
                 <span className="load-progress-track"><i style={{ transform: `scaleX(${loadProgress / 100})` }} /></span>
