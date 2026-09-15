@@ -2096,8 +2096,7 @@ button {
 /* Camera play controls remain above the live canvas, inside the viewfinder. */
 .play-toolbar { position: absolute; top: 18px; left: 18px; right: 18px; z-index: 8; display: flex; justify-content: space-between; pointer-events: none; }
 .play-toolbar button, .play-picker, .play-composer, .play-text-active { pointer-events: auto; }
-.play-entry, .play-text-entry, .play-text-active { border: 0; color: #302500; background: #ffde55; box-shadow: 0 4px 18px #19130020; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border-radius: 24px; padding: 0 16px; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }
-.play-text-entry { width: 44px; padding: 0; background: #ffffffee; }
+.play-entry, .play-text-active { border: 0; color: #302500; background: #ffde55; box-shadow: 0 4px 18px #19130020; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border-radius: 24px; padding: 0 16px; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }
 .play-text-active { position: absolute; z-index: 31; right: 18px; bottom: 12px; width: 44px; padding: 0; }
 .play-picker { position: absolute; z-index: 12; top: 76px; left: 18px; width: min(290px, calc(100% - 36px)); max-height: calc(100% - 94px); overflow-y: auto; overscroll-behavior: contain; padding: 18px; color: #302817; background: #fffef8; border: 1px solid #f0e7d2; border-radius: 24px; box-shadow: 0 14px 44px #241b0030; }
 .play-picker strong { display: block; margin: 0 0 12px; font-size: 17px; }

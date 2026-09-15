@@ -3643,7 +3643,6 @@ function App() {
           {cameraState === "ready" && !recording && !mediaLibraryOpen && !mediaPreview && <>
             {!gameplayMode && <div className="play-toolbar">
               <button type="button" className="play-entry" aria-expanded={gameplayMenuOpen} onClick={() => setGameplayMenuOpen(!gameplayMenuOpen)}><Sparkle size={19} weight="fill" />一起玩</button>
-              <button type="button" className="play-text-entry" aria-label="打字说句话" onClick={() => setTextComposerOpen(!textComposerOpen)}><ChatCircleText size={22} weight="bold" /></button>
             </div>}
             {gameplayMenuOpen && !gameplayMode && <div className="play-picker" role="dialog" aria-label="选择一个玩法">
               <strong>今天想怎么玩？</strong>
