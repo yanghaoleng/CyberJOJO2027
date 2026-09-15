@@ -25,11 +25,11 @@ function foodOrigin(stage, panel) {
 }
 
 /** Mount inside the camera viewfinder. All coordinates use this element's CSS pixels. */
-export default function GamePlayOverlay({ mode, onClose, captureFrame, onReaction, onActivity, onTarget, character = "jiaojiao", characterRect, frameKey = "camera", transcript = "" }) {
+export default function GamePlayOverlay({ mode, onClose, captureFrame, onReaction, onActivity, onTarget, onFound, character = "jiaojiao", characterRect, frameKey = "camera", transcript = "" }) {
   const elementRef = useRef(null);
   const panelRef = useRef(null);
-  const callbacks = useRef({ captureFrame, onReaction, onActivity, onTarget, onClose });
-  callbacks.current = { captureFrame, onReaction, onActivity, onTarget, onClose };
+  const callbacks = useRef({ captureFrame, onReaction, onActivity, onTarget, onFound, onClose });
+  callbacks.current = { captureFrame, onReaction, onActivity, onTarget, onFound, onClose };
   const guard = useRef(createRoundGuard());
   const requestRef = useRef(null);
   const timerRef = useRef(null);
@@ -183,6 +183,7 @@ export default function GamePlayOverlay({ mode, onClose, captureFrame, onReactio
         } else { setPhase("idle"); setMessage("这里还不太清楚，换个角度再出一道题吧"); }
       } else if (result.evaluable && result.matched && result.bbox && stageBoxFromRaw(result.bbox, frame, stage)) {
         setConfirmed({ frame, bbox: result.bbox }); setPhase("success"); setMessage("找到了！这是你选中的范围");
+        callbacks.current.onFound?.();
         callbacks.current.onReaction?.({ action: "praise", text: "你发现啦，观察得真仔细！" });
       } else { setPhase("searching"); setMessage(result.text || "还没找到，再观察一下吧"); }
     } catch (failure) {
@@ -304,7 +305,7 @@ export default function GamePlayOverlay({ mode, onClose, captureFrame, onReactio
           {phase === "searching" && <span className={`gameplay-stability ${steady ? "is-ready" : ""}`}>{steady ? "镜头稳啦，可以确认" : "稳住镜头一小会儿"}</span>}
           <div className="gameplay-actions">
             {phase === "searching" || phase === "verifying" ? <button type="button" className="gameplay-primary" disabled={!steady || busy || retrySeconds > 0} onClick={() => observe("verify")}>{phase === "verifying" ? "确认中…" : retrySeconds ? `${retrySeconds} 秒后再试` : "找到了，看看这个"}</button>
-              : <button type="button" className="gameplay-primary" disabled={busy || retrySeconds > 0} onClick={() => observe("quest")}>{phase === "creating" ? "正在出题…" : retrySeconds ? `${retrySeconds} 秒后再试` : phase === "success" ? "再找一个" : "看看周围，出一道题"}</button>}
+              : <button type="button" className="gameplay-primary" disabled={busy || retrySeconds > 0} onClick={() => observe("quest")}>{phase === "creating" ? "正在出题…" : retrySeconds ? `${retrySeconds} 秒后再试` : phase === "success" ? "找下一个" : "看看周围，出一道题"}</button>}
             {target && phase !== "success" && <button type="button" className="gameplay-secondary" disabled={busy || retrySeconds > 0} onClick={() => observe("quest")}>换一道</button>}
           </div>
         </>}

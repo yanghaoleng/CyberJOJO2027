@@ -3516,6 +3516,7 @@ function App() {
       window.speechSynthesis.speak(utterance);
     }
   }, [activeCharacter]);
+  const handleGameplayFound = useCallback(() => scheduleAutoCapture("gameplay:find", 420), [scheduleAutoCapture]);
   const analyzeToy = useCallback((image, { signal } = {}) => requestGameplay({ source: "toy", image,
     roundId: crypto.randomUUID(), frameId: crypto.randomUUID(), character: activeCharacter }, { signal }), [activeCharacter]);
   const handleFriendSaved = useCallback((friend) => setFriends((current) => [friend, ...current.filter((item) => item.id !== friend.id)]), []);
@@ -3656,9 +3657,9 @@ function App() {
                 transcript={gameplayTranscript} onClose={() => startGameplay("")} onSaved={handleFriendSaved} onReaction={handleGameplayReaction} />
                 : <GamePlayOverlay mode={gameplayMode} captureFrame={captureGameplayFrame} character={activeCharacter}
                   characterRect={gameplayCharacterRect} frameKey={`${facingMode}-${frameOrientation}-${cameraState}`}
-                  transcript={gameplayTranscript?.text || ""} onClose={() => startGameplay("")} onReaction={handleGameplayReaction} onTarget={handleGameplayTarget} />}
+                  transcript={gameplayTranscript?.text || ""} onClose={() => startGameplay("")} onReaction={handleGameplayReaction} onTarget={handleGameplayTarget} onFound={handleGameplayFound} />}
             </Suspense>}
-            {gameplayMode && gameplayMode !== "toy" && <button className="play-text-active" type="button" aria-label="打字说句话" onClick={() => setTextComposerOpen(!textComposerOpen)}><ChatCircleText size={21} weight="bold" /></button>}
+            {gameplayMode === "feed" && <button className="play-text-active" type="button" aria-label="打字说句话" onClick={() => setTextComposerOpen(!textComposerOpen)}><ChatCircleText size={21} weight="bold" /></button>}
             {textComposerOpen && <form className="play-composer" onSubmit={submitTypedMessage}>
               <input aria-label="想和叫叫说的话" autoFocus maxLength={1000} disabled={textSending} placeholder="想说什么，写在这里" value={textDraft} onChange={(event) => setTextDraft(event.target.value)} />
               <button type="submit" aria-label={textSending ? "正在发送" : "发送"} disabled={textSending || !textDraft.trim()}><PaperPlaneRight size={22} weight="fill" /></button>
