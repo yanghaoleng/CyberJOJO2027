@@ -15,6 +15,18 @@ export function getUserSpeechBubbleSizing({ targetWidth, targetHeight, isTabletD
   };
 }
 
+export function truncateBubbleText(context, text, maxWidth) {
+  const content = String(text || "").replace(/\s+/g, " ").trim();
+  if (!content || context.measureText(content).width <= maxWidth) return content;
+  const suffix = "…";
+  let visible = "";
+  for (const character of content) {
+    if (context.measureText(`${visible}${character}${suffix}`).width > maxWidth) break;
+    visible += character;
+  }
+  return `${visible || content[0]}${suffix}`;
+}
+
 export function getUserSpeechBubblePlacement({
   facingMode,
   anchor,

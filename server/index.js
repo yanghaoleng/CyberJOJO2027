@@ -11,7 +11,7 @@ import { createSummaryRequestHandler } from "./summary-route.js";
 import { createGameplayRequestHandler } from "./gameplay-route.js";
 
 const PORT = Number(process.env.PORT || 8787);
-const MAX_SESSION_MS = Number(process.env.JOCAM_MAX_SESSION_MS || 5 * 60_000);
+const MAX_SESSION_MS = Number(process.env.JOCAM_MAX_SESSION_MS || 0);
 const MAX_CONNECTIONS_PER_IP = Number(process.env.JOCAM_MAX_CONNECTIONS_PER_IP || 2);
 const allowedOrigins = new Set((process.env.JOCAM_ALLOWED_ORIGINS || [
   "https://mikeywa.site",
@@ -144,6 +144,8 @@ websocketServer.on("connection", (client) => {
   let lastLocalSpeechAt = 0;
   let localSpeechSequence = 0;
   let lastTextAt = 0;
+  let pendingSpeechParts = [];
+  let pendingSpeechTimer = null;
   const recentGameplayTranscripts = new Map();
   const acceptedTextMessages = new Map();
   const sessionId = randomUUID();
@@ -152,6 +154,34 @@ websocketServer.on("connection", (client) => {
     epoch += 1;
     inferenceController?.abort();
     sendJson(client, { type: "ai", state: "idle" });
+  };
+
+  const clearPendingSpeech = () => {
+    if (pendingSpeechTimer) clearTimeout(pendingSpeechTimer);
+    pendingSpeechTimer = null;
+    pendingSpeechParts = [];
+  };
+
+  const queueSpeechTurn = (text) => {
+    const content = String(text || "").trim();
+    if (!content || interactionMode !== "none") return;
+    if (!pendingSpeechParts.includes(content)) pendingSpeechParts.push(content);
+    if (pendingSpeechTimer) clearTimeout(pendingSpeechTimer);
+    pendingSpeechTimer = setTimeout(() => {
+      const parts = pendingSpeechParts;
+      pendingSpeechParts = [];
+      pendingSpeechTimer = null;
+      const merged = parts.join("；").slice(0, 1000);
+      if (!merged || closed || interactionMode !== "none") return;
+      const requestedCharacter = detectCharacterSwitchCommand(merged);
+      if (requestedCharacter) {
+        activeCharacter = requestedCharacter;
+        sendJson(client, { type: "character_switch", character: requestedCharacter });
+        return;
+      }
+      void runInference(merged);
+    }, 850);
+    pendingSpeechTimer.unref?.();
   };
 
   const sendSpeech = async (text, { opening = false, character = activeCharacter, local = false, expectedEpoch = epoch, expectedLocalSequence = localSpeechSequence, signal } = {}) => {
@@ -208,16 +238,17 @@ websocketServer.on("connection", (client) => {
     if (closed) return;
     closed = true;
     cancelPending();
+    clearPendingSpeech();
     asr?.close();
     activeByIp.set(ip, Math.max(0, (activeByIp.get(ip) || 1) - 1));
     if (!activeByIp.get(ip)) activeByIp.delete(ip);
   };
 
-  const hardStop = setTimeout(() => {
+  const hardStop = MAX_SESSION_MS > 0 ? setTimeout(() => {
     sendJson(client, { type: "error", code: "SESSION_LIMIT", message: "语音会话已达到时长上限" });
     client.close(1000);
-  }, MAX_SESSION_MS);
-  hardStop.unref();
+  }, MAX_SESSION_MS) : null;
+  hardStop?.unref();
 
   client.on("message", async (data, isBinary) => {
     try {
@@ -276,6 +307,7 @@ websocketServer.on("connection", (client) => {
     }
     if (message.type === "clear_memory") {
       cancelPending();
+      clearPendingSpeech();
       context = { entries: [], moments: [] };
       recentGameplayTranscripts.clear();
       acceptedTextMessages.clear();
@@ -356,13 +388,7 @@ websocketServer.on("connection", (client) => {
             if (recentGameplayTranscripts.size > 8) recentGameplayTranscripts.delete(recentGameplayTranscripts.keys().next().value);
             return;
           }
-          const requestedCharacter = detectCharacterSwitchCommand(corrected.text);
-          if (requestedCharacter) {
-            activeCharacter = requestedCharacter;
-            sendJson(client, { type: "character_switch", character: requestedCharacter });
-            return;
-          }
-          runInference(corrected.text);
+          queueSpeechTurn(corrected.text);
         }
       },
       onError: (error) => {
@@ -382,7 +408,7 @@ websocketServer.on("connection", (client) => {
   });
 
   client.once("close", () => {
-    clearTimeout(hardStop);
+    if (hardStop) clearTimeout(hardStop);
     endSession();
   });
   client.once("error", endSession);

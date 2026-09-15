@@ -3,7 +3,13 @@ import test from "node:test";
 import {
   getUserSpeechBubblePlacement,
   getUserSpeechBubbleSizing,
+  truncateBubbleText,
 } from "./speech-bubble-layout.js";
+
+test("long user transcripts stay on one line with an ellipsis", () => {
+  const context = { measureText: (text) => ({ width: [...text].length * 10 }) };
+  assert.equal(truncateBubbleText(context, "我今天和叫叫一起看了一本很长很长的故事书", 70), "我今天和叫叫…");
+});
 
 const BASE_LAYOUT = {
   targetWidth: 720,

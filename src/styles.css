@@ -256,13 +256,13 @@ button {
 
 .speech-bubble-calligraph {
   display: flex !important;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-content: center;
   justify-content: center;
   width: 100%;
-  max-height: none;
-  overflow: visible;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .character-thinking-indicator {
@@ -305,13 +305,13 @@ button {
 }
 
 .character-caption-bubble {
-  --character-tail-x: 18%;
+  --character-tail-x: 50%;
   --character-tail-width: 24px;
   --character-tail-height: 15px;
   position: absolute;
   z-index: 3;
-  left: 42%;
-  bottom: clamp(58px, 9%, 104px);
+  left: 50%;
+  bottom: clamp(138px, 22%, 258px);
   width: max-content;
   max-width: min(calc(100% - 32px), 430px);
   padding: 12px 17px 13px;
@@ -369,7 +369,7 @@ button {
 }
 
 .app-shell.is-tablet-device .character-caption-bubble {
-  left: 36%;
+  left: 50%;
   max-width: min(calc(100% - 64px), 360px);
   padding: 14px 22px 15px;
   font-size: clamp(15px, 1.9vw, 18px);
@@ -781,14 +781,14 @@ button {
 }
 
 .camera-stage.is-landscape .character-caption-bubble {
-  left: 37%;
-  bottom: max(54px, 10%);
-  max-width: min(48%, 520px);
+  left: 50%;
+  bottom: max(96px, 18%);
+  max-width: min(calc(100% - 32px), 520px);
   font-size: clamp(17px, 2.1vw, 23px);
 }
 
 .app-shell.is-tablet-device .camera-stage.is-landscape .character-caption-bubble {
-  left: 31%;
+  left: 50%;
   max-width: min(40%, 380px);
   padding: 13px 22px 14px;
   font-size: clamp(15px, 1.65vw, 18px);

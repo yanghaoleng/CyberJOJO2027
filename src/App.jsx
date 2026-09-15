@@ -88,6 +88,7 @@ import {
 import {
   getUserSpeechBubblePlacement,
   getUserSpeechBubbleSizing,
+  truncateBubbleText,
 } from "./speech-bubble-layout.js";
 import {
   CHARACTER_LEFT_OVERFLOW_RATIO,
@@ -572,23 +573,6 @@ function getVoiceSocketUrl() {
   return "wss://rive.mikeywa.site/jocam/api/voice";
 }
 
-function splitBubbleText(context, text, maxWidth) {
-  const allCharacters = Array.from(String(text || "").replace(/\s+/g, " ").trim());
-  const characters = allCharacters;
-  const lines = [""];
-  for (const character of characters) {
-    const current = lines.at(-1);
-    if (context.measureText(current + character).width <= maxWidth || !current) {
-      lines[lines.length - 1] = current + character;
-    } else if (lines.length < 2) {
-      lines.push(character);
-    } else {
-      lines.push(character);
-    }
-  }
-  return lines;
-}
-
 function roundedRectPath(context, x, y, width, height, radius) {
   const safeRadius = Math.min(radius, width / 2, height / 2);
   context.beginPath();
@@ -805,6 +789,8 @@ function App() {
   const voiceReadyPromiseRef = useRef(null);
   const voiceReadyResolveRef = useRef(null);
   const voiceSessionGenerationRef = useRef(0);
+  const voiceReconnectTimerRef = useRef(null);
+  const voiceReconnectAttemptsRef = useRef(0);
   const pendingTextRef = useRef(null);
   const textSendingRef = useRef(false);
   const lastTextAttemptRef = useRef(null);
@@ -1047,14 +1033,8 @@ function App() {
     if (!content) return;
     const rect = characterDrawRectRef.current;
     const canvas = outputCanvasRef.current;
-    const anchor = rect && canvas?.width && canvas?.height
-      ? {
-          x: clamp(rect.mouthX / canvas.width, 0.16, 0.84),
-          y: clamp(rect.mouthY / canvas.height, 0.16, 0.72),
-        }
-      : null;
     // A new key removes the old line before replaying the entrance motion.
-    setCharacterBubble({ id: crypto.randomUUID(), text: content, character, tone: "speech", anchor });
+    setCharacterBubble({ id: crypto.randomUUID(), text: content, character, tone: "speech" });
   }, [activeCharacter]);
   const speakCharacterFallback = useCallback((text) => {
     if (!window.speechSynthesis || !text) return;
@@ -1486,6 +1466,8 @@ function App() {
     voiceReadyResolveRef.current?.(null);
     voiceReadyResolveRef.current = null;
     voiceReadyPromiseRef.current = null;
+    if (voiceReconnectTimerRef.current) window.clearTimeout(voiceReconnectTimerRef.current);
+    voiceReconnectTimerRef.current = null;
     pendingTextRef.current?.finish(false, "连接已中断，文字还在，可以再试一次。");
     voiceIntentionalCloseRef.current = true;
     const graph = voiceAudioGraphRef.current;
@@ -1557,6 +1539,30 @@ function App() {
         };
       });
       const settleReady = voiceReadyResolveRef.current;
+      const scheduleVoiceReconnect = () => {
+        if (
+          textOnly
+          || !audioTrack
+          || audioTrack.readyState !== "live"
+          || voiceIntentionalCloseRef.current
+          || voiceReconnectTimerRef.current
+          || streamRef.current !== stream
+        ) return;
+        const attempt = voiceReconnectAttemptsRef.current + 1;
+        voiceReconnectAttemptsRef.current = attempt;
+        if (attempt > 6) {
+          setVoiceState("unavailable");
+          showToast("语音连接没有恢复，可以稍后再试。");
+          return;
+        }
+        const delay = Math.min(4_000, 500 * (2 ** (attempt - 1)));
+        setVoiceState("connecting");
+        voiceReconnectTimerRef.current = window.setTimeout(() => {
+          voiceReconnectTimerRef.current = null;
+          if (voiceIntentionalCloseRef.current || streamRef.current !== stream || audioTrack.readyState !== "live") return;
+          void startVoiceSession(stream);
+        }, delay);
+      };
       voiceReadyPromiseRef.current = readyPromise;
       readyTimer = window.setTimeout(() => {
         settleReady(null);
@@ -1596,6 +1602,7 @@ function App() {
         }
         if (message.type === "ready") {
           voiceReadyRef.current = true;
+          voiceReconnectAttemptsRef.current = 0;
           settleReady(socket);
           setVoiceState("listening");
           return;
@@ -1670,7 +1677,7 @@ function App() {
           if (message.clientMessageId && pendingTextRef.current?.id === message.clientMessageId) pendingTextRef.current.finish(false, message.message);
           if (!["TEXT_RATE_LIMIT", "TURN_QUEUE_FULL", "INVALID_TEXT", "LOCAL_SPEECH_RATE_LIMIT"].includes(message.code)) setVoiceState("unavailable");
           showToast(message.message || "语音识别暂时不可用");
-          if (message.code === "ASR_UNAVAILABLE" && audioTrack) void startVoiceSession(stream, { textOnly: true });
+          if (message.code === "ASR_UNAVAILABLE") scheduleVoiceReconnect();
         }
       });
       socket.addEventListener("error", () => {
@@ -1679,13 +1686,14 @@ function App() {
         settleReady(null);
         pendingTextRef.current?.finish(false, "连接没有成功，文字还在，可以再试一次。");
         setVoiceState("unavailable");
+        scheduleVoiceReconnect();
       });
       socket.addEventListener("close", () => {
         if (voiceSocketRef.current !== socket) return;
         voiceReadyRef.current = false;
         settleReady(null);
         pendingTextRef.current?.finish(false, "连接已断开，文字还在，可以再试一次。");
-        if (!voiceIntentionalCloseRef.current) setVoiceState("unavailable");
+        if (!voiceIntentionalCloseRef.current) scheduleVoiceReconnect();
       });
       return readyPromise;
     } catch (error) {
@@ -1827,7 +1835,7 @@ function App() {
     context.save();
     context.font = `700 ${fontSize}px "Mohr Rounded", "PingFang SC", sans-serif`;
     const maxTextWidth = maxBubbleWidth - horizontalPadding * 2;
-    const lines = splitBubbleText(context, text, maxTextWidth);
+    const lines = [truncateBubbleText(context, text, maxTextWidth)];
     const measuredTextWidth = Math.max(
       fontSize,
       ...lines.map((line) => context.measureText(line).width),
@@ -1839,7 +1847,7 @@ function App() {
     );
     const textWidth = bubbleWidth - horizontalPadding * 2;
     const lineHeight = fontSize * 1.12;
-    const bubbleHeight = Math.max(fontSize * 2.15, lines.length * lineHeight + verticalPadding * 2);
+    const bubbleHeight = Math.max(fontSize * 2.15, lineHeight + verticalPadding * 2);
     const tailHeight = fontSize * 0.4;
     const tailWidth = tailHeight * 2;
     const placement = getUserSpeechBubblePlacement({
@@ -2908,6 +2916,7 @@ function App() {
                 echoCancellation: { ideal: true },
                 noiseSuppression: { ideal: true },
                 autoGainControl: { ideal: true },
+                voiceIsolation: { ideal: true },
               },
               video: videoConstraints,
             }),

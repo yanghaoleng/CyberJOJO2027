@@ -5,27 +5,26 @@ function cleanSubject(value) {
   return String(value || "").replace(/\s+/g, "").replace(/[，。！？,.!?]+$/g, "").slice(0, 10);
 }
 
-function createDayCaption(mode, day) {
+function createDayCaption(day) {
   const paddedDay = String(day).padStart(2, "0");
-  if (mode === "streak") {
-    return {
-      kind: "day",
-      mode: "streak",
-      firstLine: "坚持连续学习叫叫阅读",
-      dayPrefix: "第",
-      day: paddedDay,
-      suffix: "天",
-      text: `坚持连续学习叫叫阅读第 ${paddedDay} 天`,
-    };
-  }
   return {
     kind: "day",
-    mode: "together",
-    firstLine: "我和叫叫一起阅读的",
+    mode: "streak",
+    firstLine: "坚持连续学习叫叫阅读",
     dayPrefix: "第",
     day: paddedDay,
     suffix: "天",
-    text: `我和叫叫一起阅读的第 ${paddedDay} 天`,
+    text: `坚持连续学习叫叫阅读第 ${paddedDay} 天`,
+  };
+}
+
+function createDefaultCaption(characterLabel) {
+  return {
+    kind: "subject",
+    mode: "contextual",
+    firstLine: `我和${characterLabel}一起`,
+    secondLine: "聊聊天",
+    text: `我和${characterLabel}一起聊聊天`,
   };
 }
 
@@ -36,12 +35,20 @@ export function getContextualCaption({
   fallbackMode = "together",
   day,
 } = {}) {
-  if (gesture === "thumbs_up") return createDayCaption("streak", day);
+  if (gesture === "thumbs_up" || gesture === "heart") return createDayCaption(day);
 
   const subject = cleanSubject(sceneReaction?.subject);
   const category = String(sceneReaction?.category || "");
-  if (category === "book" || BOOK_SUBJECT_PATTERN.test(subject)) return createDayCaption("together", day);
-  if (!subject) return createDayCaption(fallbackMode, day);
+  if (category === "book" || BOOK_SUBJECT_PATTERN.test(subject)) {
+    return {
+      kind: "subject",
+      mode: "contextual",
+      firstLine: `我和${characterLabel}一起`,
+      secondLine: `聊${subject || "故事书"}`,
+      text: `我和${characterLabel}一起聊${subject || "故事书"}`,
+    };
+  }
+  if (!subject) return createDefaultCaption(characterLabel);
 
   let action = "发现";
   if (["food", "dessert"].includes(category)) action = "打卡";
