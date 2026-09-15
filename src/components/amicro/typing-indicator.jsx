@@ -1,13 +1,13 @@
 import { motion, useReducedMotion } from "motion/react";
 
-export function TypingIndicator({ className = "" }) {
+export function TypingIndicator({ className = "", label = "正在思考" }) {
   const shouldReduceMotion = useReducedMotion();
 
   return (
     <div
       className={`amicro-typing-indicator ${className}`.trim()}
       role="status"
-      aria-label="正在思考"
+      aria-label={label}
     >
       {[0, 1, 2].map((index) => (
         <motion.span

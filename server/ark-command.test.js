@@ -57,10 +57,19 @@ test("character responses require text and discard arbitrary animation names", (
   assert.deepEqual(arkInternals.parseCharacterResponse('{"text":"这本书一定很有趣！","action":"happy"}'), {
     text: "这本书一定很有趣！",
     action: "happy",
+    story: { thread: "none" },
   });
   assert.deepEqual(arkInternals.parseCharacterResponse('{"text":"我在听呢。","action":"arbitrary_animation"}'), {
     text: "我在听呢。",
     action: null,
+    story: { thread: "none" },
   });
   assert.equal(arkInternals.parseCharacterResponse('{"action":"happy"}'), null);
+});
+
+test("character responses only expose the bounded hidden-story directives", () => {
+  assert.deepEqual(arkInternals.parseCharacterResponse('{"text":"拿近一点让我看看。","action":"curious","story":{"thread":"inspect"}}'), {
+    text: "拿近一点让我看看。", action: "curious", story: { thread: "inspect" },
+  });
+  assert.equal(arkInternals.parseCharacterResponse('{"text":"好呀","action":"happy","story":{"thread":"open_browser"}}').story.thread, "none");
 });

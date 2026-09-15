@@ -50,6 +50,15 @@ test("distinguishes OK from a finger heart by the other three fingers", () => {
   }), CAMERA_GESTURES.FINGER_HEART);
 });
 
+test("recognizes two hands forming one heart", () => {
+  const left = makePinchLandmarks({ extendedFingers: 1 });
+  const right = makePinchLandmarks({ extendedFingers: 1 }).map((point) => ({ ...point, x: point.x + 0.24 }));
+  left[0] = { x: 0.38, y: 0.9, z: 0 }; right[0] = { x: 0.62, y: 0.9, z: 0 };
+  left[8] = { x: 0.49, y: 0.32, z: 0 }; right[8] = { x: 0.51, y: 0.32, z: 0 };
+  left[4] = { x: 0.49, y: 0.55, z: 0 }; right[4] = { x: 0.51, y: 0.55, z: 0 };
+  assert.equal(classifyCameraGesture({ landmarks: [left, right] }), CAMERA_GESTURES.HEART);
+});
+
 test("requires stable frames and a release before retriggering", () => {
   let state = createGestureTracker();
   let update = advanceGestureTracker(state, CAMERA_GESTURES.OK, 0);

@@ -25,6 +25,21 @@ test("food and toy observations do not fabricate supported objects from low conf
   assert.equal(parseGameplayAssessment("food", { ...base, confidence: NaN }), null);
 });
 
+test("conversation-led observation only returns a clear, bounded object category", () => {
+  const clearBook = parseGameplayAssessment("observe", {
+    evaluable: true, confidence: 0.92, bbox: [0.3, 0.2, 0.3, 0.5], label: "绘本", category: "book", text: "看到了绘本",
+  });
+  assert.equal(clearBook.evaluable, true);
+  assert.equal(clearBook.label, "绘本");
+  assert.equal(clearBook.category, "book");
+  const unclear = parseGameplayAssessment("observe", {
+    evaluable: true, confidence: 0.6, bbox: [0.3, 0.2, 0.3, 0.5], label: "绘本", category: "book", text: "",
+  });
+  assert.equal(unclear.evaluable, false);
+  assert.equal(unclear.label, "");
+  assert.equal(unclear.category, "");
+});
+
 test("quest only starts with an actual localized reference and supported color", () => {
   assert.equal(parseGameplayAssessment("quest", { ...base, target: { kind: "color", value: "red" } }).target.prompt, "找一个红色的东西");
   for (const change of [{ bbox: [0, 0, 0, 0] }, { bbox: [0.9, 0.2, 0.4, 0.4] }, { target: { kind: "color", value: "rainbow" } }]) {

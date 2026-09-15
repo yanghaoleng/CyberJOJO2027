@@ -2,7 +2,10 @@ export const CAMERA_GESTURES = Object.freeze({
   THUMBS_UP: "thumbs_up",
   VICTORY: "victory",
   OK: "ok",
-  FINGER_HEART: "finger_heart",
+  // Both the two-hand heart and the single-hand finger heart are one product
+  // gesture. Keeping one event means they receive exactly the same feedback.
+  HEART: "heart",
+  FINGER_HEART: "heart",
 });
 
 const DEFAULT_TRACKER = Object.freeze({
@@ -37,7 +40,32 @@ function isFingerExtended(landmarks, mcpIndex, pipIndex, tipIndex) {
   return jointAngle(landmarks[mcpIndex], landmarks[pipIndex], landmarks[tipIndex]) >= 145;
 }
 
+function palmWidth(landmarks) {
+  return distance(landmarks?.[5], landmarks?.[17]);
+}
+
+/**
+ * A two-hand heart has two close "joins": the index fingertips form the top
+ * notch and the thumb fingertips form the bottom point. Distances are scaled
+ * by each child's actual palm size instead of image pixels, so this holds up
+ * when hands are near or far from the camera.
+ */
+export function isTwoHandHeart(hands = []) {
+  if (hands.length < 2) return false;
+  const [first, second] = hands;
+  const scale = (palmWidth(first) + palmWidth(second)) / 2;
+  if (!Number.isFinite(scale) || scale < 0.04) return false;
+  const indexJoin = distance(first[8], second[8]) / scale;
+  const thumbJoin = distance(first[4], second[4]) / scale;
+  const palmGap = distance(first[0], second[0]) / scale;
+  return indexJoin <= 1.05 && thumbJoin <= 1.05 && palmGap >= 0.85 && palmGap <= 4.8;
+}
+
 export function classifyCameraGesture(result) {
+  const hands = (result?.landmarks || []).filter((hand) => hand?.[0] && hand?.[4] && hand?.[8]);
+  // A complete two-hand shape is more specific than one hand's canned label.
+  if (isTwoHandHeart(hands)) return CAMERA_GESTURES.HEART;
+
   const cannedGesture = result?.gestures?.[0]?.[0];
   if (cannedGesture?.categoryName === "Thumb_Up" && cannedGesture.score >= 0.62) {
     return CAMERA_GESTURES.THUMBS_UP;
@@ -46,11 +74,11 @@ export function classifyCameraGesture(result) {
     return CAMERA_GESTURES.VICTORY;
   }
 
-  const landmarks = result?.landmarks?.[0];
+  const landmarks = hands[0];
   if (!landmarks?.[0] || !landmarks?.[4] || !landmarks?.[8]) return null;
-  const palmWidth = distance(landmarks[5], landmarks[17]);
-  if (!Number.isFinite(palmWidth) || palmWidth < 0.04) return null;
-  const pinchRatio = distance(landmarks[4], landmarks[8]) / palmWidth;
+  const width = palmWidth(landmarks);
+  if (!Number.isFinite(width) || width < 0.04) return null;
+  const pinchRatio = distance(landmarks[4], landmarks[8]) / width;
   if (pinchRatio > 0.43) return null;
 
   const extendedFingers = [

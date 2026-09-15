@@ -4,12 +4,9 @@ import {
   ArrowClockwise,
   ArrowsLeftRight,
   CaretDown,
-  ChatCircleText,
   Check,
   DownloadSimple,
   ImagesSquare,
-  Sparkle,
-  PaperPlaneRight,
   LockSimple,
   MagnifyingGlass,
   PictureInPicture,
@@ -66,9 +63,8 @@ import JournalDay from "./journal/JournalDay.jsx";
 import { loadFriends } from "./friends/friend-store.js";
 import { requestGameplay } from "./gameplay/gameplay-api.js";
 import { createCharacterInteraction } from "./character-interaction.js";
-import { resolveCharacterAnimation } from "./character-animations.js";
-const GamePlayOverlay = lazy(() => import("./gameplay/GamePlayOverlay.jsx"));
-const FriendIntro = lazy(() => import("./friends/FriendIntro.jsx"));
+import { CHARACTER_TIMELINES, resolveCharacterAnimation } from "./character-animations.js";
+import { drawHeartFeedback, HEART_FEEDBACK_DURATION_MS } from "./heart-feedback.js";
 const FriendCollection = lazy(() => import("./friends/FriendCollection.jsx"));
 import { getContextualCaption } from "./contextual-caption.js";
 import { createShutterSamples } from "./camera-feedback.js";
@@ -109,6 +105,11 @@ const WELCOME_HEADLINES = [
 const WELCOME_CHARACTER_DELAY_MS = 76;
 const WELCOME_ANIMATION_SETTLE_MS = 420;
 const WELCOME_HEADLINE_HOLD_MS = 3_000;
+
+const WAITING_VOICE_LINES = {
+  recognizing: ["我听到你说的了，让我想想", "收到啦，我先听清楚这句话"],
+  thinking: ["我正在思考", "让我来想一想，马上告诉你"],
+};
 
 function ProgressiveCalligraphLine({ text, start, lineIndex, onComplete }) {
   const characters = Array.from(text);
@@ -361,7 +362,7 @@ const GESTURE_ACTIONS = {
     toast: "收到你的 OK",
   },
   [CAMERA_GESTURES.FINGER_HEART]: {
-    animation: "TalkingEmotion_Happy",
+    animation: CHARACTER_TIMELINES.HEART_FULL_BODY,
     toast: "接住你的比心",
   },
 };
@@ -568,7 +569,7 @@ function getVoiceSocketUrl() {
 
 function splitBubbleText(context, text, maxWidth) {
   const allCharacters = Array.from(String(text || "").replace(/\s+/g, " ").trim());
-  const characters = allCharacters.slice(0, 42);
+  const characters = allCharacters;
   const lines = [""];
   for (const character of characters) {
     const current = lines.at(-1);
@@ -577,14 +578,8 @@ function splitBubbleText(context, text, maxWidth) {
     } else if (lines.length < 2) {
       lines.push(character);
     } else {
-      lines[1] += character;
+      lines.push(character);
     }
-  }
-  if (lines.length === 2) {
-    while (context.measureText(`${lines[1]}…`).width > maxWidth && lines[1].length > 1) {
-      lines[1] = lines[1].slice(0, -1);
-    }
-    if (lines.join("").length < characters.length || allCharacters.length > characters.length) lines[1] += "…";
   }
   return lines;
 }
@@ -799,7 +794,6 @@ function App() {
   const pipRequestIdRef = useRef(0);
   const voiceSocketRef = useRef(null);
   const voiceAudioGraphRef = useRef(null);
-  const voicePcmMutedRef = useRef(false);
   const voiceIntentionalCloseRef = useRef(false);
   const voiceReadyRef = useRef(false);
   const voiceReadyPromiseRef = useRef(null);
@@ -847,6 +841,8 @@ function App() {
   const mediaPreviewRef = useRef(null);
   const mediaLibraryRef = useRef([]);
   const gameplayModeRef = useRef("");
+  const storyFocusRef = useRef(null);
+  const inspectStoryRef = useRef(null);
   const gameplayTargetRef = useRef(null);
   const characterInteractionRef = useRef(null);
   const gameplayFrameCanvasRef = useRef(null);
@@ -904,7 +900,16 @@ function App() {
   const [voiceState, setVoiceState] = useState("idle");
   const [aiState, setAiState] = useState("idle");
   const [speechText, setSpeechText] = useState("");
+  const [characterSpeechText, setCharacterSpeechText] = useState("");
   const [welcomeHeadlineIndex, setWelcomeHeadlineIndex] = useState(0);
+
+  useEffect(() => {
+    if (!WAITING_VOICE_LINES[aiState]) return;
+    const socket = voiceSocketRef.current;
+    if (socket?.readyState !== WebSocket.OPEN) return;
+    const lines = WAITING_VOICE_LINES[aiState];
+    socket.send(JSON.stringify({ type: "local_speech", text: lines[Math.floor(Math.random() * lines.length)] }));
+  }, [aiState]);
 
   const scheduleNextWelcomeHeadline = useCallback(() => {
     if (welcomeHeadlineTimerRef.current) window.clearTimeout(welcomeHeadlineTimerRef.current);
@@ -967,6 +972,7 @@ function App() {
   const [textDraft, setTextDraft] = useState("");
   const [textSending, setTextSending] = useState(false);
   const [gameplayReaction, setGameplayReaction] = useState(null);
+  const [storyFocus, setStoryFocus] = useState(null);
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
   const [mediaLibraryClosing, setMediaLibraryClosing] = useState(false);
   const [mediaLibraryDragY, setMediaLibraryDragY] = useState(0);
@@ -974,6 +980,11 @@ function App() {
   const [cameraMenuOpen, setCameraMenuOpen] = useState(false);
   const [videoDurations, setVideoDurations] = useState({});
   const frameSize = FRAME_SIZES[frameOrientation];
+
+  const setHiddenStoryFocus = useCallback((next) => {
+    storyFocusRef.current = next;
+    setStoryFocus(next);
+  }, []);
 
   useEffect(() => {
     mediaPreviewRef.current = mediaPreview;
@@ -1021,7 +1032,6 @@ function App() {
     guideAudioRef.current?.pause();
     if (synthesizedAudioUrlRef.current) URL.revokeObjectURL(synthesizedAudioUrlRef.current);
     synthesizedAudioUrlRef.current = "";
-    voicePcmMutedRef.current = false;
     window.speechSynthesis?.cancel();
     setAiState("idle");
   }, []);
@@ -1318,6 +1328,7 @@ function App() {
     if (!audio || (!audio.paused && audio.dataset.voiceKind === "synthesized")) return;
     const message = synthesizedSpeechQueueRef.current.shift();
     if (!message) {
+      setCharacterSpeechText("");
       setAiState((current) => current === "thinking" ? current : "idle");
       return;
     }
@@ -1342,6 +1353,7 @@ function App() {
     audio.dataset.character = message.character || "jiaojiao";
     audio.dataset.opening = message.opening ? "true" : "false";
     audio.dataset.speechText = String(message.text || "");
+    if (!message.local && message.text) setCharacterSpeechText(String(message.text));
     setAiState("speaking");
     const playback = audio.play();
     playback?.catch((error) => {
@@ -1383,15 +1395,18 @@ function App() {
     const action = GESTURE_ACTIONS[update.trigger];
     if (!action || !rivePlayAnimationRef.current?.(action.animation)) return;
     setLastRecognizedGesture(update.trigger);
-    if (shouldOutlineGesture(update.trigger)) {
-      gestureEffectUntilRef.current = timestamp + GESTURE_OUTLINE_DURATION_MS;
+    const effectDuration = update.trigger === CAMERA_GESTURES.HEART
+      ? HEART_FEEDBACK_DURATION_MS
+      : GESTURE_OUTLINE_DURATION_MS;
+    if (shouldOutlineGesture(update.trigger) || update.trigger === CAMERA_GESTURES.HEART) {
+      gestureEffectUntilRef.current = timestamp + effectDuration;
       setActiveGestureEffect(update.trigger);
       if (gestureEffectTimerRef.current) window.clearTimeout(gestureEffectTimerRef.current);
       gestureEffectTimerRef.current = window.setTimeout(() => {
         gestureEffectTimerRef.current = null;
         gestureEffectUntilRef.current = 0;
         setActiveGestureEffect("");
-      }, GESTURE_OUTLINE_DURATION_MS);
+      }, effectDuration);
       scheduleAutoCapture(`gesture:${update.trigger}`);
     }
     notifyVoiceInteraction(update.trigger);
@@ -1416,7 +1431,7 @@ function App() {
   }, [activeCharacter, enqueueSynthesizedSpeech, recordConversationMessage]);
 
   const { visionState: sceneVisionState, sceneReaction } = useCameraSceneAnalysis({
-    enabled: cameraState === "ready" && !recording && !mediaPreview && !mediaLibraryOpen && !gameplayMode,
+    enabled: cameraState === "ready" && !recording && !mediaPreview && !mediaLibraryOpen && !gameplayMode && !storyFocus,
     videoRef,
     activeCharacter,
     onReaction: handleSceneReaction,
@@ -1459,6 +1474,7 @@ function App() {
     speechTextRef.current = "";
     mouthAnchorRef.current = null;
     setSpeechText("");
+    setCharacterSpeechText("");
     setVoiceState("idle");
     setAiState("idle");
   }, []);
@@ -1515,10 +1531,7 @@ function App() {
         }
       }, 12_000);
       if (processor) processor.onaudioprocess = (event) => {
-        if (
-          voicePcmMutedRef.current
-          || socket.readyState !== WebSocket.OPEN
-        ) return;
+        if (socket.readyState !== WebSocket.OPEN) return;
         const samples = event.inputBuffer.getChannelData(0);
         const pcm = downsampleToPcm16(samples, inputSampleRate);
         if (pcm.byteLength) socket.send(pcm.buffer);
@@ -1554,24 +1567,25 @@ function App() {
         if (message.type === "transcript") {
           const text = String(message.text || "").trim().slice(0, 1000);
           if (!text) return;
+          if (!message.final) setAiState("recognizing");
+          // Keep listening while the character speaks. Once ASR hears a real
+          // partial utterance, stop the old audio and abandon its unfinished turn.
+          // Browser echo cancellation keeps the synthesized voice from becoming
+          // a transcript on supported devices; two characters avoids reacting to
+          // a one-syllable echo artifact.
+          const activeAudio = guideAudioRef.current;
+          if (!message.final && text.length >= 2 && activeAudio?.dataset.voiceKind === "synthesized" && !activeAudio.paused) {
+            clearCharacterSpeech();
+            socket.send(JSON.stringify({ type: "cancel" }));
+          }
           if (message.final) {
             if (message.clientMessageId && pendingTextRef.current?.id === message.clientMessageId) pendingTextRef.current.finish(true);
-            const stopRequested = /不玩了|退出游戏|退出玩法|停止游戏|停一下|我很难过|我想妈妈/.test(text);
-            const requestedMode = /喂.*(叫叫|你)|吃点东西|喂食/.test(text) ? "feed"
-              : /找一找|找东西|寻找挑战/.test(text) ? "find"
-                : /介绍.*(朋友|玩具)|认识.*(朋友|玩具)/.test(text) ? "toy" : "";
-            if (stopRequested && gameplayModeRef.current) {
-              startGameplayRef.current?.("");
-              if (/难过|想妈妈/.test(text)) {
-                recordConversationMessage({ ...message, role: "user", text, source: "child_speech", character: activeCharacter });
-                if (message.source === "gameplay" && message.id) socket.send(JSON.stringify({ type: "resume_conversation", transcriptId: message.id }));
-              }
-            } else if (requestedMode && !gameplayModeRef.current) startGameplayRef.current?.(requestedMode);
-            else {
-              recordConversationMessage({ ...message, role: "user", text,
-                source: message.source || (gameplayModeRef.current ? "gameplay" : "child_speech"), character: activeCharacter });
-              setGameplayTranscript({ ...message, id: message.id || crypto.randomUUID(), text, final: true });
+            if (/^(?:没有|没找到|不找了|不想找|算了|先不看了)[。！!，, ]*$/.test(text)) {
+              setHiddenStoryFocus(null);
+            } else if (["waiting", "framing"].includes(storyFocusRef.current?.phase)) {
+              inspectStoryRef.current?.();
             }
+            recordConversationMessage({ ...message, role: "user", text, source: "child_speech", character: activeCharacter });
           }
           speechTextRef.current = text.slice(0, 42);
           setSpeechText(text.slice(0, 42));
@@ -1590,13 +1604,17 @@ function App() {
           scheduleAutoCapture(`voice:${message.action}`, 420);
           return;
         }
+        if (message.type === "story") {
+          if (message.thread === "inspect") setHiddenStoryFocus({ phase: "waiting" });
+          return;
+        }
         if (message.type === "character_switch") {
           const requestedCharacter = CHARACTERS[message.character] ? message.character : null;
           if (requestedCharacter) void switchCharacterToRef.current?.(requestedCharacter);
           return;
         }
         if (message.type === "ai") {
-          setAiState(["thinking", "speaking", "unavailable"].includes(message.state) ? message.state : "idle");
+          setAiState(["recognizing", "thinking", "speaking", "unavailable"].includes(message.state) ? message.state : "idle");
           return;
         }
         if (message.type === "speech") {
@@ -1640,7 +1658,7 @@ function App() {
       if (audioTrack) return startVoiceSession(stream, { textOnly: true });
       return null;
     }
-  }, [activeCharacter, enqueueSynthesizedSpeech, recordConversationMessage, scheduleAutoCapture, showToast, stopVoiceSession]);
+  }, [activeCharacter, clearCharacterSpeech, enqueueSynthesizedSpeech, recordConversationMessage, scheduleAutoCapture, setHiddenStoryFocus, showToast, stopVoiceSession]);
 
   const updateMask = useCallback((result) => {
     const masks = result.confidenceMasks;
@@ -2067,6 +2085,10 @@ function App() {
     outputContext.fillRect(0, 0, targetWidth, targetHeight);
     drawCameraSource(outputContext, video, rect, targetWidth, mirrored);
 
+    if (activeGestureEffect === CAMERA_GESTURES.HEART && timestamp < gestureEffectUntilRef.current) {
+      drawHeartFeedback(outputContext, targetWidth, targetHeight, HEART_FEEDBACK_DURATION_MS - (gestureEffectUntilRef.current - timestamp));
+    }
+
     const drawPerson = () => {
       if (!maskReadyRef.current || !maskCanvas?.width || !maskCanvas?.height) return;
       if (timestamp < gestureEffectUntilRef.current) {
@@ -2230,6 +2252,7 @@ function App() {
                 DEFAULT_RIVE_ANIMATION,
                 SECOND_RIVE_ANIMATION,
                 CLICK_RIVE_ANIMATION,
+                CHARACTER_TIMELINES.HEART_FULL_BODY,
                 ...talkingAnimations,
               ])].filter((name) => animations.includes(name));
               riveAnimationsRef.current = animationOrder;
@@ -2595,7 +2618,7 @@ function App() {
                   delegate: "CPU",
                 },
                 runningMode: "VIDEO",
-                numHands: 1,
+                numHands: 2,
                 minHandDetectionConfidence: 0.55,
                 minHandPresenceConfidence: 0.55,
                 minTrackingConfidence: 0.55,
@@ -3464,6 +3487,43 @@ function App() {
     return { image, blob, width: canvas.width, height: canvas.height, mirrored: false };
   }, [facingMode]);
 
+  const inspectStoryObject = useCallback(async () => {
+    const activeFocus = storyFocusRef.current;
+    if (!activeFocus || activeFocus.phase === "checking") return;
+    setHiddenStoryFocus({ phase: "checking" });
+    const askToFrame = () => {
+      const text = "我还没看清，把它放进白色虚线框里好吗？";
+      setGameplayReaction({ action: "curious", text, id: crypto.randomUUID(), character: activeCharacter });
+      const socket = voiceSocketRef.current;
+      if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", text }));
+      else if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text); utterance.lang = "zh-CN"; utterance.rate = 1;
+        window.speechSynthesis.speak(utterance);
+      }
+    };
+    try {
+      const frame = await captureGameplayFrame();
+      const result = await requestGameplay({
+        source: "observe", image: frame.image, roundId: crypto.randomUUID(), frameId: crypto.randomUUID(), character: activeCharacter,
+      });
+      if (!result.evaluable || !result.label || !result.category) {
+        setHiddenStoryFocus({ phase: "framing" });
+        askToFrame();
+        return;
+      }
+      setHiddenStoryFocus(null);
+      const socket = voiceSocketRef.current;
+      if (socket?.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: "story_observation", observation: { label: result.label, category: result.category } }));
+      }
+    } catch {
+      setHiddenStoryFocus({ phase: "framing" });
+      askToFrame();
+    }
+  }, [activeCharacter, captureGameplayFrame, setHiddenStoryFocus]);
+  inspectStoryRef.current = inspectStoryObject;
+
   const startGameplay = useCallback(async (mode) => {
     gameplayModeRef.current = mode;
     clearCharacterSpeech();
@@ -3604,15 +3664,12 @@ function App() {
           playsInline
           onPlay={() => {
             if (guideAudioRef.current?.dataset.voiceKind !== "synthesized") return;
-            voicePcmMutedRef.current = true;
             riveMouthPlaybackRef.current?.(true);
           }}
           onPause={() => {
-            voicePcmMutedRef.current = false;
             riveMouthPlaybackRef.current?.(false);
           }}
           onEnded={() => {
-            voicePcmMutedRef.current = false;
             riveMouthPlaybackRef.current?.(false);
             playNextSynthesizedSpeech();
           }}
@@ -3641,33 +3698,18 @@ function App() {
             </Calligraph>
           </div>
           {!gameplayMode && <CharacterCaptionBubble reaction={gameplayReaction || sceneReaction} canvasRendered={recording} />}
-          {cameraState === "ready" && !recording && !mediaLibraryOpen && !mediaPreview && <>
-            {!gameplayMode && <div className="play-toolbar">
-              <button type="button" className="play-entry" aria-expanded={gameplayMenuOpen} onClick={() => setGameplayMenuOpen(!gameplayMenuOpen)}><Sparkle size={19} weight="fill" />一起玩</button>
-            </div>}
-            {gameplayMenuOpen && !gameplayMode && <div className="play-picker" role="dialog" aria-label="选择一个玩法">
-              <strong>今天想怎么玩？</strong>
-              <button type="button" onClick={() => startGameplay("feed")}><span>喂叫叫吃东西</span><small>拖一拖，啊呜一口</small></button>
-              <button type="button" onClick={() => startGameplay("find")}><span>找一找挑战</span><small>发现身边的小惊喜</small></button>
-              <button type="button" onClick={() => startGameplay("toy")}><span>介绍一个新朋友</span><small>给玩具做张小名片</small></button>
-              <a href="/assets/">逛逛资源陈列馆</a>
-            </div>}
-            {gameplayMode && <Suspense fallback={<div className="play-loading">玩法正在准备…</div>}>
-              {gameplayMode === "toy" ? <FriendIntro key={`toy-${facingMode}-${frameOrientation}`} captureFrame={captureGameplayFrame} analyzeToy={analyzeToy}
-                transcript={gameplayTranscript} onClose={() => startGameplay("")} onSaved={handleFriendSaved} onReaction={handleGameplayReaction} />
-                : <GamePlayOverlay mode={gameplayMode} captureFrame={captureGameplayFrame} character={activeCharacter}
-                  characterRect={gameplayCharacterRect} frameKey={`${facingMode}-${frameOrientation}-${cameraState}`}
-                  transcript={gameplayTranscript?.text || ""} onClose={() => startGameplay("")} onReaction={handleGameplayReaction} onTarget={handleGameplayTarget} onFound={handleGameplayFound} />}
-            </Suspense>}
-            {gameplayMode === "feed" && <button className="play-text-active" type="button" aria-label="打字说句话" onClick={() => setTextComposerOpen(!textComposerOpen)}><ChatCircleText size={21} weight="bold" /></button>}
-            {textComposerOpen && <form className="play-composer" onSubmit={submitTypedMessage}>
-              <input aria-label="想和叫叫说的话" autoFocus maxLength={1000} disabled={textSending} placeholder="想说什么，写在这里" value={textDraft} onChange={(event) => setTextDraft(event.target.value)} />
-              <button type="submit" aria-label={textSending ? "正在发送" : "发送"} disabled={textSending || !textDraft.trim()}><PaperPlaneRight size={22} weight="fill" /></button>
-              <button type="button" aria-label="收起输入" onClick={() => setTextComposerOpen(false)}><X size={20} /></button>
-            </form>}
-          </>}
+          {!gameplayMode && characterSpeechText && (
+            <div className="character-caption-bubble is-speech" role="status" aria-live="polite">
+              <span className="character-caption-copy">{characterSpeechText}</span>
+            </div>
+          )}
+          {storyFocus?.phase === "framing" && (
+            <div className="dialogue-focus-frame" aria-live="polite" aria-label="把物品放进白色虚线框里">
+              <span className="sr-only">把物品放进白色虚线框里</span>
+            </div>
+          )}
 
-          {cameraState === "ready" && aiState === "thinking" && (
+          {cameraState === "ready" && ["recognizing", "thinking"].includes(aiState) && (
             <div
               className="character-thinking-indicator"
               data-character={activeCharacter}
@@ -3678,7 +3720,7 @@ function App() {
                   }
                 : undefined}
             >
-              <TypingIndicator />
+              <TypingIndicator label={aiState === "recognizing" ? "正在识别你说的话" : "正在思考"} />
             </div>
           )}
 

@@ -98,7 +98,7 @@ function sendJson(socket, payload) {
   if (socket.readyState === 1) socket.send(JSON.stringify(payload));
 }
 
-const OPENING_TEXT = "我来啦！看镜头，我们一起拍张照片吧！";
+const OPENING_TEXT = "我来啦。今天有没有一件想跟我说说的事？";
 const GESTURE_PROMPTS = Object.freeze({
   thumbs_up: "用户刚刚对你比了一个赞，请自然回应这个动作。",
   victory: "用户刚刚对你比了一个胜利手势，请自然回应这个动作。",
@@ -136,15 +136,11 @@ websocketServer.on("connection", (client) => {
   let asr = null;
   let started = false;
   let closed = false;
-  let inferenceRunning = false;
-  const queuedPrompts = [];
-  let lastInferenceAt = 0;
   let activeCharacter = "jiaojiao";
   let interactionMode = "none";
   let context = { entries: [], moments: [] };
   let epoch = 0;
   let inferenceController = null;
-  let queueTimer = null;
   let lastLocalSpeechAt = 0;
   let localSpeechSequence = 0;
   let lastTextAt = 0;
@@ -154,17 +150,15 @@ websocketServer.on("connection", (client) => {
 
   const cancelPending = () => {
     epoch += 1;
-    queuedPrompts.length = 0;
-    clearTimeout(queueTimer);
     inferenceController?.abort();
     sendJson(client, { type: "ai", state: "idle" });
   };
 
-  const sendSpeech = async (text, { opening = false, character = activeCharacter, local = false, expectedEpoch = epoch, expectedLocalSequence = localSpeechSequence } = {}) => {
+  const sendSpeech = async (text, { opening = false, character = activeCharacter, local = false, expectedEpoch = epoch, expectedLocalSequence = localSpeechSequence, signal } = {}) => {
     const speechCharacter = normalizeCharacter(character);
-    const audio = await synthesizeSpeech(text, speechCharacter, ttsConfig);
+    const audio = await synthesizeSpeech(text, speechCharacter, ttsConfig, fetch, signal);
     if (closed || expectedEpoch !== epoch || (local && expectedLocalSequence !== localSpeechSequence)) return;
-    if (!opening) sendJson(client, { type: "ai", state: "speaking" });
+    if (!opening && !local) sendJson(client, { type: "ai", state: "speaking" });
     sendJson(client, {
       type: "speech",
       text,
@@ -180,47 +174,35 @@ websocketServer.on("connection", (client) => {
   const runInference = async (text, character = activeCharacter) => {
     const responseCharacter = normalizeCharacter(character);
     if (!text || closed || interactionMode !== "none") return;
-    if (inferenceRunning || Date.now() - lastInferenceAt < 1_200) {
-      if (queuedPrompts.length >= 64) {
-        sendJson(client, { type: "error", code: "TURN_QUEUE_FULL", message: "我还在听前面的话，稍等一下再继续。" });
-        return;
-      }
-      queuedPrompts.push({ text: String(text).slice(0, 1000), character: responseCharacter });
-      if (!inferenceRunning) {
-        clearTimeout(queueTimer);
-        queueTimer = setTimeout(drainQueue, Math.max(20, 1_200 - (Date.now() - lastInferenceAt)));
-      }
-      return;
+    // A child changing their mind is more important than finishing an old turn.
+    // Abort immediately instead of making the new turn wait behind Ark or TTS.
+    if (inferenceController) {
+      epoch += 1;
+      inferenceController.abort();
     }
-    inferenceRunning = true;
-    lastInferenceAt = Date.now();
     const expectedEpoch = epoch;
-    inferenceController = new AbortController();
+    const controller = new AbortController();
+    inferenceController = controller;
     try {
       sendJson(client, { type: "ai", state: "thinking" });
-      const response = await inferCharacterResponse(text, responseCharacter, arkConfig, null, context, inferenceController.signal);
+      const response = await inferCharacterResponse(text, responseCharacter, arkConfig, null, context, controller.signal);
       if (closed || expectedEpoch !== epoch || interactionMode !== "none") return;
       if (!response?.text) throw new Error("Ark returned an empty character response");
       context.entries = [...context.entries, { role: "user", text: String(text).slice(0, 1000) }, { role: "assistant", text: response.text }].slice(-16);
       if (response.action) sendJson(client, { type: "action", action: response.action });
-      await sendSpeech(response.text, { character: responseCharacter, expectedEpoch });
+      if (response.story?.thread && response.story.thread !== "none") {
+        sendJson(client, { type: "story", ...response.story });
+      }
+      await sendSpeech(response.text, { character: responseCharacter, expectedEpoch, signal: controller.signal });
     } catch (error) {
       if (expectedEpoch !== epoch || closed || error.name === "AbortError") return;
       console.error("Character response failed", { name: error.name });
       sendJson(client, { type: "ai", state: "unavailable" });
       sendJson(client, { type: "ai", state: "idle" });
     } finally {
-      inferenceRunning = false;
-      inferenceController = null;
-      if (queuedPrompts.length && !closed && interactionMode === "none") queueTimer = setTimeout(drainQueue, 1_250);
+      if (inferenceController === controller) inferenceController = null;
     }
   };
-
-  function drainQueue() {
-    if (inferenceRunning || closed || interactionMode !== "none") return;
-    const next = queuedPrompts.shift();
-    if (next) void runInference(next.text, next.character);
-  }
 
   const endSession = () => {
     if (closed) return;
@@ -297,6 +279,15 @@ websocketServer.on("connection", (client) => {
       context = { entries: [], moments: [] };
       recentGameplayTranscripts.clear();
       acceptedTextMessages.clear();
+      return;
+    }
+    if (message.type === "story_observation") {
+      if (!started || closed) return;
+      const observation = message.observation && typeof message.observation === "object" ? message.observation : {};
+      const label = String(observation.label || "").replace(/\s+/g, " ").trim().slice(0, 48);
+      const category = ["book", "food", "plant", "animal", "object"].includes(observation.category) ? observation.category : "object";
+      if (!label) return;
+      void runInference(`孩子拿到镜头前的物品看起来是${label}（${category}）。请自然接着聊，别声称看见了没提供的细节。`);
       return;
     }
     if (message.type === "resume_conversation") {

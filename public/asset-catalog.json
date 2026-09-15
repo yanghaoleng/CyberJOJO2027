@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-11T08:36:23.236Z",
+  "generatedAt": "2026-09-15T09:00:32.615Z",
   "publicFileCount": 50,
   "totalBytes": 58194237,
   "assets": [
@@ -596,20 +596,6 @@
       "license": "MIT"
     },
     {
-      "id": "phosphor:ChatCircleText",
-      "name": "聊天",
-      "iconName": "ChatCircleText",
-      "category": "interface",
-      "format": "SVG",
-      "weights": [
-        "bold"
-      ],
-      "usedIn": [
-        "src/App.jsx"
-      ],
-      "license": "MIT"
-    },
-    {
       "id": "phosphor:Check",
       "name": "确认",
       "iconName": "Check",
@@ -681,20 +667,6 @@
       "license": "MIT"
     },
     {
-      "id": "phosphor:PaperPlaneRight",
-      "name": "发送",
-      "iconName": "PaperPlaneRight",
-      "category": "interface",
-      "format": "SVG",
-      "weights": [
-        "fill"
-      ],
-      "usedIn": [
-        "src/App.jsx"
-      ],
-      "license": "MIT"
-    },
-    {
       "id": "phosphor:PictureInPicture",
       "name": "画中画",
       "iconName": "PictureInPicture",
@@ -723,28 +695,13 @@
       "license": "MIT"
     },
     {
-      "id": "phosphor:Sparkle",
-      "name": "灵感",
-      "iconName": "Sparkle",
-      "category": "interface",
-      "format": "SVG",
-      "weights": [
-        "fill"
-      ],
-      "usedIn": [
-        "src/App.jsx"
-      ],
-      "license": "MIT"
-    },
-    {
       "id": "phosphor:X",
       "name": "关闭",
       "iconName": "X",
       "category": "interface",
       "format": "SVG",
       "weights": [
-        "bold",
-        "regular"
+        "bold"
       ],
       "usedIn": [
         "src/App.jsx"

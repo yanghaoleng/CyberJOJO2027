@@ -62,7 +62,7 @@ export function parseTtsResponse(payload) {
   return Buffer.concat(chunks);
 }
 
-export async function synthesizeSpeech(text, character, config, fetchImpl = fetch) {
+export async function synthesizeSpeech(text, character, config, fetchImpl = fetch, signal) {
   const normalizedText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 120);
   if (!normalizedText) throw new Error("TTS text is empty");
   const activeCharacter = normalizeCharacter(character);
@@ -95,6 +95,7 @@ export async function synthesizeSpeech(text, character, config, fetchImpl = fetc
         },
       },
     }),
+    signal,
   });
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 240);

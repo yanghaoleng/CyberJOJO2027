@@ -12,7 +12,7 @@ async function waitFor(condition, timeout = 6000) {
 }
 async function freePort() { const server = http.createServer(); server.listen(0, "127.0.0.1"); await once(server, "listening"); const port = server.address().port; await new Promise((resolve) => server.close(resolve)); return port; }
 
-test("text-only voice sessions preserve gameplay transcripts, cancel stale replies and retain queued utterances", { timeout: 25000 }, async () => {
+test("text-only voice sessions preserve gameplay transcripts and let a newer turn preempt an unfinished reply", { timeout: 25000 }, async () => {
   const calls = [];
   let responseDelay = 30;
   let providerReturned = 0;
@@ -75,9 +75,12 @@ test("text-only voice sessions preserve gameplay transcripts, cancel stale repli
     await waitFor(() => calls.length === 2);
     await new Promise((resolve) => setTimeout(resolve, 750)); send({ type: "text", text: "第二句也要保留" });
     await waitFor(() => messages.some((message) => message.type === "transcript" && message.text === "第二句也要保留"));
+    // The first turn is still waiting on the provider. The second must begin
+    // immediately instead of sitting behind it in a per-session queue.
+    await waitFor(() => calls.length === 3, 300);
     await new Promise((resolve) => setTimeout(resolve, 750)); send({ type: "text", text: "第三句不能覆盖第二句" });
     responseDelay = 20;
-    await waitFor(() => calls.length === 4, 10000).catch((error) => {
+    await waitFor(() => calls.length === 4, 1000).catch((error) => {
       error.message += JSON.stringify({ calls: calls.map((call) => call.input.at(-1).content[0].text), errors: messages.filter((message) => message.type === "error").map((message) => message.code), childExitCode: child.exitCode, serverOutput: output });
       throw error;
     });
