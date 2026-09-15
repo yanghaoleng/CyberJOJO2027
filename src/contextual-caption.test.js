@@ -38,3 +38,12 @@ test("books and idle states stay contextual instead of showing a reading count",
   assert.equal(caption.text, "我和叫叫一起聊一本故事书");
   assert.equal(getContextualCaption({ characterLabel: "叫叫", day: 7 }).text, "我和叫叫一起聊聊天");
 });
+
+test("a recent conversation topic takes precedence over camera recognition", () => {
+  const caption = getContextualCaption({
+    characterLabel: "叫叫",
+    conversationTopic: "设计城堡",
+    sceneReaction: { category: "toy", subject: "积木" },
+  });
+  assert.equal(caption.text, "我和叫叫一起设计城堡");
+});
