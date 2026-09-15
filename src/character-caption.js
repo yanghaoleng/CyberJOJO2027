@@ -69,7 +69,7 @@ export function drawCharacterCaption(
 
   context.shadowColor = "rgba(0, 0, 0, 0.2)";
   context.shadowBlur = 14;
-  context.fillStyle = "#ffffff";
+  context.fillStyle = "#fff1b8";
   context.beginPath();
   context.moveTo(tailX - fontSize * 0.4, top + 1);
   context.lineTo(tailX, top - tailHeight);
@@ -79,7 +79,7 @@ export function drawCharacterCaption(
   roundedRectPath(context, left, top, bubbleWidth, bubbleHeight, bubbleHeight / 2);
   context.fill();
   context.shadowColor = "transparent";
-  context.fillStyle = "#111111";
+  context.fillStyle = "#513512";
   context.textAlign = "center";
   context.textBaseline = "middle";
   lines.forEach((line, index) => {

@@ -2,6 +2,12 @@ import { Calligraph } from "calligraph";
 
 export function CharacterCaptionBubble({ reaction, canvasRendered = false }) {
   if (!reaction?.text) return null;
+  const style = reaction.anchor ? {
+    left: `${reaction.anchor.x * 100}%`,
+    top: `calc(${reaction.anchor.y * 100}% + 14px)`,
+    bottom: "auto",
+    "--character-tail-x": "50%",
+  } : undefined;
   return (
     <div
       key={reaction.id}
@@ -9,6 +15,7 @@ export function CharacterCaptionBubble({ reaction, canvasRendered = false }) {
       data-character={reaction.character || "jiaojiao"}
       role="status"
       aria-live="polite"
+      style={style}
     >
       <Calligraph
         className="character-caption-copy"

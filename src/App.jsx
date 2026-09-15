@@ -81,6 +81,11 @@ import { TypingIndicator } from "./components/amicro/typing-indicator.jsx";
 import { CharacterCaptionBubble } from "./components/character-caption-bubble.jsx";
 import { drawCharacterCaption } from "./character-caption.js";
 import {
+  endCharacterEchoGate,
+  isCharacterEchoGateActive,
+  startCharacterEchoGate,
+} from "./voice-input-gate.js";
+import {
   getUserSpeechBubblePlacement,
   getUserSpeechBubbleSizing,
 } from "./speech-bubble-layout.js";
@@ -782,6 +787,7 @@ function App() {
   const autoCaptureTimerRef = useRef(null);
   const lastAutoCaptureAtRef = useRef(0);
   const guideAudioRef = useRef(null);
+  const characterEchoGateUntilRef = useRef(0);
   const riveRef = useRef(null);
   const rivePlaybackRateRef = useRef(COVER_RIVE_PLAYBACK_RATE);
   const segmenterRef = useRef(null);
@@ -900,7 +906,7 @@ function App() {
   const [voiceState, setVoiceState] = useState("idle");
   const [aiState, setAiState] = useState("idle");
   const [speechText, setSpeechText] = useState("");
-  const [characterSpeechText, setCharacterSpeechText] = useState("");
+  const [characterBubble, setCharacterBubble] = useState(null);
   const [welcomeHeadlineIndex, setWelcomeHeadlineIndex] = useState(0);
 
   useEffect(() => {
@@ -1033,7 +1039,36 @@ function App() {
     if (synthesizedAudioUrlRef.current) URL.revokeObjectURL(synthesizedAudioUrlRef.current);
     synthesizedAudioUrlRef.current = "";
     window.speechSynthesis?.cancel();
+    setCharacterBubble(null);
     setAiState("idle");
+  }, []);
+  const replaceCharacterBubble = useCallback((text, character = activeCharacter) => {
+    const content = String(text || "").trim();
+    if (!content) return;
+    const rect = characterDrawRectRef.current;
+    const canvas = outputCanvasRef.current;
+    const anchor = rect && canvas?.width && canvas?.height
+      ? {
+          x: clamp(rect.mouthX / canvas.width, 0.16, 0.84),
+          y: clamp(rect.mouthY / canvas.height, 0.16, 0.72),
+        }
+      : null;
+    // A new key removes the old line before replaying the entrance motion.
+    setCharacterBubble({ id: crypto.randomUUID(), text: content, character, tone: "speech", anchor });
+  }, [activeCharacter]);
+  const speakCharacterFallback = useCallback((text) => {
+    if (!window.speechSynthesis || !text) return;
+    window.speechSynthesis.cancel();
+    characterEchoGateUntilRef.current = startCharacterEchoGate();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "zh-CN";
+    utterance.rate = 1;
+    const releaseGate = () => {
+      characterEchoGateUntilRef.current = endCharacterEchoGate(performance.now());
+    };
+    utterance.onend = releaseGate;
+    utterance.onerror = releaseGate;
+    window.speechSynthesis.speak(utterance);
   }, []);
   const handleMemoryChange = useCallback((context, { reset } = {}) => {
     if (reset) clearCharacterSpeech();
@@ -1328,7 +1363,7 @@ function App() {
     if (!audio || (!audio.paused && audio.dataset.voiceKind === "synthesized")) return;
     const message = synthesizedSpeechQueueRef.current.shift();
     if (!message) {
-      setCharacterSpeechText("");
+      setCharacterBubble(null);
       setAiState((current) => current === "thinking" ? current : "idle");
       return;
     }
@@ -1353,7 +1388,7 @@ function App() {
     audio.dataset.character = message.character || "jiaojiao";
     audio.dataset.opening = message.opening ? "true" : "false";
     audio.dataset.speechText = String(message.text || "");
-    if (!message.local && message.text) setCharacterSpeechText(String(message.text));
+    if (!message.local && message.text) replaceCharacterBubble(message.text, message.character || activeCharacter);
     setAiState("speaking");
     const playback = audio.play();
     playback?.catch((error) => {
@@ -1361,7 +1396,7 @@ function App() {
       setAiState((current) => current === "thinking" ? current : "idle");
       window.queueMicrotask(playNextSynthesizedSpeech);
     });
-  }, []);
+  }, [activeCharacter, replaceCharacterBubble]);
 
   const enqueueSynthesizedSpeech = useCallback((message) => {
     if (!message?.audio) return;
@@ -1422,13 +1457,14 @@ function App() {
       source: "scene_comment",
       character: reaction.character || activeCharacter,
     });
+    replaceCharacterBubble(reaction.text, reaction.character || activeCharacter);
     if (reaction.audio) {
       enqueueSynthesizedSpeech({
         ...reaction,
         opening: false,
       });
     }
-  }, [activeCharacter, enqueueSynthesizedSpeech, recordConversationMessage]);
+  }, [activeCharacter, enqueueSynthesizedSpeech, recordConversationMessage, replaceCharacterBubble]);
 
   const { visionState: sceneVisionState, sceneReaction } = useCameraSceneAnalysis({
     enabled: cameraState === "ready" && !recording && !mediaPreview && !mediaLibraryOpen && !gameplayMode && !storyFocus,
@@ -1474,7 +1510,7 @@ function App() {
     speechTextRef.current = "";
     mouthAnchorRef.current = null;
     setSpeechText("");
-    setCharacterSpeechText("");
+    setCharacterBubble(null);
     setVoiceState("idle");
     setAiState("idle");
   }, []);
@@ -1531,7 +1567,7 @@ function App() {
         }
       }, 12_000);
       if (processor) processor.onaudioprocess = (event) => {
-        if (socket.readyState !== WebSocket.OPEN) return;
+        if (socket.readyState !== WebSocket.OPEN || isCharacterEchoGateActive(characterEchoGateUntilRef.current, performance.now())) return;
         const samples = event.inputBuffer.getChannelData(0);
         const pcm = downsampleToPcm16(samples, inputSampleRate);
         if (pcm.byteLength) socket.send(pcm.buffer);
@@ -1565,6 +1601,7 @@ function App() {
           return;
         }
         if (message.type === "transcript") {
+          if (isCharacterEchoGateActive(characterEchoGateUntilRef.current, performance.now())) return;
           const text = String(message.text || "").trim().slice(0, 1000);
           if (!text) return;
           if (!message.final) setAiState("recognizing");
@@ -2138,13 +2175,13 @@ function App() {
     if (includeSpeechText) {
       drawCharacterCaption(
         outputContext,
-        sceneReaction?.text,
+        characterBubble?.text,
         targetWidth,
         targetHeight,
         { isTabletDevice },
       );
     }
-  }, [drawCaption, drawFrontCameraPip, drawRiveLayer, drawSpeechBubble, facingMode, isTabletDevice, personLayer, sceneReaction]);
+  }, [characterBubble, drawCaption, drawFrontCameraPip, drawRiveLayer, drawSpeechBubble, facingMode, isTabletDevice, personLayer]);
 
   useEffect(() => {
     let cancelled = false;
@@ -3494,13 +3531,10 @@ function App() {
     const askToFrame = () => {
       const text = "我还没看清，把它放进白色虚线框里好吗？";
       setGameplayReaction({ action: "curious", text, id: crypto.randomUUID(), character: activeCharacter });
+      replaceCharacterBubble(text);
       const socket = voiceSocketRef.current;
       if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", text }));
-      else if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text); utterance.lang = "zh-CN"; utterance.rate = 1;
-        window.speechSynthesis.speak(utterance);
-      }
+      else speakCharacterFallback(text);
     };
     try {
       const frame = await captureGameplayFrame();
@@ -3521,7 +3555,7 @@ function App() {
       setHiddenStoryFocus({ phase: "framing" });
       askToFrame();
     }
-  }, [activeCharacter, captureGameplayFrame, setHiddenStoryFocus]);
+  }, [activeCharacter, captureGameplayFrame, replaceCharacterBubble, setHiddenStoryFocus, speakCharacterFallback]);
   inspectStoryRef.current = inspectStoryObject;
 
   const startGameplay = useCallback(async (mode) => {
@@ -3568,14 +3602,11 @@ function App() {
     const action = VOICE_ACTIONS[reaction.action];
     if (action && !gameplayTargetRef.current?.chewing) rivePlayAnimationRef.current?.(action.animation);
     setGameplayReaction({ ...reaction, id: crypto.randomUUID(), character: activeCharacter });
+    replaceCharacterBubble(reaction.text);
     const socket = voiceSocketRef.current;
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", text: reaction.text }));
-    else if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(reaction.text); utterance.lang = "zh-CN"; utterance.rate = 1;
-      window.speechSynthesis.speak(utterance);
-    }
-  }, [activeCharacter]);
+    else speakCharacterFallback(reaction.text);
+  }, [activeCharacter, replaceCharacterBubble, speakCharacterFallback]);
   const handleGameplayFound = useCallback(() => scheduleAutoCapture("gameplay:find", 420), [scheduleAutoCapture]);
   const analyzeToy = useCallback((image, { signal } = {}) => requestGameplay({ source: "toy", image,
     roundId: crypto.randomUUID(), frameId: crypto.randomUUID(), character: activeCharacter }, { signal }), [activeCharacter]);
@@ -3664,13 +3695,14 @@ function App() {
           playsInline
           onPlay={() => {
             if (guideAudioRef.current?.dataset.voiceKind !== "synthesized") return;
+            characterEchoGateUntilRef.current = startCharacterEchoGate();
             riveMouthPlaybackRef.current?.(true);
           }}
           onPause={() => {
+            characterEchoGateUntilRef.current = endCharacterEchoGate(performance.now());
             riveMouthPlaybackRef.current?.(false);
           }}
           onEnded={() => {
-            riveMouthPlaybackRef.current?.(false);
             playNextSynthesizedSpeech();
           }}
           aria-hidden="true"
@@ -3697,12 +3729,7 @@ function App() {
               {speechText}
             </Calligraph>
           </div>
-          {!gameplayMode && <CharacterCaptionBubble reaction={gameplayReaction || sceneReaction} canvasRendered={recording} />}
-          {!gameplayMode && characterSpeechText && (
-            <div className="character-caption-bubble is-speech" role="status" aria-live="polite">
-              <span className="character-caption-copy">{characterSpeechText}</span>
-            </div>
-          )}
+          {!gameplayMode && <CharacterCaptionBubble reaction={characterBubble} canvasRendered={recording} />}
           {storyFocus?.phase === "framing" && (
             <div className="dialogue-focus-frame" aria-live="polite" aria-label="把物品放进白色虚线框里">
               <span className="sr-only">把物品放进白色虚线框里</span>
