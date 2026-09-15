@@ -114,7 +114,7 @@ const WELCOME_HEADLINE_HOLD_MS = 3_000;
 
 const WAITING_VOICE_LINES = {
   recognizing: ["我听到你说的了，让我想想", "收到啦，我先听清楚这句话"],
-  thinking: ["我正在思考", "让我来想一想，马上告诉你"],
+  thinking: ["我想想"],
 };
 
 function ProgressiveCalligraphLine({ text, start, lineIndex, onComplete }) {
