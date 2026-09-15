@@ -60,10 +60,15 @@ export function createChangelog({ head, commits, notes = {}, commitBaseUrl, gene
   const days = [...groups.keys()].sort().reverse().map((date) => {
     const dailyCommits = groups.get(date).sort((a, b) => Date.parse(b.committedAt) - Date.parse(a.committedAt));
     const note = notes?.days?.[date];
+    const commitSubjects = note?.commitSubjects && typeof note.commitSubjects === 'object' ? note.commitSubjects : {};
+    const localizedCommits = dailyCommits.map((commit) => {
+      const localized = commitSubjects[commit.sha];
+      return typeof localized === 'string' && localized.trim() ? { ...commit, subject: localized.trim() } : commit;
+    });
     const title = typeof note?.title === 'string' && note.title.trim() ? note.title.trim() : '更新记录';
     const suppliedItems = Array.isArray(note?.items) ? uniqueText(note.items) : [];
-    const items = suppliedItems.length ? suppliedItems : uniqueText(dailyCommits.map((commit) => commit.subject));
-    return { date, title, items, commits: dailyCommits };
+    const items = suppliedItems.length ? suppliedItems : uniqueText(localizedCommits.map((commit) => commit.subject));
+    return { date, title, items, commits: localizedCommits };
   });
   return { version: 1, generatedAt, head, days };
 }

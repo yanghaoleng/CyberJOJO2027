@@ -42,6 +42,16 @@ test('optional Chinese notes override only their day and cannot create dates wit
   assert.equal(result.days.length, 2);
 });
 
+test('day notes can localize visible commit subjects without changing commit identity', () => {
+  const entry = commit('a', '2026-09-15T10:00:00+08:00', 'feat: improve voice flow');
+  const result = build([entry], { days: {
+    '2026-09-15': { commitSubjects: { [entry.sha]: '优化语音对话流程' } },
+  } });
+  assert.equal(result.days[0].commits[0].subject, '优化语音对话流程');
+  assert.equal(result.days[0].commits[0].sha, entry.sha);
+  assert.deepEqual(result.days[0].items, ['优化语音对话流程']);
+});
+
 test('missing, empty or unusable notes fall back to real unique subjects', () => {
   const rows = [commit('a', '2026-09-09T10:00:00+08:00', '修复相册'), commit('b', '2026-09-09T11:00:00+08:00', '修复相册')];
   for (const notes of [undefined, {}, { days: {} }, { days: { '2026-09-09': { title: ' ', items: [] } } }, { days: { '2026-09-09': { items: [null, ' ', 1] } } }]) {

@@ -14,18 +14,22 @@
     *{box-sizing:border-box} html{scroll-behavior:smooth}
     body{margin:0;color:var(--ink);background:var(--paper);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC","Microsoft YaHei",sans-serif}
     button{font:inherit} a{color:inherit;text-decoration:none}
-    .hero{min-height:86vh;position:relative;overflow:hidden;color:white;background:#12103a url("assets/intro-hero.webp") 52% 50%/cover no-repeat;display:grid;align-items:center}
-    .hero:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,6,38,.72) 0%,rgba(12,9,46,.46) 32%,rgba(12,9,46,.05) 67%)}
+    .hero{min-height:86vh;position:relative;isolation:isolate;overflow:hidden;color:white;background:#12103a url("assets/intro-hero-blur.webp") 52% 50%/cover no-repeat;display:grid;align-items:center}
+    .hero-video{position:absolute;z-index:-2;inset:0;width:100%;height:100%;object-fit:cover;object-position:52% 50%;opacity:0;filter:saturate(.88) contrast(1.08);transition:opacity 180ms linear}
+    .hero-video.is-playing{opacity:1}
+    .hero:before{content:"";position:absolute;z-index:-1;inset:0;background:linear-gradient(90deg,rgba(8,6,38,.72) 0%,rgba(12,9,46,.46) 32%,rgba(12,9,46,.05) 67%)}
+    .hero:after{content:"";pointer-events:none;position:absolute;z-index:1;inset:0;opacity:.42;background:repeating-linear-gradient(0deg,rgba(255,255,255,.09) 0 1px,rgba(2,1,20,.14) 1px 3px),radial-gradient(ellipse at center,transparent 48%,rgba(3,0,20,.43) 100%);mix-blend-mode:soft-light}
+    .hero-copy,.nav{z-index:2}
     .nav{position:absolute;z-index:3;left:clamp(24px,6vw,92px);right:clamp(24px,6vw,92px);top:28px;display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.08em}
     .brand{display:flex;align-items:center;gap:10px;font-weight:760}.brand img{width:40px;height:40px;border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.25)}
     .nav-note{color:rgba(255,255,255,.65)}
     .hero-copy{position:relative;z-index:2;width:min(650px,84vw);margin-left:clamp(24px,7vw,110px);padding:120px 0 80px}
     .eyebrow{display:inline-flex;align-items:center;gap:8px;margin-bottom:20px;color:#bcf7ff;font-size:13px;font-weight:700;letter-spacing:.12em}.eyebrow:before{content:"";width:28px;height:1px;background:var(--cyan)}
-    h1{font-size:clamp(52px,7.2vw,112px);line-height:.94;letter-spacing:-.065em;margin:0 0 26px;text-shadow:0 8px 50px rgba(24,4,68,.35)}
+    h1{font-size:clamp(52px,7.2vw,112px);line-height:.94;letter-spacing:-.065em;margin:0 0 26px;font-weight:950;color:#fffdf4;text-shadow:0 0 3px rgba(255,255,238,.96),0 0 14px rgba(255,239,177,.54),0 0 32px rgba(255,214,119,.26),0 8px 50px rgba(24,4,68,.35)}
     .hero-copy p{max-width:580px;margin:0;color:rgba(255,255,255,.82);font-size:clamp(18px,2vw,25px);line-height:1.65;font-weight:420}
     .actions{margin-top:34px;display:flex;gap:12px;flex-wrap:wrap}.pill{display:inline-flex;align-items:center;padding:13px 18px;border:1px solid rgba(255,255,255,.28);border-radius:999px;background:rgba(16,9,57,.24);backdrop-filter:blur(12px);font-size:14px}.pill.primary{border-color:transparent;background:white;color:#211844;font-weight:700}
     main{overflow:hidden}.section{padding:clamp(72px,10vw,144px) clamp(24px,7vw,110px)}
-    .intro{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:clamp(36px,8vw,120px);align-items:start;background:white}
+    .intro{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:clamp(36px,8vw,120px);align-items:start;background:white}.intro-copy{display:block}.intro-copy .lead{max-width:940px}
     .kicker{color:#7d62c4;font-size:13px;font-weight:760;letter-spacing:.12em;text-transform:uppercase}.display{font-size:clamp(34px,4.4vw,68px);line-height:1.1;letter-spacing:-.045em;margin:15px 0 0}
     .lead{font-size:clamp(18px,2.1vw,29px);line-height:1.65;color:#4a465f;margin:0}.lead strong{color:#211c3c}
     .feature-details{background:#fbfaff}.feature-head{max-width:880px;margin-bottom:clamp(38px,6vw,70px)}.feature-head .display{margin-top:0}.feature-head p{max-width:720px;margin:22px 0 0;color:#5c5771;font-size:18px;line-height:1.7}.feature-groups{display:grid;grid-template-columns:1fr 1fr;column-gap:clamp(36px,7vw,100px)}.feature-group{padding:26px 0 30px;border-top:1px solid var(--line)}.feature-group h3{margin:0 0 22px;color:#211c3c;font-size:26px;letter-spacing:-.025em}.feature-item{display:grid;grid-template-columns:minmax(120px,.65fr) 1.35fr;gap:20px;padding:15px 0}.feature-item b{color:#765dc0;font-size:15px}.feature-item span{color:#6c6983;font-size:14px;line-height:1.65}
@@ -40,53 +44,54 @@
     .quote{background:linear-gradient(140deg,#1c144c,#2e1c68);color:white;border-radius:28px;padding:clamp(28px,4vw,54px);position:relative;overflow:hidden}.quote:after{content:"";position:absolute;width:230px;height:230px;border:1px solid rgba(102,232,255,.25);border-radius:50%;right:-90px;bottom:-110px;box-shadow:0 0 80px rgba(96,230,255,.1)}.quote p{position:relative;z-index:1;font-size:clamp(25px,3vw,42px);line-height:1.45;margin:0}.quote small{display:block;margin-top:24px;color:#9eefff;letter-spacing:.08em}
     body.policy-open{overflow:hidden}.policy-modal[hidden]{display:none}.policy-modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:24px}.policy-backdrop{position:absolute;inset:0;background:rgba(8,6,30,.78);backdrop-filter:blur(10px)}.policy-dialog{position:relative;width:min(1120px,100%);max-height:min(86dvh,860px);overflow:auto;border:1px solid rgba(255,255,255,.15);border-radius:28px;background:#17123e;color:white;box-shadow:0 32px 90px rgba(7,4,28,.45);padding:clamp(24px,4vw,48px)}.policy-modal-head{display:flex;align-items:start;justify-content:space-between;gap:24px;margin-bottom:28px}.policy-modal-head h2{margin:7px 0 0;font-size:clamp(28px,3.5vw,46px);line-height:1.12;letter-spacing:-.035em}.policy-updated{color:#9eefff;font-size:12px;font-weight:760;letter-spacing:.1em}.policy-close{flex:0 0 auto;width:42px;height:42px;border:1px solid rgba(255,255,255,.18);border-radius:50%;background:rgba(255,255,255,.07);color:white;cursor:pointer;font-size:25px;line-height:1}.policy-close:hover,.policy-close:focus-visible{background:white;color:#20183f}.policy-close:focus-visible{outline:2px solid #9eefff;outline-offset:3px}.policy-close:active{transform:translateY(1px)}.policy-regions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.policy-region{border:1px solid rgba(255,255,255,.12);border-radius:22px;background:rgba(255,255,255,.055);padding:22px}.policy-region h3{margin:0 0 6px;font-size:22px}.policy-status{display:block;margin-bottom:17px;color:#9eefff;font-size:12px;line-height:1.5}.policy-region ul{margin:0;padding-left:18px;color:rgba(255,255,255,.76);font-size:14px;line-height:1.65}.policy-region li+li{margin-top:10px}.policy-sources{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:18px}.policy-sources a{color:#9eefff;font-size:12px;border-bottom:1px solid rgba(158,239,255,.42)}.policy-sources a:hover,.policy-sources a:focus-visible{border-color:#9eefff}.policy-note{margin:22px 0 0;color:rgba(255,255,255,.5);font-size:12px;line-height:1.6}
     footer{padding:34px clamp(24px,7vw,110px);background:#0d0928;color:rgba(255,255,255,.58);display:flex;justify-content:space-between;gap:20px;font-size:13px}
-    @media(max-width:850px){.hero{min-height:760px;background-position:64% 50%}.hero:before{background:linear-gradient(90deg,rgba(8,6,38,.82),rgba(12,9,46,.22))}.hero-copy{padding-top:180px}.intro,.boundary-grid,.question-card.wide{grid-template-columns:1fr}.audience-head{display:block}.switch{width:max-content;margin-top:24px}.cards,.question-grid,.guardrails,.policy-regions,.feature-groups{grid-template-columns:1fr}.card:nth-child(1),.card:nth-child(4){grid-column:auto}.feature-item{grid-template-columns:1fr;gap:7px}.question-card.wide{grid-column:auto}.principles{grid-template-columns:1fr}.principle:nth-child(odd){padding-right:0}.nav-note{display:none}.policy-modal{padding:12px}.policy-dialog{max-height:92dvh;border-radius:22px;padding:22px}.policy-modal-head{gap:14px}.policy-line{margin-top:-10px}}
+    @media(prefers-reduced-motion:no-preference){.motion-ready [data-reveal]{opacity:0;transform:translateY(14px) scale(1.01);filter:blur(14px);transition:opacity 760ms cubic-bezier(.22,1,.36,1),transform 760ms cubic-bezier(.22,1,.36,1),filter 760ms cubic-bezier(.22,1,.36,1);transition-delay:var(--reveal-delay,0ms);will-change:transform,opacity,filter}.motion-ready [data-reveal].is-visible{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}.motion-ready .hero [data-reveal]{transition-delay:var(--reveal-delay,0ms)}}
+    @media(max-width:850px){.hero{min-height:760px;background-position:64% 50%}.hero-video{object-position:64% 50%}.hero:before{background:linear-gradient(90deg,rgba(8,6,38,.82),rgba(12,9,46,.22))}.hero-copy{padding-top:180px}.intro,.boundary-grid,.question-card.wide{grid-template-columns:1fr}.audience-head{display:block}.switch{width:max-content;margin-top:24px}.cards,.question-grid,.guardrails,.policy-regions,.feature-groups{grid-template-columns:1fr}.card:nth-child(1),.card:nth-child(4){grid-column:auto}.feature-item{grid-template-columns:1fr;gap:7px}.question-card.wide{grid-column:auto}.principles{grid-template-columns:1fr}.principle:nth-child(odd){padding-right:0}.nav-note{display:none}.policy-modal{padding:12px}.policy-dialog{max-height:92dvh;border-radius:22px;padding:22px}.policy-line{margin-top:-10px}}
     @media(prefers-reduced-transparency:reduce){.policy-backdrop{backdrop-filter:none;background:rgba(8,6,30,.92)}}
   </style>
 </head>
 <body>
   <header class="hero">
-    <nav class="nav"><div class="brand"><img src="assets/intro-logo.webp" alt="赛博叫叫图标" width="40" height="40" decoding="async" />赛博叫叫 2027</div><div class="nav-note">CHILD-AI COMPANION CONCEPT</div></nav>
+  <video class="hero-video" id="heroEntrance" muted playsinline preload="auto" poster="assets/intro-hero-blur.webp" aria-hidden="true"><source src="assets/intro-entrance.mp4" type="video/mp4" /></video>
+  <video class="hero-video" id="heroLoop" muted playsinline preload="metadata" loop poster="assets/intro-hero-blur.webp" aria-hidden="true"><source src="assets/intro-loop.mp4" type="video/mp4" /></video>
+    <nav class="nav" data-reveal style="--reveal-delay:80ms"><div class="brand"><img src="assets/intro-logo.webp" alt="赛博叫叫图标" width="40" height="40" decoding="async" />赛博叫叫 2027</div><div class="nav-note">CHILD-AI COMPANION CONCEPT</div></nav>
     <div class="hero-copy">
-      <div class="eyebrow">公司黑客松项目</div>
-      <h1>赛博叫叫<br />2027</h1>
-      <p>先说说今天，再把发现带来一起看。赛博叫叫让对话自然长成一次陪伴。</p>
-      <div class="actions"><a class="pill primary" href="/">开始和叫叫聊聊</a><a class="pill" href="#idea">产品介绍</a></div>
+      <div class="eyebrow" data-reveal style="--reveal-delay:160ms">公司黑客松项目</div>
+      <h1 data-reveal style="--reveal-delay:240ms">赛博叫叫<br />2027</h1>
+      <p data-reveal style="--reveal-delay:360ms">先说说今天，再把发现带来一起看。赛博叫叫让对话自然长成一次陪伴。</p>
+      <div class="actions" data-reveal style="--reveal-delay:480ms"><a class="pill primary" href="/">开始和叫叫聊聊</a><a class="pill" href="#idea">产品介绍</a></div>
     </div>
   </header>
   <main>
-    <section class="section intro" id="idea">
-      <div><div class="kicker">The idea</div><h2 class="display">不是选一个玩法，<br />而是从一句话开始。</h2></div>
-      <p class="lead">孩子的成长里有无数来不及被接住的瞬间。赛博叫叫从<strong>“今天有没有一件想说说的事？”</strong>开始，接住开心、烦恼和想念；当孩子愿意把身边的发现拿来分享，才一起看、一起继续聊。</p>
+    <section class="section intro intro-copy" id="idea">
+      <p class="lead" data-reveal>孩子的成长里有无数来不及被接住的瞬间。赛博叫叫从<strong>“今天有没有一件想说说的事？”</strong>开始，接住开心、烦恼和想念；当孩子愿意把身边的发现拿来分享，才一起看、一起继续聊。</p>
     </section>
     <section class="section feature-details" id="features">
-      <div class="feature-head"><h2 class="display">不选玩法，故事从<br />一句对话慢慢展开。</h2><p>叫叫不把成长拆成一排按钮。孩子想说就说，想找就找；镜头只在需要一起看清时加入。</p></div>
       <div class="feature-groups">
-        <article class="feature-group"><h3>先聊聊今天</h3><div class="feature-item"><b>接住想念和烦恼</b><span>孩子提起想念家人、开心事或不顺心，叫叫先回应，再只问一个愿意回答的问题。</span></div><div class="feature-item"><b>当天小记</b><span>只整理孩子真实说过的经历、感受与想法，让普通的一天有可回看的线索。</span></div></article>
-        <article class="feature-group"><h3>一起找找看</h3><div class="feature-item"><b>孩子自己决定找什么</b><span>从颜色或身边常见物开始；说没有或不想找时，立刻换个方向，不设任务入口。</span></div><div class="feature-item"><b>需要时才看镜头</b><span>孩子说“拿给你看”后才观察画面，不根据镜头猜测孩子的心情。</span></div></article>
-        <article class="feature-group"><h3>看清一件具体的事</h3><div class="feature-item"><b>白色虚线框</b><span>第一次看不清时，才邀请把物品放进取景框再试。</span></div><div class="feature-item"><b>把发现继续聊下去</b><span>绘本、食物、植物或动物，会变成下一句关于内容、照料或观察的对话。</span></div></article>
-        <article class="feature-group"><h3>动作也有回应</h3><div class="feature-item"><b>点赞和比心</b><span>角色会用表情、动作和语音自然回应。</span></div><div class="feature-item"><b>留下真实片刻</b><span>关键互动可以触发自动快门，影像和当天小记都留在孩子的生活脉络里。</span></div></article>
+        <article class="feature-group" data-reveal><h3>先聊聊今天</h3><div class="feature-item"><b>接住想念和烦恼</b><span>孩子提起想念家人、开心事或不顺心，叫叫先回应，再只问一个愿意回答的问题。</span></div><div class="feature-item"><b>当天小记</b><span>只整理孩子真实说过的经历、感受与想法，让普通的一天有可回看的线索。</span></div></article>
+        <article class="feature-group" data-reveal style="--reveal-delay:80ms"><h3>一起找找看</h3><div class="feature-item"><b>孩子自己决定找什么</b><span>从颜色或身边常见物开始；说没有或不想找时，立刻换个方向，不设任务入口。</span></div><div class="feature-item"><b>需要时才看镜头</b><span>孩子说“拿给你看”后才观察画面，不根据镜头猜测孩子的心情。</span></div></article>
+        <article class="feature-group" data-reveal><h3>看清一件具体的事</h3><div class="feature-item"><b>白色虚线框</b><span>第一次看不清时，才邀请把物品放进取景框再试。</span></div><div class="feature-item"><b>把发现继续聊下去</b><span>绘本、食物、植物或动物，会变成下一句关于内容、照料或观察的对话。</span></div></article>
+        <article class="feature-group" data-reveal style="--reveal-delay:80ms"><h3>动作也有回应</h3><div class="feature-item"><b>点赞和比心</b><span>角色会用表情、动作和语音自然回应。</span></div><div class="feature-item"><b>留下真实片刻</b><span>关键互动可以触发自动快门，影像和当天小记都留在孩子的生活脉络里。</span></div></article>
       </div>
     </section>
     <section class="section questions" id="questions">
-      <div class="questions-head"><div class="kicker">Hard questions</div><h2 class="display">它为什么成立，<br />又怎样不伤害孩子？</h2></div>
+      <div class="questions-head" data-reveal><div class="kicker">Hard questions</div><h2 class="display">它为什么成立，<br />又怎样不伤害孩子？</h2></div>
       <div class="question-grid">
-        <article class="question-card"><span class="num">QUESTION 01</span><h3>为什么需要摄像头？</h3><p>不是为了监控，也不是默认开启。孩子从“你看这个”开始表达，并主动说愿意拿来分享时，镜头才成为共同注意的工具。它必须按需开启、清晰提示、随时关闭，并坚持最小必要采集。</p></article>
-        <article class="question-card"><span class="num">QUESTION 02</span><h3>为什么不是另一个豆包？</h3><p>差异不只在模型，而在产品契约：通用助手追求完成任务；赛博叫叫追求适龄表达、长期成长、真实关系回归，以及儿童专属的监护、升级、记忆和反依赖机制。</p></article>
-        <article class="question-card"><span class="num">QUESTION 03</span><h3>如何衡量产品价值？</h3><p>不是孩子聊得更久，而是他更会描述感受、完成更多现实行动，也更愿意把重要的事告诉可信任的人。结束对话并走向真实世界，也应该被计为一次成功。</p></article>
-        <article class="question-card wide"><div><span class="num">QUESTION 04</span><h3>如何避免沉迷与过度依赖？</h3><p>AI 应成为通往真实交流的脚手架，而不是永远顺从、永不冲突的封闭替代世界。孩子能力越强，叫叫应该越懂得少说一点、退后一点。</p></div><div class="guardrails"><div class="guardrail"><b>拒绝成瘾机制</b><br />无签到惩罚、限时焦虑和情感挽留。</div><div class="guardrail"><b>设计自然结束点</b><br />每段对话都有小结和离开的理由。</div><div class="guardrail"><b>现实任务闭环</b><br />AI 负责准备与复盘，行动发生在真实世界。</div><div class="guardrail"><b>社交暴露阶梯</b><br />先演练一句话，再完成一个小的真实行动。</div><div class="guardrail"><b>禁止排他关系</b><br />不要求秘密，不贬低父母朋友，不制造嫉妒。</div><div class="guardrail"><b>异常状态升级</b><br />持续回避、焦虑或伤害风险转交真实成年人。</div></div></article>
+        <article class="question-card" data-reveal><span class="num">QUESTION 01</span><h3>为什么需要摄像头？</h3><p>不是为了监控，也不是默认开启。孩子从“你看这个”开始表达，并主动说愿意拿来分享时，镜头才成为共同注意的工具。它必须按需开启、清晰提示、随时关闭，并坚持最小必要采集。</p></article>
+        <article class="question-card" data-reveal style="--reveal-delay:80ms"><span class="num">QUESTION 02</span><h3>为什么不是另一个豆包？</h3><p>差异不只在模型，而在产品契约：通用助手追求完成任务；赛博叫叫追求适龄表达、长期成长、真实关系回归，以及儿童专属的监护、升级、记忆和反依赖机制。</p></article>
+        <article class="question-card" data-reveal style="--reveal-delay:160ms"><span class="num">QUESTION 03</span><h3>如何衡量产品价值？</h3><p>不是孩子聊得更久，而是他更会描述感受、完成更多现实行动，也更愿意把重要的事告诉可信任的人。结束对话并走向真实世界，也应该被计为一次成功。</p></article>
+        <article class="question-card wide" data-reveal><div><span class="num">QUESTION 04</span><h3>如何避免沉迷与过度依赖？</h3><p>AI 应成为通往真实交流的脚手架，而不是永远顺从、永不冲突的封闭替代世界。孩子能力越强，叫叫应该越懂得少说一点、退后一点。</p></div><div class="guardrails"><div class="guardrail"><b>拒绝成瘾机制</b><br />无签到惩罚、限时焦虑和情感挽留。</div><div class="guardrail"><b>设计自然结束点</b><br />每段对话都有小结和离开的理由。</div><div class="guardrail"><b>现实任务闭环</b><br />AI 负责准备与复盘，行动发生在真实世界。</div><div class="guardrail"><b>社交暴露阶梯</b><br />先演练一句话，再完成一个小的真实行动。</div><div class="guardrail"><b>禁止排他关系</b><br />不要求秘密，不贬低父母朋友，不制造嫉妒。</div><div class="guardrail"><b>异常状态升级</b><br />持续回避、焦虑或伤害风险转交真实成年人。</div></div></article>
       </div>
     </section>
     <section class="section audience" id="value">
-      <div class="audience-head"><div><div class="kicker" style="color:#89ecff">Two perspectives</div><h2 class="display">产品价值</h2></div><div class="switch"><button class="on" data-mode="user">用户价值</button><button data-mode="regulator">监管视角</button></div></div>
-      <p class="promise" id="promise"></p>
-      <div class="policy-line" id="policyLine" hidden><button class="policy-trigger" id="policyTrigger" type="button" aria-haspopup="dialog" aria-controls="policyModal"><span>政策依据（更新至 2026.09）：中国拟人化互动办法、美国 COPPA 与加州 SB 243、欧盟 AI Act 与 GDPR</span><b>查看法规摘要</b></button></div>
+      <div class="audience-head" data-reveal><div><div class="kicker" style="color:#89ecff">Two perspectives</div><h2 class="display">产品价值</h2></div><div class="switch"><button class="on" data-mode="user">用户价值</button><button data-mode="regulator">监管视角</button></div></div>
+      <p class="promise" id="promise" data-reveal></p>
+      <div class="policy-line" id="policyLine" data-reveal hidden><button class="policy-trigger" id="policyTrigger" type="button" aria-haspopup="dialog" aria-controls="policyModal"><span>政策依据（更新至 2026.09）：中国拟人化互动办法、美国 COPPA 与加州 SB 243、欧盟 AI Act 与 GDPR</span><b>查看法规摘要</b></button></div>
       <div class="cards" id="cards"></div>
     </section>
     <section class="section boundary" id="boundary">
       <div class="boundary-grid">
-        <div><div class="kicker">Safety as experience</div><h2 class="display">陪伴有温度，<br />关系有边界。</h2></div>
-        <div class="principles">
+        <div data-reveal><div class="kicker">Safety as experience</div><h2 class="display">陪伴有温度，<br />关系有边界。</h2></div>
+        <div class="principles" data-reveal style="--reveal-delay:100ms">
           <div class="principle"><b>不建立秘密同盟</b><span>不使用“只有我懂你”等排他性话术，也不要求孩子隐瞒对话。</span></div>
           <div class="principle"><b>不替代真实关系</b><span>在更合适的时候，引导孩子去找父母、老师、同伴或专业人员。</span></div>
           <div class="principle"><b>不以依赖换增长</b><span>不用情感勒索、连续签到惩罚或拟人化焦虑换取时长与付费。</span></div>
@@ -96,9 +101,9 @@
         </div>
       </div>
     </section>
-    <section class="section" style="background:#eee9ff"><div class="quote"><p>真正的问题不是“儿童能不能拥有情感型 AI”，而是我们能否尽早把它应该遵守的关系原则设计清楚。</p><small>赛博叫叫 2027 · 黑客松探索命题</small></div></section>
+    <section class="section" style="background:#eee9ff"><div class="quote" data-reveal><p>真正的问题不是“儿童能不能拥有情感型 AI”，而是我们能否尽早把它应该遵守的关系原则设计清楚。</p><small>赛博叫叫 2027 · 黑客松探索命题</small></div></section>
   </main>
-  <footer><span>赛博叫叫 2027</span><span>AI 管能力与边界，人类关系仍然属于真实世界。</span></footer>
+  <footer data-reveal><span>赛博叫叫 2027</span><span>AI 管能力与边界，人类关系仍然属于真实世界。</span></footer>
   <div class="policy-modal" id="policyModal" hidden>
     <div class="policy-backdrop" data-policy-close></div>
     <section class="policy-dialog" role="dialog" aria-modal="true" aria-labelledby="policyTitle" tabindex="-1">
@@ -117,11 +122,14 @@
       regulator:{promise:'合规不是上线后的补丁，而是儿童 AI 伴侣从身份、关系、数据到风险处置的产品底座。',cards:[['身份与年龄','明确告知用户正在与 AI 互动，识别未成年人，并提供与年龄相匹配的保护。'],['关系与依赖','不诱导排他关系、情感依赖或沉迷，设置现实提醒、时长限制与退出通道。'],['内容与危机','阻断色情、自伤、自杀与情感操纵内容，极端情境转交监护人或紧急联系人。'],['数据与记忆','最小必要收集，记忆可查看、复制和删除，敏感交互数据训练须满足单独同意等条件。'],['数字人与内容标识','对 AI 身份、合成语音、图像、视频和交互场景进行适用的显式披露与可追溯标识。'],['评估与审计','上线前评估、算法备案、日志留存与持续审计，为风险纠偏和监管核查保留依据。']]}
     };
     const policyModal=document.querySelector('#policyModal'),policyDialog=policyModal.querySelector('.policy-dialog'),policyTrigger=document.querySelector('#policyTrigger');let lastPolicyFocus;
-    function render(mode){document.querySelectorAll('.switch button').forEach(b=>b.classList.toggle('on',b.dataset.mode===mode));document.querySelector('#promise').textContent=copy[mode].promise;document.querySelector('#cards').innerHTML=copy[mode].cards.map(x=>`<article class="card"><b>${x[0]}</b><p>${x[1]}</p></article>`).join('');document.querySelector('#policyLine').hidden=mode!=='regulator'}
+    const prefersReducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;let revealObserver;
+    function observeReveals(){if(prefersReducedMotion)return;document.documentElement.classList.add('motion-ready');if(!revealObserver)revealObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');revealObserver.unobserve(entry.target)}}),{threshold:.14});document.querySelectorAll('[data-reveal]:not(.is-visible)').forEach(target=>revealObserver.observe(target))}
+    function render(mode){document.querySelectorAll('.switch button').forEach(b=>b.classList.toggle('on',b.dataset.mode===mode));document.querySelector('#promise').textContent=copy[mode].promise;document.querySelector('#cards').innerHTML=copy[mode].cards.map((x,index)=>`<article class="card" data-reveal style="--reveal-delay:${index%3*70}ms"><b>${x[0]}</b><p>${x[1]}</p></article>`).join('');document.querySelector('#policyLine').hidden=mode!=='regulator';observeReveals()}
     function openPolicy(){lastPolicyFocus=document.activeElement;policyModal.hidden=false;document.body.classList.add('policy-open');policyDialog.focus()}
     function closePolicy(){policyModal.hidden=true;document.body.classList.remove('policy-open');lastPolicyFocus?.focus()}
     policyTrigger.addEventListener('click',openPolicy);policyModal.querySelectorAll('[data-policy-close]').forEach(el=>el.addEventListener('click',closePolicy));document.addEventListener('keydown',event=>{if(policyModal.hidden)return;if(event.key==='Escape'){closePolicy();return}if(event.key==='Tab'){const focusable=[...policyDialog.querySelectorAll('a,button')];const first=focusable[0],last=focusable[focusable.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}}});
-    document.querySelectorAll('.switch button').forEach(b=>b.addEventListener('click',()=>render(b.dataset.mode)));render('user');
+    function playHeroMotion(){if(prefersReducedMotion)return;const entrance=document.querySelector('#heroEntrance'),loop=document.querySelector('#heroLoop');if(!entrance||!loop)return;const revealLoop=()=>{entrance.classList.remove('is-playing');loop.classList.add('is-playing');loop.play().catch(()=>{})},startLoop=()=>{if(loop.readyState>=3)revealLoop();else loop.addEventListener('canplay',revealLoop,{once:true})},startEntrance=()=>{entrance.classList.add('is-playing');entrance.play().catch(startLoop)};entrance.addEventListener('ended',startLoop,{once:true});entrance.addEventListener('error',startLoop,{once:true});if(entrance.readyState>=3)startEntrance();else entrance.addEventListener('canplay',startEntrance,{once:true})}
+    document.querySelectorAll('.switch button').forEach(b=>b.addEventListener('click',()=>render(b.dataset.mode)));render('user');observeReveals();playHeroMotion();
   </script>
 </body>
 </html>

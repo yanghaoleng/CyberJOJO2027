@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-15T09:15:20.385Z",
-  "publicFileCount": 50,
-  "totalBytes": 58194333,
+  "generatedAt": "2026-09-15T17:27:28.427Z",
+  "publicFileCount": 53,
+  "totalBytes": 58538268,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -253,6 +253,28 @@
       ]
     },
     {
+      "id": "intro/assets/intro-entrance.mp4",
+      "path": "intro/assets/intro-entrance.mp4",
+      "name": "intro-entrance.mp4",
+      "category": "other",
+      "format": "MP4",
+      "bytes": 178127,
+      "sha256": "e7a2f7ddbbbdbf0a24872e89c36462d02cfee9abd56d0cb97f60c1f1db022bcb"
+    },
+    {
+      "id": "intro/assets/intro-hero-blur.webp",
+      "path": "intro/assets/intro-hero-blur.webp",
+      "name": "intro-hero-blur.webp",
+      "category": "image",
+      "format": "WEBP",
+      "bytes": 4770,
+      "sha256": "4649bbb59cffc8430952c185d386248c034520852f9a33bd1fbc4d9799e11022",
+      "dimensions": [
+        768,
+        512
+      ]
+    },
+    {
       "id": "intro/assets/intro-hero.webp",
       "path": "intro/assets/intro-hero.webp",
       "name": "介绍页主视觉",
@@ -279,13 +301,22 @@
       ]
     },
     {
+      "id": "intro/assets/intro-loop.mp4",
+      "path": "intro/assets/intro-loop.mp4",
+      "name": "intro-loop.mp4",
+      "category": "other",
+      "format": "MP4",
+      "bytes": 157750,
+      "sha256": "e5f837458cba94e8c507644a960754948d1f4b6e8bc68c35afdb89e58a2fdb30"
+    },
+    {
       "id": "intro/index.html",
       "path": "intro/index.html",
       "name": "index.html",
       "category": "other",
       "format": "HTML",
-      "bytes": 26142,
-      "sha256": "20e2a3e60d1fb71491d655603f3a098339a33e5bb6293527c7b5484da86ae400"
+      "bytes": 29430,
+      "sha256": "227a94a7823312cbb01c5715842f072b750da877aa43c0c78117f860475c9928"
     },
     {
       "id": "media/jiaojiao.riv",
