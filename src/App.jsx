@@ -63,7 +63,8 @@ import {
 } from "./media-library.js";
 import useDailyJournal from "./journal/useDailyJournal.js";
 import JournalDay from "./journal/JournalDay.jsx";
-import { loadFriends, saveFriend } from "./friends/friend-store.js";
+import { isUnreadCollection, loadFriends, markCollectionsSeen, saveFriend } from "./friends/friend-store.js";
+import { runCollectionJob } from "./friends/collection-job.js";
 import { parseCollectionDialogue } from "./friends/collection-dialogue.js";
 import { createStickerFromCapture } from "./sticker-matting.js";
 import CollectionFlight from "./friends/CollectionFlight.jsx";
@@ -859,6 +860,10 @@ function App() {
   const mediaLibraryCloseTimerRef = useRef(null);
   const collectionFlightTimerRef = useRef(null);
   const collectionInFlightRef = useRef(false);
+  const collectionForegroundRef = useRef(null);
+  const collectionWorkerRef = useRef(null);
+  const collectionMountedRef = useRef(true);
+  const mediaLibraryEntryRef = useRef(null);
   const collectionHistoryRef = useRef(new Map());
   const latestCollectionRef = useRef(null);
   const collectionDialogueRef = useRef(() => {});
@@ -967,6 +972,7 @@ function App() {
   const [mediaLibrary, setMediaLibrary] = useState([]);
   const [friends, setFriends] = useState([]);
   const [collectionFlight, setCollectionFlight] = useState(null);
+  const [collectionQueueTick, setCollectionQueueTick] = useState(0);
   const [gameplayMode, setGameplayMode] = useState("");
   const [gameplayMenuOpen, setGameplayMenuOpen] = useState(false);
   const [gameplayTranscript, setGameplayTranscript] = useState(null);
@@ -1112,10 +1118,33 @@ function App() {
 
   const showToast = useCallback((message) => {
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
-    if (collectionFlightTimerRef.current) window.clearTimeout(collectionFlightTimerRef.current);
     setToast(message);
     toastTimerRef.current = window.setTimeout(() => setToast(""), 2_600);
   }, []);
+
+  const dismissCollection = useCallback(() => {
+    collectionForegroundRef.current = null;
+    setCollectionFlight(null);
+    if (collectionFlightTimerRef.current) window.clearTimeout(collectionFlightTimerRef.current);
+    collectionFlightTimerRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    collectionMountedRef.current = true;
+    const onKey = (event) => { if (event.key === "Escape") dismissCollection(); };
+    const onVisibility = () => { if (document.hidden) dismissCollection(); };
+    document.addEventListener("pointerdown", dismissCollection, true);
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      collectionMountedRef.current = false;
+      collectionWorkerRef.current?.abort();
+      document.removeEventListener("pointerdown", dismissCollection, true);
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (collectionFlightTimerRef.current) window.clearTimeout(collectionFlightTimerRef.current);
+    };
+  }, [dismissCollection]);
 
   const unlockShutterSound = useCallback(() => {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -1261,11 +1290,11 @@ function App() {
     }
   }, []);
 
-  const addMediaCapture = useCallback((capture, { automatic = false } = {}) => {
+  const addMediaCapture = useCallback((capture, { automatic = false, persisted = false, quiet = false } = {}) => {
     const item = {
       ...capture,
-      id: createCaptureId(capture.type),
-      createdAt: Date.now(),
+      id: capture.id || createCaptureId(capture.type),
+      createdAt: capture.createdAt || Date.now(),
       url: URL.createObjectURL(capture.blob),
     };
     setMediaLibrary((current) => {
@@ -1275,11 +1304,11 @@ function App() {
       }
       return next;
     });
-    storeMediaCapture(item).catch((error) => {
+    if (!persisted) storeMediaCapture(item).catch((error) => {
       console.warn("Capture could not be persisted to the local media library", error);
       showToast("作品已保留在本次相机中");
     });
-    showToast(automatic ? "已自动拍下这一刻" : capture.type === "video" ? "短视频已加入作品" : "照片已加入作品");
+    if (!quiet) showToast(automatic ? "已自动拍下这一刻" : capture.type === "video" ? "短视频已加入作品" : "照片已加入作品");
     return item;
   }, [showToast]);
 
@@ -1689,6 +1718,7 @@ function App() {
           if (message.final) {
             if (message.clientMessageId && pendingTextRef.current?.id === message.clientMessageId) pendingTextRef.current.finish(true);
             const voiceIntent = parseVoiceIntent(text);
+            if (voiceIntent?.type !== "collect") dismissCollection();
             if (voiceIntent?.type === "heart") {
               triggerHeartVoiceRef.current?.();
             } else if (voiceIntent?.type === "collect") {
@@ -1782,7 +1812,7 @@ function App() {
       if (audioTrack) return startVoiceSession(stream, { textOnly: true });
       return null;
     }
-  }, [activeCharacter, clearCharacterSpeech, enqueueSynthesizedSpeech, recordConversationMessage, scheduleAutoCapture, setHiddenStoryFocus, showToast, stopVoiceSession]);
+  }, [activeCharacter, clearCharacterSpeech, dismissCollection, enqueueSynthesizedSpeech, recordConversationMessage, scheduleAutoCapture, setHiddenStoryFocus, showToast, stopVoiceSession]);
 
   const updateMask = useCallback((result) => {
     const masks = result.confidenceMasks;
@@ -3223,6 +3253,8 @@ function App() {
   }, [cameraMenuOpen, playInterfaceSound]);
 
   const openMediaLibrary = useCallback(() => {
+    dismissCollection();
+    setLibraryTab("all");
     if (mediaLibraryCloseTimerRef.current) {
       window.clearTimeout(mediaLibraryCloseTimerRef.current);
       mediaLibraryCloseTimerRef.current = null;
@@ -3234,7 +3266,7 @@ function App() {
     mediaLibraryOpenRef.current = true;
     setMediaLibraryOpen(true);
     playInterfaceSound("open");
-  }, [playInterfaceSound]);
+  }, [dismissCollection, playInterfaceSound]);
 
   const closeMediaLibrary = useCallback(() => {
     if (!mediaLibraryOpenRef.current || mediaLibraryClosing) return;
@@ -3586,29 +3618,36 @@ function App() {
   }, [captionMode, mediaPreview, paddedDay, playInterfaceSound]);
 
   const latestMedia = mediaLibrary[0] || null;
-  const captureGameplayFrame = useCallback(async () => {
+  const captureGameplayFrame = useCallback(async ({ original = false } = {}) => {
     const video = videoRef.current;
     if (!video?.videoWidth || !video.videoHeight || video.readyState < 2) throw new Error("相机还没准备好");
     const output = outputCanvasRef.current;
     const displayWidth = output.clientWidth, displayHeight = output.clientHeight;
     if (!displayWidth || !displayHeight) throw new Error("相机还没准备好");
-    const scale = Math.min(1, 640 / Math.max(displayWidth, displayHeight));
+    const displayScale = Math.max(displayWidth / output.width, displayHeight / output.height);
+    const rect = getCoverRect(video.videoWidth, video.videoHeight, output.width, output.height);
+    const nativeScale = video.videoWidth / rect.width / displayScale;
+    const scale = Math.min(original ? nativeScale : 1, (original ? 1280 : 640) / Math.max(displayWidth, displayHeight));
     const canvas = gameplayFrameCanvasRef.current || document.createElement("canvas");
     gameplayFrameCanvasRef.current = canvas;
     canvas.width = Math.round(displayWidth * scale); canvas.height = Math.round(displayHeight * scale);
     const context = canvas.getContext("2d");
-    const displayScale = Math.max(displayWidth / output.width, displayHeight / output.height);
     const cropBottom = output.height * displayScale - displayHeight;
     // Match both the video's centered cover and the output canvas's left/bottom cover.
     // The JPEG is already mirrored exactly as displayed, so later point mapping is direct.
     context.setTransform(scale * displayScale, 0, 0, scale * displayScale, 0, -cropBottom * scale);
-    const rect = getCoverRect(video.videoWidth, video.videoHeight, output.width, output.height);
     drawCameraSource(context, video, rect, output.width, shouldMirrorCamera(facingMode));
     context.resetTransform();
+    const originalBlob = original ? await new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("照片没有拍好")), "image/jpeg", .92)) : null;
+    const recognition = document.createElement("canvas");
+    const recognitionScale = Math.min(1, 640 / Math.max(canvas.width, canvas.height));
+    recognition.width = Math.round(canvas.width * recognitionScale);
+    recognition.height = Math.round(canvas.height * recognitionScale);
+    recognition.getContext("2d").drawImage(canvas, 0, 0, recognition.width, recognition.height);
     let quality = 0.78;
-    let image = canvas.toDataURL("image/jpeg", quality);
-    while (image.length > 230_000 && quality > 0.3) { quality -= 0.1; image = canvas.toDataURL("image/jpeg", quality); }
-    const blob = await (await fetch(image)).blob();
+    let image = recognition.toDataURL("image/jpeg", quality);
+    while (image.length > 230_000 && quality > 0.3) { quality -= 0.1; image = recognition.toDataURL("image/jpeg", quality); }
+    const blob = originalBlob || await (await fetch(image)).blob();
     return { image, blob, width: canvas.width, height: canvas.height, mirrored: false };
   }, [facingMode]);
 
@@ -3633,51 +3672,90 @@ function App() {
     collectionInFlightRef.current = true;
     collectionHistoryRef.current.set(key, now);
     const id = crypto.randomUUID();
-    setCollectionFlight({ id, phase: "model", name: reaction.subject });
+    collectionForegroundRef.current = id;
+    setCollectionFlight({ id, phase: "capturing", name: reaction.subject });
     try {
-      const frame = await captureGameplayFrame();
-      const observation = await requestGameplay({
-        source: "collect",
-        image: frame.image,
-        roundId: crypto.randomUUID(),
-        frameId: crypto.randomUUID(),
-        character: activeCharacter,
-      });
-      if (!observation.evaluable || !observation.label || !observation.bbox) throw new Error("还没看清这件东西");
-      const stickerBlob = await createStickerFromCapture(frame.blob, observation.bbox, {
-        onProgress: (progress) => {
-          if (progress?.status === "matting") setCollectionFlight((current) => current?.id === id ? { ...current, phase: "matting", name: observation.label } : current);
-        },
-      });
+      const frame = await captureGameplayFrame({ original: true });
+      const capture = { id: createCaptureId("photo"), createdAt: Date.now(), type: "photo", blob: frame.blob, captionText: `收集：${reaction.subject}`, source: "collection" };
+      if (!await storeMediaCapture(capture)) throw new Error("本机存储暂时不可用");
+      addMediaCapture(capture, { persisted: true, quiet: true });
       const record = await saveFriend({
-        name: observation.label,
-        kind: observation.category,
-        english: observation.english,
-        learning: observation.learning,
-        stickerBlob,
+        id, name: reaction.subject, subject: reaction.subject,
+        originalBlob: frame.blob, captureId: capture.id,
+        status: "pending", attempts: 0,
       });
       saveCollectedFriend(record);
-      const explanation = [
-        observation.learning,
-        observation.english ? `英文是 ${observation.english}` : "",
-        getCollectionFollowUp(observation.category, observation.label),
-      ].filter(Boolean).join("。");
-      setCollectionFlight({ id, phase: "ready", name: record.name, english: record.english, explanation, stickerBlob });
+      if (collectionForegroundRef.current === id) setCollectionFlight({ id, phase: "processing", name: record.name, originalBlob: frame.blob });
       if (collectionFlightTimerRef.current) window.clearTimeout(collectionFlightTimerRef.current);
-      collectionFlightTimerRef.current = window.setTimeout(() => {
-        setCollectionFlight((current) => current?.id === id ? null : current);
-        collectionFlightTimerRef.current = null;
-      }, 4_100);
-      shareCollectionLearning(explanation);
+      // Waiting feedback quietly fades; completion can still fly to the album
+      // unless the child explicitly interacts with something else.
+      collectionFlightTimerRef.current = window.setTimeout(() => setCollectionFlight((current) => current?.id === id && current.phase !== "ready" ? null : current), 4500);
     } catch (error) {
       collectionHistoryRef.current.delete(key);
-      setCollectionFlight(null);
-      if (error?.name !== "AbortError") showToast("这次没能做成精细贴纸，换个角度再试试");
+      dismissCollection();
+      if (error?.name !== "AbortError") showToast("收集暂时没有保存好，请再试一次");
     } finally {
       collectionInFlightRef.current = false;
     }
-  }, [activeCharacter, captureGameplayFrame, saveCollectedFriend, shareCollectionLearning, showToast]);
+  }, [addMediaCapture, captureGameplayFrame, dismissCollection, saveCollectedFriend, showToast]);
   startObjectCollectionRef.current = startObjectCollection;
+
+  useEffect(() => {
+    if (collectionWorkerRef.current) return undefined;
+    const waiting = friends.filter((record) => ["pending", "processing"].includes(record.status) && record.originalBlob).sort((a, b) => a.createdAt - b.createdAt);
+    const record = waiting.find((item) => item.retryAt <= Date.now());
+    if (!record) {
+      if (!waiting.length) return undefined;
+      const timer = window.setTimeout(() => setCollectionQueueTick((value) => value + 1), Math.max(200, Math.min(...waiting.map((item) => item.retryAt)) - Date.now()));
+      return () => window.clearTimeout(timer);
+    }
+    const controller = new AbortController();
+    collectionWorkerRef.current = controller;
+    void runCollectionJob(record, {
+      signal: controller.signal,
+      save: saveFriend,
+      onUpdate: (next) => { if (collectionMountedRef.current) saveCollectedFriend(next); },
+      observe: async (item, signal) => {
+        const url = URL.createObjectURL(item.originalBlob);
+        try {
+          const photo = new Image(); photo.src = url; await photo.decode();
+          const canvas = document.createElement("canvas");
+          const ratio = Math.min(1, 640 / Math.max(photo.naturalWidth, photo.naturalHeight));
+          canvas.width = Math.round(photo.naturalWidth * ratio); canvas.height = Math.round(photo.naturalHeight * ratio);
+          canvas.getContext("2d").drawImage(photo, 0, 0, canvas.width, canvas.height);
+          let quality = .78, image = canvas.toDataURL("image/jpeg", quality);
+          while (image.length > 230000 && quality > .3) { quality -= .1; image = canvas.toDataURL("image/jpeg", quality); }
+          return await requestGameplay({ source: "collect", image, subject: item.subject, roundId: item.id, frameId: item.captureId || item.id, character: activeCharacter }, { signal });
+        } finally { URL.revokeObjectURL(url); }
+      },
+      matte: createStickerFromCapture,
+    }).then((ready) => {
+      if (!collectionMountedRef.current || collectionForegroundRef.current !== ready.id || mediaLibraryOpenRef.current || mediaPreviewRef.current || document.hidden) return;
+      const rect = mediaLibraryEntryRef.current?.getBoundingClientRect();
+      const target = rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : null;
+      setCollectionFlight({ ...ready, phase: "ready", target });
+      if (collectionFlightTimerRef.current) window.clearTimeout(collectionFlightTimerRef.current);
+      collectionFlightTimerRef.current = window.setTimeout(dismissCollection, 2500);
+      shareCollectionLearning([ready.learning, ready.english ? `英文是 ${ready.english}` : "", getCollectionFollowUp(ready.kind, ready.name)].filter(Boolean).join("。"));
+    }).catch(() => {
+      // Original and pending/failed status have already been committed. Never
+      // resurrect foreground UI after a user interruption.
+      if (collectionMountedRef.current && collectionForegroundRef.current === record.id) dismissCollection();
+    }).finally(() => {
+      collectionWorkerRef.current = null;
+      if (collectionMountedRef.current) setCollectionQueueTick((value) => value + 1);
+    });
+    return undefined;
+  }, [friends, collectionQueueTick, activeCharacter, dismissCollection, saveCollectedFriend, shareCollectionLearning]);
+
+  const retryCollection = useCallback(async (record) => {
+    saveCollectedFriend(await saveFriend({ id: record.id, status: "pending", attempts: 0, retryAt: 0 }));
+  }, [saveCollectedFriend]);
+  const onCollectionsSeen = useCallback(async (ids) => {
+    await markCollectionsSeen(ids);
+    setFriends((current) => current.map((record) => ids.includes(record.id) ? { ...record, seenAt: Date.now() } : record));
+  }, []);
+  const unreadCollectionCount = friends.filter(isUnreadCollection).length;
 
   const updateCollectedFriendFromDialogue = useCallback(async (text) => {
     const command = parseCollectionDialogue(text);
@@ -3990,12 +4068,14 @@ function App() {
             <div className="capture-toolbar" aria-label="拍摄工具">
               <div className="capture-side capture-side-left">
                 <button
-                  className={`media-library-entry ${latestMedia ? "has-media" : ""}`}
+                  ref={mediaLibraryEntryRef}
+                  className={`media-library-entry ${latestMedia ? "has-media" : ""} ${unreadCollectionCount ? "has-unread-collection" : ""}`}
                   type="button"
                   disabled={recording}
                   onClick={() => { startGameplay(""); openMediaLibrary(); }}
-                  aria-label={mediaLibrary.length ? `打开作品列表，共 ${mediaLibrary.length} 个作品` : "打开作品列表"}
+                  aria-label={`打开作品列表，共 ${mediaLibrary.length} 个作品${unreadCollectionCount ? `，${unreadCollectionCount} 张新收集贴纸` : ""}`}
                 >
+                  {unreadCollectionCount > 0 && <span className="collection-unread-dot" aria-hidden="true" />}
                   {latestMedia ? (
                     <>
                       {latestMedia.type === "photo" ? (
@@ -4142,7 +4222,7 @@ function App() {
             )}
             <p className="privacy-note">
               <LockSimple size={14} weight="fill" />
-              <span>AI 识物和相册小记会按需发送压缩画面；对话文字仅在本机留作日记，并发送给豆包 Mini 生成小记；本站不保存原图和原始音频</span>
+              <span>AI 识物、收集抠图和相册小记会按需发送压缩画面；原图与贴纸保存在本机，服务器抠图后不留存图片；对话文字在本机留作日记，并发送给豆包 Mini 生成小记</span>
             </p>
           </div>
           </>
@@ -4174,11 +4254,11 @@ function App() {
             <nav className="library-tabs" aria-label="相册分类">
               <button type="button" aria-pressed={libraryTab === "days"} onClick={() => setLibraryTab("days")} aria-label="时光小记" title="时光小记"><BookOpenText size={22} weight="bold" aria-hidden="true" /></button>
               <button type="button" aria-pressed={libraryTab === "all"} onClick={() => setLibraryTab("all")} aria-label="全部" title="全部"><SquaresFour size={22} weight="fill" aria-hidden="true" /></button>
-              <button type="button" aria-pressed={libraryTab === "friends"} onClick={() => setLibraryTab("friends")} aria-label="朋友收藏" title="朋友收藏"><Sticker size={22} weight="bold" aria-hidden="true" /></button>
+              <button type="button" aria-pressed={libraryTab === "friends"} onClick={() => setLibraryTab("friends")} aria-label="收集" title="收集"><Sticker size={22} weight="bold" aria-hidden="true" /></button>
             </nav>
-            {libraryTab === "friends" ? <div className="media-library-timeline" ref={mediaLibraryGridRef}><Suspense fallback={<p>朋友们正在到场…</p>}><FriendCollection friends={friends} /></Suspense></div> : (mediaTimeline.length || libraryTab === "all") ? (
+            {libraryTab === "friends" ? <div className="media-library-timeline" ref={mediaLibraryGridRef}><Suspense fallback={<p>收集正在打开…</p>}><FriendCollection friends={friends} onSeen={onCollectionsSeen} onRetry={retryCollection} /></Suspense></div> : (mediaTimeline.length || libraryTab === "all") ? (
               <div className="media-library-timeline" ref={mediaLibraryGridRef}>
-                {libraryTab === "all" && <Suspense fallback={<p>朋友们正在到场…</p>}><FriendCollection friends={friends} /></Suspense>}
+                {libraryTab === "all" && <Suspense fallback={<p>收集正在打开…</p>}><FriendCollection friends={friends} onSeen={onCollectionsSeen} onRetry={retryCollection} /></Suspense>}
                 {mediaTimeline.map(({ dayKey, items }, dayIndex) => {
                   const entries = conversationEntriesByDay.get(dayKey) || [];
                   const summaryRecord = conversationSummaries[dayKey];

@@ -1,7 +1,4 @@
-export const BIREFNET_MODEL = "onnx-community/BiRefNet-ONNX";
 export const MAX_STICKER_EDGE = 1280;
-
-let backgroundRemoverPromise = null;
 
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -36,9 +33,13 @@ function canvasToBlob(canvas, type = "image/png", quality) {
 }
 
 async function cropCapture(source, bbox) {
-  const image = await createImageBitmap(source);
+  // Image.decode also works on iOS versions with incomplete createImageBitmap.
+  const url = URL.createObjectURL(source);
+  const image = new Image();
   try {
-    const crop = getStickerCropBox(image.width, image.height, bbox);
+    image.src = url;
+    await image.decode();
+    const crop = getStickerCropBox(image.naturalWidth, image.naturalHeight, bbox);
     const scale = Math.min(1, MAX_STICKER_EDGE / Math.max(crop.width, crop.height));
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(crop.width * scale));
@@ -49,34 +50,31 @@ async function cropCapture(source, bbox) {
     context.drawImage(image, crop.x, crop.y, crop.width, crop.height, 0, 0, canvas.width, canvas.height);
     return canvasToBlob(canvas, "image/jpeg", 0.96);
   } finally {
-    image.close?.();
+    URL.revokeObjectURL(url);
   }
 }
 
-async function getBackgroundRemover(onProgress) {
-  if (!backgroundRemoverPromise) {
-    backgroundRemoverPromise = import("@huggingface/transformers").then(async ({ env, pipeline }) => {
-      // This runs once, only after an object is recognised. Keeping it out of the
-      // initial bundle preserves the camera's first-open time.
-      env.allowLocalModels = false;
-      env.backends.onnx.wasm.numThreads = Math.min(4, Math.max(1, navigator.hardwareConcurrency || 1));
-      return pipeline("background-removal", BIREFNET_MODEL, {
-        device: "wasm",
-        dtype: "fp32",
-        progress_callback: onProgress,
-      });
-    });
-  }
-  return backgroundRemoverPromise;
+export function getMattingApiUrl() {
+  if (import.meta.env?.VITE_JOCAM_MATTING_URL) return import.meta.env.VITE_JOCAM_MATTING_URL;
+  if (["localhost", "127.0.0.1"].includes(window.location.hostname)) return "http://127.0.0.1:8787/matting";
+  return `${window.location.origin}/api/matting`;
 }
 
-export async function createStickerFromCapture(source, bbox, { onProgress } = {}) {
+export async function createStickerFromCapture(source, bbox, { onProgress, signal } = {}) {
   if (!(source instanceof Blob)) throw new Error("还没有可做成贴纸的照片");
   const crop = await cropCapture(source, bbox);
-  onProgress?.({ status: "model" });
-  const removeBackground = await getBackgroundRemover(onProgress);
   onProgress?.({ status: "matting" });
-  const sticker = await removeBackground(crop);
-  onProgress?.({ status: "ready" });
-  return sticker.toBlob("image/png");
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  signal?.addEventListener("abort", abort, { once: true });
+  if (signal?.aborted) abort();
+  const timer = setTimeout(abort, 33_000);
+  try {
+    const response = await fetch(getMattingApiUrl(), { method: "POST", headers: { "Content-Type": "image/jpeg" }, body: crop, signal: controller.signal });
+    if (!response.ok) throw Object.assign(new Error("贴纸暂时没有做好"), { status: response.status });
+    const sticker = await response.blob();
+    if (sticker.type !== "image/png" || sticker.size < 100) throw new Error("没有收到透明贴纸");
+    onProgress?.({ status: "ready" });
+    return sticker;
+  } finally { clearTimeout(timer); signal?.removeEventListener("abort", abort); }
 }

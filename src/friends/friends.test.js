@@ -17,7 +17,7 @@ test("toy names can be corrected and confirmation only saves the review stage", 
 test("friend collections own their sticker bytes and update without losing their original creation date", () => {
   const portraitBlob = new Blob(["photo"], { type: "image/jpeg" });
   const first = normalizeFriend({ id: "f1", name: "球球", portraitBlob, createdAt: 100 });
-  assert.equal(first.portraitBlob, portraitBlob); assert.equal("captureId" in first, false);
+  assert.equal(first.portraitBlob, portraitBlob); assert.equal(first.captureId, null);
   const updated = normalizeFriend({ name: "圆圆", kind: "玩偶" }, first);
   assert.equal(updated.id, "f1"); assert.equal(updated.createdAt, 100); assert.equal(updated.stickerBlob, portraitBlob); assert.equal(updated.version, 2);
   assert.throws(() => normalizeFriend({ name: "", portraitBlob }), /名字/);

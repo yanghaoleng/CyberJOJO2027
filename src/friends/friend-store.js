@@ -9,23 +9,31 @@ function openDatabase() {
     const request = indexedDB.open(DATABASE_NAME, 1);
     request.onupgradeneeded = () => request.result.createObjectStore(STORE_NAME, { keyPath: "id" });
     request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(new Error("朋友收藏没有打开成功"));
+    request.onerror = () => reject(new Error("收集没有打开成功"));
   });
 }
 function read(request) { return new Promise((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); }
 function done(transaction) { return new Promise((resolve, reject) => { transaction.oncomplete = resolve; transaction.onerror = () => reject(transaction.error); transaction.onabort = () => reject(transaction.error || new Error("保存已取消")); }); }
 
 export function normalizeFriend(value, previous = null) {
+  value = { ...previous, ...value };
   const clean = (text, max) => String(text || "").replace(/\s+/g, " ").trim().slice(0, max);
   const name = clean(value.name, 24);
-  if (!name) throw new Error("先给新朋友取个名字吧");
-  const stickerBlob = value.stickerBlob || previous?.stickerBlob || value.portraitBlob || previous?.portraitBlob;
-  if (!(stickerBlob instanceof Blob) || !stickerBlob.type.startsWith("image/") || stickerBlob.size > 4_000_000) throw new Error("请使用一张清楚的贴纸照片");
+  if (!name) throw new Error("先给收集的物品取个名字吧");
+  const status = ["pending", "processing", "failed", "ready"].includes(value.status) ? value.status : "ready";
+  const stickerBlob = value.stickerBlob || (status === "ready" ? value.portraitBlob : null);
+  const originalBlob = value.originalBlob || null;
+  const availableImage = stickerBlob || originalBlob;
+  if (!(availableImage instanceof Blob) || !availableImage.type.startsWith("image/") || availableImage.size > 4_000_000) throw new Error("请使用一张清楚的贴纸照片");
   const portraitBlob = value.portraitBlob || previous?.portraitBlob || null;
   return {
     id: previous?.id || value.id || createFriendId(), name,
     kind: clean(value.kind, 32), appearance: clean(value.appearance, 160), childDescription: clean(value.childDescription, 240),
     english: clean(value.english, 48), learning: clean(value.learning, 180), stickerBlob,
+    originalBlob, status, captureId: value.captureId || null,
+    bbox: value.bbox || null, subject: clean(value.subject, 48),
+    attempts: Math.max(0, Number(value.attempts) || 0), retryAt: Number(value.retryAt) || 0,
+    seenAt: value.status ? Number(value.seenAt) || 0 : Date.now(),
     ...(portraitBlob ? { portraitBlob } : {}),
     createdAt: previous?.createdAt || Number(value.createdAt) || Date.now(), updatedAt: Date.now(),
     version: Number(previous?.version || 0) + 1,
@@ -45,11 +53,26 @@ export async function saveFriend(value, { expectedVersion } = {}) {
     const previous = value.id ? await read(store.get(value.id)) : null;
     if (expectedVersion !== undefined && Number(previous?.version || 0) !== expectedVersion) { await finished; throw new Error("这张名片刚刚有了变化，请重新打开后再修改"); }
     const count = await read(store.count());
-    if (!previous && count >= FRIEND_LIMIT) { await finished; throw new Error("朋友收藏已经满了，可以先整理几张名片"); }
+    if (!previous && count >= FRIEND_LIMIT) { await finished; throw new Error("收集已经满了，可以先整理几张贴纸"); }
     const record = normalizeFriend(value, previous);
     store.put(record);
     await finished;
     return record;
+  } finally { db.close(); }
+}
+
+// Old records have no unread flag; only newly completed stickers get a badge.
+export const isUnreadCollection = (record) => record.status === "ready" && record.seenAt === 0;
+
+export async function markCollectionsSeen(ids) {
+  const db = await openDatabase();
+  try {
+    const tx = db.transaction(STORE_NAME, "readwrite"); const finished = done(tx); const store = tx.objectStore(STORE_NAME);
+    for (const id of ids) {
+      const record = await read(store.get(id));
+      if (record?.status === "ready" && !record.seenAt) store.put({ ...record, seenAt: Date.now() });
+    }
+    await finished;
   } finally { db.close(); }
 }
 export async function deleteFriend(id) {

@@ -48,7 +48,9 @@ test("a collection observation requires a precise object and child-safe learning
   assert.equal(collection.evaluable, true);
   assert.equal(collection.english, "plant");
   assert.match(collection.learning, /窗边/);
-  assert.equal(parseGameplayAssessment("collect", { ...base, label: "绘本", category: "book", english: "book" }).evaluable, false);
+  assert.equal(parseGameplayAssessment("collect", { ...base, label: "绘本", category: "book", english: "book" }).evaluable, true);
+  assert.equal(parseGameplayAssessment("collect", { ...base, label: "杯子", category: "object", confidence: .78, bbox: [.01, .01, .95, .95] }).evaluable, true);
+  assert.equal(parseGameplayAssessment("collect", { ...base, label: "杯子", category: "object", bbox: null }).evaluable, false);
   assert.equal(validateGameplayRequest(request("collect")).source, "collect");
 });
 

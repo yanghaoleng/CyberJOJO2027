@@ -20,6 +20,8 @@ tar -xzf "/tmp/cyberjojo-voice-$RELEASE_TAG.tgz" -C "$voice_dir"
 test -s "$static_dir/index.html"
 test -s "$static_dir/asset-catalog.json"
 test -s "$voice_dir/server/gameplay-route.js"
+# Fail before switching production if the preloaded cutout worker is unavailable.
+curl --fail --silent --show-error http://127.0.0.1:8790/health >/dev/null
 cp -a "$previous_voice/server/node_modules" "$voice_dir/server/node_modules"
 cp -L "$nginx_file" "$nginx_backup"
 

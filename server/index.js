@@ -9,6 +9,7 @@ import { getVolcTtsConfig, synthesizeSpeech } from "./volc-tts.js";
 import { createVisionRequestHandler } from "./vision-route.js";
 import { createSummaryRequestHandler } from "./summary-route.js";
 import { createGameplayRequestHandler } from "./gameplay-route.js";
+import { createMattingRequestHandler } from "./matting-route.js";
 
 const PORT = Number(process.env.PORT || 8787);
 const MAX_SESSION_MS = Number(process.env.JOCAM_MAX_SESSION_MS || 0);
@@ -56,7 +57,9 @@ const handleVisionRequest = createVisionRequestHandler({
 });
 const handleSummaryRequest = createSummaryRequestHandler({ allowedOrigins, arkConfig });
 const handleGameplayRequest = createGameplayRequestHandler({ allowedOrigins, arkConfig });
+const handleMattingRequest = createMattingRequestHandler({ allowedOrigins });
 const server = http.createServer(async (request, response) => {
+  if (await handleMattingRequest(request, response)) return;
   if (await handleGameplayRequest(request, response)) return;
   if (await handleVisionRequest(request, response)) return;
   if (await handleSummaryRequest(request, response)) return;
