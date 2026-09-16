@@ -130,6 +130,29 @@ function sse(value) {
   return new Response(content, { status: 200, headers: { "content-type": "text/event-stream" } });
 }
 
+test("collection grounding converts declared corner coordinates instead of confusing bottom with height", () => {
+  const item = { ...base, label: "多肉", category: "plant" };
+  assert.deepEqual(parseGameplayAssessment("collect", { ...item, bbox: { left: 370, top: 360, right: 520, bottom: 520 } }).bbox, [.37, .36, .15, .16]);
+  const legacy = parseGameplayAssessment("collect", { ...item, bbox: { left: .37, top: .36, right: .52, bottom: .52 } });
+  assert.equal(legacy.evaluable, true);
+  assert.ok(Math.abs(legacy.bbox[3] - .16) < 1e-9);
+  for (const bbox of [{left: 520, top: 360, right: 370, bottom: 520}, {left: 0, top: 0, right: 1001, bottom: 520}]) {
+    assert.equal(parseGameplayAssessment("collect", { ...item, bbox }).evaluable, false);
+  }
+});
+
+test("collection requests high detail and an unambiguous 1000-unit corner contract", async () => {
+  let sent;
+  await assessGameplay(request("collect"), {endpoint: "https://example.test", apiKey: "test", model: "configured"}, {
+    fetchImpl: async (_url, options) => { sent = JSON.parse(options.body); return sse({...base, label: "植物", category: "plant", bbox: {left: 200, top: 300, right: 600, bottom: 800}}); },
+  });
+  assert.equal(sent.input[1].content[0].detail, "high");
+  assert.deepEqual(sent.tools[0].parameters.properties.bbox.required, ["left", "top", "right", "bottom"]);
+  assert.equal(sent.tools[0].parameters.properties.bbox.properties.bottom.maximum, 1000);
+  assert.match(sent.input[0].content[0].text, /left:200,top:300,right:600,bottom:800/);
+  assert.doesNotMatch(sent.input[0].content[0].text, /width:物体宽/);
+});
+
 test("gameplay uses configured vision credentials and authorized fallback without storing images", async () => {
   const sent = [];
   const result = await assessGameplay(request(), { endpoint: "https://example.test/responses", apiKey: "text-key", visionApiKey: "vision-key", visionModel: "configured-first", visionFallbackModel: "configured-fallback" }, {
