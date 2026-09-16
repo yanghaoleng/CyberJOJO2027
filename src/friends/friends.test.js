@@ -14,12 +14,12 @@ test("toy names can be corrected and confirmation only saves the review stage", 
   assert.deepEqual(parseToyDialogue("它每天陪我睡觉", "review"), { type: "description", text: "它每天陪我睡觉" });
 });
 
-test("friend collections own their cover bytes and update without losing their original creation date", () => {
+test("friend collections own their sticker bytes and update without losing their original creation date", () => {
   const portraitBlob = new Blob(["photo"], { type: "image/jpeg" });
   const first = normalizeFriend({ id: "f1", name: "球球", portraitBlob, createdAt: 100 });
   assert.equal(first.portraitBlob, portraitBlob); assert.equal("captureId" in first, false);
   const updated = normalizeFriend({ name: "圆圆", kind: "玩偶" }, first);
-  assert.equal(updated.id, "f1"); assert.equal(updated.createdAt, 100); assert.equal(updated.portraitBlob, portraitBlob); assert.equal(updated.version, 2);
+  assert.equal(updated.id, "f1"); assert.equal(updated.createdAt, 100); assert.equal(updated.stickerBlob, portraitBlob); assert.equal(updated.version, 2);
   assert.throws(() => normalizeFriend({ name: "", portraitBlob }), /名字/);
   assert.throws(() => normalizeFriend({ name: "球球", portraitBlob: new Blob(["not a photo"]) }), /照片/);
 });

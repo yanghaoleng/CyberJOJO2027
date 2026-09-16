@@ -45,11 +45,13 @@ test("malformed context members are ignored without throwing", () => {
 
 test("command hints distinguish photo chat from action requests", () => {
   assert.equal(looksLikeJiaojiaoCommand("叫叫，比个赞"), true);
+  assert.equal(looksLikeJiaojiaoCommand("叫叫，给我比个心"), true);
   assert.equal(looksLikeJiaojiaoCommand("我们今天一起读书"), false);
 });
 
 test("tool arguments accept only the action whitelist", () => {
   assert.equal(arkInternals.parseAction('{"action":"praise"}'), "praise");
+  assert.equal(arkInternals.parseAction('{"action":"heart"}'), "heart");
   assert.equal(arkInternals.parseAction('{"action":"arbitrary_animation"}'), null);
 });
 

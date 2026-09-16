@@ -11,6 +11,9 @@ import {
   MagnifyingGlass,
   PictureInPicture,
   PlayCircle,
+  BookOpenText,
+  SquaresFour,
+  Sticker,
   X,
 } from "@phosphor-icons/react";
 import {
@@ -60,7 +63,10 @@ import {
 } from "./media-library.js";
 import useDailyJournal from "./journal/useDailyJournal.js";
 import JournalDay from "./journal/JournalDay.jsx";
-import { loadFriends } from "./friends/friend-store.js";
+import { loadFriends, saveFriend } from "./friends/friend-store.js";
+import { parseCollectionDialogue } from "./friends/collection-dialogue.js";
+import { createStickerFromCapture } from "./sticker-matting.js";
+import CollectionFlight from "./friends/CollectionFlight.jsx";
 import { requestGameplay } from "./gameplay/gameplay-api.js";
 import { createCharacterInteraction } from "./character-interaction.js";
 import { CHARACTER_TIMELINES, resolveCharacterAnimation } from "./character-animations.js";
@@ -98,6 +104,7 @@ import {
   isTabletViewport,
 } from "./device-layout.js";
 import { useCameraSceneAnalysis } from "./use-camera-scene-analysis.js";
+import { getCollectionFollowUp, parseVoiceIntent, shouldInspectAfterSpeech } from "./voice-intents.js";
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -355,6 +362,7 @@ const VOICE_ACTIONS = {
   happy: { animation: "TalkingEmotion_Happy", toast: "开心地笑了" },
   frighten: { animation: "TalkingEmotion_Frighten", toast: "吓了一跳" },
   curious: { animation: "TalkingEmotion_Curious", toast: "好奇地看过来" },
+  heart: { animation: CHARACTER_TIMELINES.HEART_FULL_BODY, toast: "给你比了一个心" },
 };
 const GESTURE_ACTIONS = {
   [CAMERA_GESTURES.THUMBS_UP]: {
@@ -422,7 +430,7 @@ const PERSON_FEATHER_RANGE_PX = 5;
 const LONG_PRESS_MS = 430;
 const MAX_RECORDING_MS = 15_000;
 const CORE_LOAD_ASSETS = [
-  { key: "riveFile", path: "media/jiaojiao.riv?v=a4301637", bytes: 6_447_356, retain: true },
+  { key: "riveFile", path: "media/jiaojiao.riv?v=ccfc2d8e", bytes: 6_751_167, retain: true },
   { key: "visionWasm", path: "mediapipe/wasm/vision_wasm_internal.wasm", bytes: 11_756_954, retain: false },
   { key: "visionLoader", path: "mediapipe/wasm/vision_wasm_internal.js", bytes: 323_377, retain: false },
   { key: "segmentModel", path: "mediapipe/selfie_segmenter.tflite", bytes: 249_537, retain: true },
@@ -464,7 +472,7 @@ function getLoadAssets(rendererMode) {
   return [CORE_LOAD_ASSETS[0], ...RIVE_RUNTIME_ASSETS[runtimeKey], ...CORE_LOAD_ASSETS.slice(1)];
 }
 const CHARACTERS = {
-  jiaojiao: { label: "叫叫", path: "media/jiaojiao.riv?v=a4301637" },
+  jiaojiao: { label: "叫叫", path: "media/jiaojiao.riv?v=ccfc2d8e" },
   lvdou: { label: "绿豆", path: "media/lvdou.riv?v=b7105cd1" },
 };
 const CHARACTER_TAP_WINDOW_MS = 720;
@@ -837,6 +845,8 @@ function App() {
   const gameplayModeRef = useRef("");
   const storyFocusRef = useRef(null);
   const inspectStoryRef = useRef(null);
+  const storyFrameTimerRef = useRef(null);
+  const lastStoryInspectAtRef = useRef(-Infinity);
   const gameplayTargetRef = useRef(null);
   const characterInteractionRef = useRef(null);
   const gameplayFrameCanvasRef = useRef(null);
@@ -847,6 +857,13 @@ function App() {
   const mediaLibraryOpenRef = useRef(false);
   const mediaLibraryGridRef = useRef(null);
   const mediaLibraryCloseTimerRef = useRef(null);
+  const collectionFlightTimerRef = useRef(null);
+  const collectionInFlightRef = useRef(false);
+  const collectionHistoryRef = useRef(new Map());
+  const latestCollectionRef = useRef(null);
+  const collectionDialogueRef = useRef(() => {});
+  const startObjectCollectionRef = useRef(() => {});
+  const triggerHeartVoiceRef = useRef(() => {});
   const mediaPreviewCloseTimerRef = useRef(null);
   const mediaLibrarySwipeRef = useRef({ active: false, startX: 0, startY: 0, dragY: 0 });
   const mediaPreviewSwipeRef = useRef({ active: false, pointerId: null, startX: 0, startY: 0 });
@@ -949,11 +966,12 @@ function App() {
   const [mediaPreviewDirection, setMediaPreviewDirection] = useState("open");
   const [mediaLibrary, setMediaLibrary] = useState([]);
   const [friends, setFriends] = useState([]);
+  const [collectionFlight, setCollectionFlight] = useState(null);
   const [gameplayMode, setGameplayMode] = useState("");
   const [gameplayMenuOpen, setGameplayMenuOpen] = useState(false);
   const [gameplayTranscript, setGameplayTranscript] = useState(null);
   const [gameplayCharacterRect, setGameplayCharacterRect] = useState(null);
-  const [libraryTab, setLibraryTab] = useState("days");
+  const [libraryTab, setLibraryTab] = useState("all");
   const [textComposerOpen, setTextComposerOpen] = useState(false);
   const [textDraft, setTextDraft] = useState("");
   const [textSending, setTextSending] = useState(false);
@@ -970,6 +988,10 @@ function App() {
   const setHiddenStoryFocus = useCallback((next) => {
     storyFocusRef.current = next;
     setStoryFocus(next);
+  }, []);
+
+  useEffect(() => () => {
+    if (storyFrameTimerRef.current) window.clearTimeout(storyFrameTimerRef.current);
   }, []);
 
   useEffect(() => {
@@ -1090,6 +1112,7 @@ function App() {
 
   const showToast = useCallback((message) => {
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    if (collectionFlightTimerRef.current) window.clearTimeout(collectionFlightTimerRef.current);
     setToast(message);
     toastTimerRef.current = window.setTimeout(() => setToast(""), 2_600);
   }, []);
@@ -1401,6 +1424,31 @@ function App() {
     }));
   }, [activeCharacter]);
 
+  const triggerHeartVoice = useCallback(() => {
+    if (
+      mediaPreviewRef.current
+      || mediaLibraryOpenRef.current
+      || characterSwitchingRef.current
+      || gameplayModeRef.current
+    ) return false;
+    const action = VOICE_ACTIONS.heart;
+    if (!rivePlayAnimationRef.current?.(action.animation)) return false;
+    const timestamp = performance.now();
+    setLastRecognizedGesture(CAMERA_GESTURES.HEART);
+    gestureEffectUntilRef.current = timestamp + HEART_FEEDBACK_DURATION_MS;
+    setActiveGestureEffect(CAMERA_GESTURES.HEART);
+    if (gestureEffectTimerRef.current) window.clearTimeout(gestureEffectTimerRef.current);
+    gestureEffectTimerRef.current = window.setTimeout(() => {
+      gestureEffectTimerRef.current = null;
+      gestureEffectUntilRef.current = 0;
+      setActiveGestureEffect("");
+    }, HEART_FEEDBACK_DURATION_MS);
+    scheduleAutoCapture("voice:heart", 720);
+    showToast(`${CHARACTERS[activeCharacter].label}${action.toast}`);
+    return true;
+  }, [activeCharacter, scheduleAutoCapture, showToast]);
+  triggerHeartVoiceRef.current = triggerHeartVoice;
+
   const handleGestureResult = useCallback((result, timestamp) => {
     const candidate = classifyCameraGesture(result);
     const update = advanceGestureTracker(gestureTrackerRef.current, candidate, timestamp);
@@ -1640,11 +1688,22 @@ function App() {
           }
           if (message.final) {
             if (message.clientMessageId && pendingTextRef.current?.id === message.clientMessageId) pendingTextRef.current.finish(true);
+            const voiceIntent = parseVoiceIntent(text);
+            if (voiceIntent?.type === "heart") {
+              triggerHeartVoiceRef.current?.();
+            } else if (voiceIntent?.type === "collect") {
+              startObjectCollectionRef.current?.({
+                subject: voiceIntent.subject,
+                category: "object",
+                repeatKey: `voice-collect:${voiceIntent.subject}`,
+              });
+            }
             if (/^(?:没有|没找到|不找了|不想找|算了|先不看了)[。！!，, ]*$/.test(text)) {
               setHiddenStoryFocus(null);
-            } else if (["waiting", "framing"].includes(storyFocusRef.current?.phase)) {
+            } else if (shouldInspectAfterSpeech(text, storyFocusRef.current?.phase)) {
               inspectStoryRef.current?.();
             }
+            collectionDialogueRef.current?.(text);
             recordConversationMessage({ ...message, role: "user", text, source: "child_speech", character: activeCharacter });
           }
           speechTextRef.current = text.slice(0, 42);
@@ -1658,6 +1717,10 @@ function App() {
         }
         if (message.type === "action") {
           if (gameplayModeRef.current) return;
+          if (message.action === "heart") {
+            triggerHeartVoiceRef.current?.();
+            return;
+          }
           const action = VOICE_ACTIONS[message.action];
           if (!action || !rivePlayAnimationRef.current?.(action.animation)) return;
           showToast(action.toast);
@@ -3549,9 +3612,98 @@ function App() {
     return { image, blob, width: canvas.width, height: canvas.height, mirrored: false };
   }, [facingMode]);
 
+  const saveCollectedFriend = useCallback((record) => {
+    latestCollectionRef.current = record;
+    setFriends((current) => [record, ...current.filter((item) => item.id !== record.id)]);
+  }, []);
+
+  const shareCollectionLearning = useCallback((text) => {
+    if (!text) return;
+    replaceCharacterBubble(text, activeCharacter);
+    const socket = voiceSocketRef.current;
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", text }));
+    else speakCharacterFallback(text);
+  }, [activeCharacter, replaceCharacterBubble, speakCharacterFallback]);
+
+  const startObjectCollection = useCallback(async (reaction) => {
+    if (!reaction?.subject || collectionInFlightRef.current || recordingRef.current || gameplayModeRef.current) return;
+    const key = reaction.repeatKey || `${reaction.category}:${reaction.subject}`;
+    const now = Date.now();
+    if (now - Number(collectionHistoryRef.current.get(key) || 0) < 10 * 60_000) return;
+    collectionInFlightRef.current = true;
+    collectionHistoryRef.current.set(key, now);
+    const id = crypto.randomUUID();
+    setCollectionFlight({ id, phase: "model", name: reaction.subject });
+    try {
+      const frame = await captureGameplayFrame();
+      const observation = await requestGameplay({
+        source: "collect",
+        image: frame.image,
+        roundId: crypto.randomUUID(),
+        frameId: crypto.randomUUID(),
+        character: activeCharacter,
+      });
+      if (!observation.evaluable || !observation.label || !observation.bbox) throw new Error("还没看清这件东西");
+      const stickerBlob = await createStickerFromCapture(frame.blob, observation.bbox, {
+        onProgress: (progress) => {
+          if (progress?.status === "matting") setCollectionFlight((current) => current?.id === id ? { ...current, phase: "matting", name: observation.label } : current);
+        },
+      });
+      const record = await saveFriend({
+        name: observation.label,
+        kind: observation.category,
+        english: observation.english,
+        learning: observation.learning,
+        stickerBlob,
+      });
+      saveCollectedFriend(record);
+      const explanation = [
+        observation.learning,
+        observation.english ? `英文是 ${observation.english}` : "",
+        getCollectionFollowUp(observation.category, observation.label),
+      ].filter(Boolean).join("。");
+      setCollectionFlight({ id, phase: "ready", name: record.name, english: record.english, explanation, stickerBlob });
+      if (collectionFlightTimerRef.current) window.clearTimeout(collectionFlightTimerRef.current);
+      collectionFlightTimerRef.current = window.setTimeout(() => {
+        setCollectionFlight((current) => current?.id === id ? null : current);
+        collectionFlightTimerRef.current = null;
+      }, 4_100);
+      shareCollectionLearning(explanation);
+    } catch (error) {
+      collectionHistoryRef.current.delete(key);
+      setCollectionFlight(null);
+      if (error?.name !== "AbortError") showToast("这次没能做成精细贴纸，换个角度再试试");
+    } finally {
+      collectionInFlightRef.current = false;
+    }
+  }, [activeCharacter, captureGameplayFrame, saveCollectedFriend, shareCollectionLearning, showToast]);
+  startObjectCollectionRef.current = startObjectCollection;
+
+  const updateCollectedFriendFromDialogue = useCallback(async (text) => {
+    const command = parseCollectionDialogue(text);
+    const previous = latestCollectionRef.current;
+    if (command?.type !== "name" || !previous || Date.now() - previous.createdAt > 20 * 60_000) return;
+    try {
+      const next = await saveFriend({ ...previous, name: command.name }, { expectedVersion: previous.version });
+      saveCollectedFriend(next);
+      setCollectionFlight((current) => current?.name === previous.name ? { ...current, name: next.name } : current);
+      showToast(`图鉴里记作「${next.name}」`);
+    } catch {
+      showToast("这个名字暂时没记上，再说一次吧");
+    }
+  }, [saveCollectedFriend, showToast]);
+  collectionDialogueRef.current = updateCollectedFriendFromDialogue;
+
   const inspectStoryObject = useCallback(async () => {
     const activeFocus = storyFocusRef.current;
     if (!activeFocus || activeFocus.phase === "checking") return;
+    const now = performance.now();
+    if (now - lastStoryInspectAtRef.current < 6_000) return;
+    lastStoryInspectAtRef.current = now;
+    if (storyFrameTimerRef.current) {
+      window.clearTimeout(storyFrameTimerRef.current);
+      storyFrameTimerRef.current = null;
+    }
     setHiddenStoryFocus({ phase: "checking" });
     const askToFrame = () => {
       const text = "我还没看清，把它放进白色虚线框里好吗？";
@@ -3560,6 +3712,11 @@ function App() {
       const socket = voiceSocketRef.current;
       if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", text }));
       else speakCharacterFallback(text);
+      if (storyFrameTimerRef.current) window.clearTimeout(storyFrameTimerRef.current);
+      storyFrameTimerRef.current = window.setTimeout(() => {
+        storyFrameTimerRef.current = null;
+        if (storyFocusRef.current?.phase === "framing") setHiddenStoryFocus({ phase: "waiting" });
+      }, 4_800);
     };
     try {
       const frame = await captureGameplayFrame();
@@ -3755,7 +3912,7 @@ function App() {
             </Calligraph>
           </div>
           {!gameplayMode && <CharacterCaptionBubble reaction={characterBubble} canvasRendered={recording} />}
-          {storyFocus?.phase === "framing" && (
+          {storyFocus?.phase === "framing" && !mediaPreview && !mediaLibraryOpen && (
             <div className="dialogue-focus-frame" aria-live="polite" aria-label="把物品放进白色虚线框里">
               <span className="sr-only">把物品放进白色虚线框里</span>
             </div>
@@ -3825,6 +3982,7 @@ function App() {
           )}
 
           {flashMode && <div className={`camera-flash is-${flashMode}`} aria-hidden="true" />}
+          {collectionFlight && <CollectionFlight collection={collectionFlight} />}
         </div>
 
         {cameraState === "ready" && (
@@ -4013,9 +4171,14 @@ function App() {
                 <X size={25} weight="bold" aria-hidden="true" />
               </button>
             </header>
-            <nav className="library-tabs" aria-label="相册分类"><button type="button" aria-pressed={libraryTab === "days"} onClick={() => setLibraryTab("days")}>时光小记</button><button type="button" aria-pressed={libraryTab === "friends"} onClick={() => setLibraryTab("friends")}>朋友收藏{friends.length ? ` · ${friends.length}` : ""}</button></nav>
-            {libraryTab === "friends" ? <div className="media-library-timeline" ref={mediaLibraryGridRef}><Suspense fallback={<p>朋友们正在到场…</p>}><FriendCollection friends={friends} onChange={setFriends} /></Suspense></div> : mediaTimeline.length ? (
+            <nav className="library-tabs" aria-label="相册分类">
+              <button type="button" aria-pressed={libraryTab === "days"} onClick={() => setLibraryTab("days")} aria-label="时光小记" title="时光小记"><BookOpenText size={22} weight="bold" aria-hidden="true" /></button>
+              <button type="button" aria-pressed={libraryTab === "all"} onClick={() => setLibraryTab("all")} aria-label="全部" title="全部"><SquaresFour size={22} weight="fill" aria-hidden="true" /></button>
+              <button type="button" aria-pressed={libraryTab === "friends"} onClick={() => setLibraryTab("friends")} aria-label="朋友收藏" title="朋友收藏"><Sticker size={22} weight="bold" aria-hidden="true" /></button>
+            </nav>
+            {libraryTab === "friends" ? <div className="media-library-timeline" ref={mediaLibraryGridRef}><Suspense fallback={<p>朋友们正在到场…</p>}><FriendCollection friends={friends} /></Suspense></div> : (mediaTimeline.length || libraryTab === "all") ? (
               <div className="media-library-timeline" ref={mediaLibraryGridRef}>
+                {libraryTab === "all" && <Suspense fallback={<p>朋友们正在到场…</p>}><FriendCollection friends={friends} /></Suspense>}
                 {mediaTimeline.map(({ dayKey, items }, dayIndex) => {
                   const entries = conversationEntriesByDay.get(dayKey) || [];
                   const summaryRecord = conversationSummaries[dayKey];
@@ -4082,7 +4245,6 @@ function App() {
                       </div>
                       <JournalDay record={summaryRecord || { dayKey }} state={summaryState}
                         onChange={journal.updateMoment} onForget={journal.forgetMoment} onRetry={() => journal.retry(dayKey)} />
-                      {friends.some((friend) => new Date(friend.createdAt).toLocaleDateString() === new Date(`${dayKey}T12:00:00`).toLocaleDateString()) && <button className="day-friends-link" type="button" onClick={() => setLibraryTab("friends")}>看看这天认识的新朋友 →</button>}
                     </section>
                   );
                 })}

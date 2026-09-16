@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-15T17:27:28.427Z",
-  "publicFileCount": 53,
-  "totalBytes": 58538268,
+  "generatedAt": "2026-09-16T11:54:19.047Z",
+  "publicFileCount": 55,
+  "totalBytes": 59182328,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -315,8 +315,26 @@
       "name": "index.html",
       "category": "other",
       "format": "HTML",
-      "bytes": 29430,
-      "sha256": "227a94a7823312cbb01c5715842f072b750da877aa43c0c78117f860475c9928"
+      "bytes": 32305,
+      "sha256": "12d285fd54aaf941a4cfb5c8860c9968c2d6e089b53f0bd18b116c97babd893e"
+    },
+    {
+      "id": "media/heart-balloon.riv",
+      "path": "media/heart-balloon.riv",
+      "name": "heart-balloon.riv",
+      "category": "rive",
+      "format": "RIV",
+      "bytes": 26436,
+      "sha256": "7a37a4eb62ba5fa800abe28724b80a807bc3c3ce39ea038a6e705e2c2081c9e7"
+    },
+    {
+      "id": "media/heart-garden.riv",
+      "path": "media/heart-garden.riv",
+      "name": "heart-garden.riv",
+      "category": "rive",
+      "format": "RIV",
+      "bytes": 310938,
+      "sha256": "ac667e2f290b6d8cf3b14d3223dc010ae41d49ce3146818549cf6779ac1d0f8f"
     },
     {
       "id": "media/jiaojiao.riv",
@@ -324,10 +342,9 @@
       "name": "叫叫",
       "category": "rive",
       "format": "RIV",
-      "bytes": 6447356,
-      "sha256": "a4301637d7200e00f3f43b2d3145a75801891443d07d9fd2a24a6948cfe65287",
-      "source": "https://rive.mikeywa.site/ZHc",
-      "sourceLabel": "叫叫 · 黑版原文件"
+      "bytes": 6751167,
+      "sha256": "ccfc2d8e7f36baf1c0b3bec3a1ed4595d3503e699598f67ab804f8fc053b16ff",
+      "sourceLabel": "叫叫 · 2026-09-16 群内更新版"
     },
     {
       "id": "media/lvdou.riv",
@@ -613,6 +630,20 @@
       "license": "MIT"
     },
     {
+      "id": "phosphor:BookOpenText",
+      "name": "BookOpenText",
+      "iconName": "BookOpenText",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "bold"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
       "id": "phosphor:CaretDown",
       "name": "展开",
       "iconName": "CaretDown",
@@ -726,6 +757,34 @@
       "license": "MIT"
     },
     {
+      "id": "phosphor:SquaresFour",
+      "name": "SquaresFour",
+      "iconName": "SquaresFour",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "fill"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "phosphor:Sticker",
+      "name": "Sticker",
+      "iconName": "Sticker",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "bold"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
       "id": "phosphor:X",
       "name": "关闭",
       "iconName": "X",
@@ -735,7 +794,8 @@
         "bold"
       ],
       "usedIn": [
-        "src/App.jsx"
+        "src/App.jsx",
+        "src/friends/FriendCollection.jsx"
       ],
       "license": "MIT"
     }

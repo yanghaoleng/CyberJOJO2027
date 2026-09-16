@@ -168,7 +168,10 @@ export function useCameraSceneAnalysis({
       }
     };
 
-    sample({ immediate: true });
+    // Start with the same stable-scene gate as later samples. This avoids a
+    // cloud request the instant the camera opens and gives the child time to
+    // finish placing an object in view.
+    sample();
     const interval = window.setInterval(sample, SCENE_SAMPLE_INTERVAL_MS);
     return () => {
       cancelled = true;

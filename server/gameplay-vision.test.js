@@ -40,6 +40,18 @@ test("conversation-led observation only returns a clear, bounded object category
   assert.equal(unclear.category, "");
 });
 
+test("a collection observation requires a precise object and child-safe learning copy", () => {
+  const collection = parseGameplayAssessment("collect", {
+    evaluable: true, confidence: 0.93, bbox: [0.3, 0.2, 0.3, 0.5], label: "小盆栽", category: "plant",
+    english: "plant", learning: "让它靠近明亮的窗边，土干了再请大人帮忙浇水。", text: "收进图鉴吧",
+  });
+  assert.equal(collection.evaluable, true);
+  assert.equal(collection.english, "plant");
+  assert.match(collection.learning, /窗边/);
+  assert.equal(parseGameplayAssessment("collect", { ...base, label: "绘本", category: "book", english: "book" }).evaluable, false);
+  assert.equal(validateGameplayRequest(request("collect")).source, "collect");
+});
+
 test("quest only starts with an actual localized reference and supported color", () => {
   assert.equal(parseGameplayAssessment("quest", { ...base, target: { kind: "color", value: "red" } }).target.prompt, "找一个红色的东西");
   for (const change of [{ bbox: [0, 0, 0, 0] }, { bbox: [0.9, 0.2, 0.4, 0.4] }, { target: { kind: "color", value: "rainbow" } }]) {

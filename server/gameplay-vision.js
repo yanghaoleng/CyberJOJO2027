@@ -1,6 +1,6 @@
 import { validateVisionImage } from "./ark-vision.js";
 
-export const GAMEPLAY_SOURCES = ["food", "toy", "quest", "verify", "observe"];
+export const GAMEPLAY_SOURCES = ["food", "toy", "quest", "verify", "observe", "collect"];
 export const FOOD_IDS = ["apple", "cake", "noodles"];
 export const QUEST_COLORS = Object.freeze({
   red: "红色", orange: "橙色", yellow: "黄色", green: "绿色", blue: "蓝色",
@@ -95,11 +95,15 @@ export function parseGameplayAssessment(source, value, request = {}) {
     result.appearance = clean(parsed.appearance, 100);
     result.evaluable = result.evaluable && Boolean(result.kind && result.appearance);
     if (!result.evaluable) { result.kind = ""; result.appearance = ""; }
-  } else if (source === "observe") {
+  } else if (source === "observe" || source === "collect") {
     result.label = clean(parsed.label, 48);
     result.category = ["book", "food", "plant", "animal", "object"].includes(parsed.category) ? parsed.category : "";
-    result.evaluable = result.evaluable && Boolean(result.label && result.category);
-    if (!result.evaluable) { result.label = ""; result.category = ""; }
+    if (source === "collect") {
+      result.english = clean(parsed.english, 48);
+      result.learning = clean(parsed.learning, 120);
+    }
+    result.evaluable = result.evaluable && Boolean(result.label && result.category && (source !== "collect" || (bbox && result.english && result.learning)));
+    if (!result.evaluable) { result.label = ""; result.category = ""; result.english = ""; result.learning = ""; }
   } else if (source === "quest") {
     result.target = normalizeQuestTarget(parsed.target);
     result.evaluable = result.evaluable && Boolean(result.target && bbox);
@@ -146,9 +150,13 @@ function responseSchema(source) {
   };
   if (source === "food") properties.foodId = { type: "string", enum: [...FOOD_IDS, "none"] };
   if (source === "toy") Object.assign(properties, { kind: { type: "string" }, appearance: { type: "string" } });
-  if (source === "observe") Object.assign(properties, {
+  if (source === "observe" || source === "collect") Object.assign(properties, {
     label: { type: "string", description: "可见物品的通俗中文名称，不猜品牌或故事内容" },
     category: { type: "string", enum: ["book", "food", "plant", "animal", "object"] },
+  });
+  if (source === "collect") Object.assign(properties, {
+    english: { type: "string", description: "这个物品的一个简单英文单词或短语，只用英文字母和空格" },
+    learning: { type: "string", description: "给孩子的一句可靠、具体小知识，不超过45个汉字" },
   });
   if (source === "quest") properties.target = {
     type: "object", additionalProperties: false,
@@ -164,6 +172,7 @@ function taskPrompt(request) {
   if (request.source === "food") return `${common}\n识别清楚可见的真实食物，只支持苹果 apple、蛋糕 cake、面条 noodles。其它物体或食物不转换成这三种，返回 foodId=none 且 evaluable=false。不声称吃过或尝到了真实食物。`;
   if (request.source === "toy") return `${common}\n判断画面主体是否为一个玩具或毛绒玩偶。kind 为简单类别，appearance 仅描述可见颜色与外形，不猜品牌、角色身份或名字。text 自然问孩子想给新朋友取什么名字。不是玩具时 evaluable=false。`;
   if (request.source === "observe") return `${common}\n观察镜头中央附近的一件普通、安全、非人物物品。label 用通俗中文名；category 只能为 book（绘本或书本）、food（普通食物）、plant（植物）、animal（普通动物）或 object。文字、品牌、书的故事内容、动植物品种不清楚时不要猜。看不清、不是单一物品或物品不在镜头中心时 evaluable=false。`;
+  if (request.source === "collect") return `${common}\n为图鉴收录镜头中央一件普通、安全、非人物的单一物品。label 用通俗中文名；category 只能为 book（绘本或书本）、food（普通食物）、plant（植物）、animal（普通动物）或 object。english 给一个孩子会说的英文单词或短语。learning 只说一条可靠小知识：植物可以给一般照料建议但不猜具体品种，绘本只能根据清楚可见的封面或标题概括主题，不能编造书中情节或长篇复述。bbox 要紧贴完整物品，为后续精细抠图留下少量边缘。看不清、遮挡、不是单一物品、物品不在镜头中心或无法给出准确边界时 evaluable=false。`;
   const objectVocabulary = Object.keys(QUEST_OBJECTS).join("/");
   const questBounds = `单个物体的 bbox 面积不得超过原图85%；太近、只见局部或需要圈住大部分背景时 evaluable=false，并提示退远一点。`;
   const canonicalExamples = `使用规范物品名，例如水杯/马克杯写“杯子”，绘本写“书本”，皮球/足球写“球”，毛绒小熊写“毛绒玩具”。`;

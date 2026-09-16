@@ -1,0 +1,20 @@
+.collection-flight.is-model .collection-flight-veil,
+.collection-flight.is-matting .collection-flight-veil {
+  animation: none;
+  opacity: 0.94;
+}
+
+.collection-flight.is-model .collection-flight-copy,
+.collection-flight.is-matting .collection-flight-copy,
+.collection-flight.is-model .collection-flight-sticker,
+.collection-flight.is-matting .collection-flight-sticker {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+.collection-flight.is-model .collection-flight-album,
+.collection-flight.is-matting .collection-flight-album {
+  animation: none;
+  opacity: 0.36;
+}

@@ -19,12 +19,15 @@ export function normalizeFriend(value, previous = null) {
   const clean = (text, max) => String(text || "").replace(/\s+/g, " ").trim().slice(0, max);
   const name = clean(value.name, 24);
   if (!name) throw new Error("先给新朋友取个名字吧");
-  const portraitBlob = value.portraitBlob || previous?.portraitBlob;
-  if (!(portraitBlob instanceof Blob) || !portraitBlob.type.startsWith("image/") || portraitBlob.size > 2_000_000) throw new Error("请使用一张清楚的小照片");
+  const stickerBlob = value.stickerBlob || previous?.stickerBlob || value.portraitBlob || previous?.portraitBlob;
+  if (!(stickerBlob instanceof Blob) || !stickerBlob.type.startsWith("image/") || stickerBlob.size > 4_000_000) throw new Error("请使用一张清楚的贴纸照片");
+  const portraitBlob = value.portraitBlob || previous?.portraitBlob || null;
   return {
     id: previous?.id || value.id || createFriendId(), name,
     kind: clean(value.kind, 32), appearance: clean(value.appearance, 160), childDescription: clean(value.childDescription, 240),
-    portraitBlob, createdAt: previous?.createdAt || Number(value.createdAt) || Date.now(), updatedAt: Date.now(),
+    english: clean(value.english, 48), learning: clean(value.learning, 180), stickerBlob,
+    ...(portraitBlob ? { portraitBlob } : {}),
+    createdAt: previous?.createdAt || Number(value.createdAt) || Date.now(), updatedAt: Date.now(),
     version: Number(previous?.version || 0) + 1,
   };
 }

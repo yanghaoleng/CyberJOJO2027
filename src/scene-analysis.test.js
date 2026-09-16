@@ -3,6 +3,8 @@ import test from "node:test";
 import {
   SCENE_INITIAL_DELAY_MS,
   SCENE_MIN_REQUEST_INTERVAL_MS,
+  SCENE_SAMPLE_INTERVAL_MS,
+  SCENE_STABLE_SAMPLE_COUNT,
   advanceSceneGate,
   beginImmediateSceneRequest,
   createSceneFingerprint,
@@ -42,8 +44,10 @@ test("scene gate waits for a stable frame, cooldown, and genuinely new content",
   gate = update.state;
   assert.equal(update.shouldRequest, false);
 
-  update = advanceSceneGate(gate, cake, SCENE_INITIAL_DELAY_MS + 1_600);
-  gate = update.state;
+  for (let sample = 1; sample < SCENE_STABLE_SAMPLE_COUNT; sample += 1) {
+    update = advanceSceneGate(gate, cake, SCENE_INITIAL_DELAY_MS + sample * SCENE_SAMPLE_INTERVAL_MS);
+    gate = update.state;
+  }
   assert.equal(update.shouldRequest, true);
   gate = finishSceneRequest(gate, update.fingerprint, true);
 
@@ -51,14 +55,15 @@ test("scene gate waits for a stable frame, cooldown, and genuinely new content",
   gate = update.state;
   assert.equal(update.shouldRequest, false);
 
-  update = advanceSceneGate(gate, cat, SCENE_INITIAL_DELAY_MS + SCENE_MIN_REQUEST_INTERVAL_MS + 3_600);
-  gate = update.state;
-  assert.equal(update.shouldRequest, false);
-  update = advanceSceneGate(gate, cat, SCENE_INITIAL_DELAY_MS + SCENE_MIN_REQUEST_INTERVAL_MS + 5_200);
+  for (let sample = 0; sample < SCENE_STABLE_SAMPLE_COUNT; sample += 1) {
+    update = advanceSceneGate(gate, cat, SCENE_INITIAL_DELAY_MS + SCENE_MIN_REQUEST_INTERVAL_MS + (sample + 1) * SCENE_SAMPLE_INTERVAL_MS);
+    gate = update.state;
+    if (sample < SCENE_STABLE_SAMPLE_COUNT - 1) assert.equal(update.shouldRequest, false);
+  }
   assert.equal(update.shouldRequest, true);
 });
 
-test("camera opening can request its first frame immediately without changing later cooldowns", () => {
+test("an explicit question can request a frame immediately without changing later cooldowns", () => {
   const cake = createSceneFingerprint(solidImage(220, 80, 90));
   const startedAt = 10_000;
   let gate = createSceneGate(startedAt);
@@ -74,8 +79,11 @@ test("camera opening can request its first frame immediately without changing la
 test("failed requests can retry after cooldown and reaction keys are suppressed", () => {
   const scene = createSceneFingerprint(solidImage(100, 150, 80));
   let gate = createSceneGate(0);
-  gate = advanceSceneGate(gate, scene, SCENE_INITIAL_DELAY_MS).state;
-  const first = advanceSceneGate(gate, scene, SCENE_INITIAL_DELAY_MS + 1_600);
+  let first;
+  for (let sample = 0; sample < SCENE_STABLE_SAMPLE_COUNT; sample += 1) {
+    first = advanceSceneGate(gate, scene, SCENE_INITIAL_DELAY_MS + sample * SCENE_SAMPLE_INTERVAL_MS);
+    gate = first.state;
+  }
   gate = finishSceneRequest(first.state, first.fingerprint, false);
   const retry = advanceSceneGate(gate, scene, first.state.lastRequestAt + SCENE_MIN_REQUEST_INTERVAL_MS);
   assert.equal(retry.shouldRequest, true);

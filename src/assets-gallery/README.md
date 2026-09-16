@@ -28,10 +28,10 @@ Rive 必须点击载入才请求文件；只有可见卡片保留运行实例，
 
 绿豆文件来自 https://rive.mikeywa.site/4KM，原名为 `ai叫叫学伴_源文件_绿豆_（黑).riv`。页面展示原始 Rive 画板构图，并提供原文件下载。
 
-叫叫文件来自 https://rive.mikeywa.site/ZHc，原名为 `ai叫叫学伴_源文件_叫叫_（黑）.riv`，包含 47 条时间轴与 1 个状态机（共 48 项）。主相机的闭嘴采样和缺失回应适配见 `src/character-interaction.js`、`src/character-animations.js`；原文件下载保持来源文件的完整字节。
+叫叫文件使用 2026-09-16 群内更新并在测试环境使用的主角色导出，6,751,167 字节，SHA-256 为 `ccfc2d8e7f36baf1c0b3bec3a1ed4595d3503e699598f67ab804f8fc053b16ff`。主相机的闭嘴采样和缺失回应适配见 `src/character-interaction.js`、`src/character-animations.js`；资源页直接下载原文件字节。心形气球、花园导出随附保存，当前背景反馈仍采用相机合成效果。
 
 ## 参考与验证
 
 - Three.js [GLTFExporter](https://threejs.org/docs/pages/GLTFExporter.html)、[GLTFLoader](https://threejs.org/docs/pages/GLTFLoader.html)、[OrbitControls](https://threejs.org/docs/pages/OrbitControls.html)。
 - Rive [运行时参数和清理 API](https://rive.app/docs/runtimes/web/rive-parameters)。
-- 原版资源页曾检查 1440px、390px、320px 布局，3D 可见性加载与分类卸载、搜索空状态和同源资源地址。ZHc 替换后的检查见 `docs/rive-ZHc-validation-2026-09-11.md`；叫叫现为 48 项，绿豆仍为 89 项。
+- 原版资源页曾检查 1440px、390px、320px 布局，3D 可见性加载与分类卸载、搜索空状态和同源资源地址。旧版 ZHc 的历史检查见 `docs/rive-ZHc-validation-2026-09-11.md`；当前动画数量以文件运行时枚举为准。

@@ -1,10 +1,10 @@
-export const SCENE_SAMPLE_INTERVAL_MS = 1_600;
-export const SCENE_INITIAL_DELAY_MS = 3_200;
-export const SCENE_MIN_REQUEST_INTERVAL_MS = 12_000;
-export const SCENE_STABLE_SAMPLE_COUNT = 2;
+export const SCENE_SAMPLE_INTERVAL_MS = 2_000;
+export const SCENE_INITIAL_DELAY_MS = 6_000;
+export const SCENE_MIN_REQUEST_INTERVAL_MS = 20_000;
+export const SCENE_STABLE_SAMPLE_COUNT = 3;
 export const SCENE_STABLE_DIFFERENCE = 0.045;
 export const SCENE_NEW_CONTENT_DIFFERENCE = 0.115;
-export const SCENE_REPEAT_COOLDOWN_MS = 75_000;
+export const SCENE_REPEAT_COOLDOWN_MS = 120_000;
 
 export function createSceneGate(startedAt = 0) {
   return {
