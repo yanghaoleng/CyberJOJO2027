@@ -69,6 +69,7 @@ import { parseCollectionDialogue } from "./friends/collection-dialogue.js";
 import { createStickerFromCapture } from "./sticker-matting.js";
 import CollectionFlight from "./friends/CollectionFlight.jsx";
 import { requestGameplay } from "./gameplay/gameplay-api.js";
+import GamePlayOverlay from "./gameplay/GamePlayOverlay.jsx";
 import { createCharacterInteraction } from "./character-interaction.js";
 import { CHARACTER_TIMELINES, resolveCharacterAnimation } from "./character-animations.js";
 import { drawFaceHeartFeedback, drawLargeHeartFeedback, HEART_FEEDBACK_DURATION_MS } from "./heart-feedback.js";
@@ -116,6 +117,8 @@ const WELCOME_HEADLINES = [
   ["看不清的时候", "我们一起靠近一点"],
   ["一个小小手势", "也会有回应"],
 ];
+
+const FEED_FOOD_IDS = ["apple", "cake", "noodles"];
 
 const WELCOME_CHARACTER_DELAY_MS = 76;
 const WELCOME_ANIMATION_SETTLE_MS = 420;
@@ -851,6 +854,7 @@ function App() {
   const mediaPreviewRef = useRef(null);
   const mediaLibraryRef = useRef([]);
   const gameplayModeRef = useRef("");
+  const feedFoodCursorRef = useRef(0);
   const storyFocusRef = useRef(null);
   const inspectStoryRef = useRef(null);
   const storyFrameTimerRef = useRef(null);
@@ -981,6 +985,7 @@ function App() {
   const [collectionFlight, setCollectionFlight] = useState(null);
   const [collectionQueueTick, setCollectionQueueTick] = useState(0);
   const [gameplayMode, setGameplayMode] = useState("");
+  const [gameplayFoodId, setGameplayFoodId] = useState(FEED_FOOD_IDS[0]);
   const [gameplayMenuOpen, setGameplayMenuOpen] = useState(false);
   const [gameplayTranscript, setGameplayTranscript] = useState(null);
   const [gameplayCharacterRect, setGameplayCharacterRect] = useState(null);
@@ -1731,6 +1736,8 @@ function App() {
             if (voiceIntent?.type !== "collect") dismissCollection();
             if (voiceIntent?.type === "heart") {
               triggerHeartVoiceRef.current?.(voiceIntent.size, { explicit: true });
+            } else if (voiceIntent?.type === "feed" && !gameplayModeRef.current) {
+              void startGameplayRef.current?.("feed");
             } else if (voiceIntent?.type === "collect") {
               startObjectCollectionRef.current?.({
                 subject: voiceIntent.subject,
@@ -3852,9 +3859,22 @@ function App() {
   inspectStoryRef.current = inspectStoryObject;
 
   const startGameplay = useCallback(async (mode) => {
+    if (mode && (
+      cameraState !== "ready"
+      || recordingRef.current
+      || mediaPreviewRef.current
+      || mediaLibraryOpenRef.current
+      || characterSwitchingRef.current
+    )) return;
     gameplayModeRef.current = mode;
     clearCharacterSpeech();
     setGameplayMenuOpen(false); setTextComposerOpen(false); setGameplayTranscript(null); setGameplayReaction(null);
+    if (mode === "feed") {
+      const nextFoodId = FEED_FOOD_IDS[feedFoodCursorRef.current % FEED_FOOD_IDS.length];
+      feedFoodCursorRef.current += 1;
+      setGameplayFoodId(nextFoodId);
+      setHiddenStoryFocus(null);
+    }
     gameplayTargetRef.current = null;
     characterInteractionRef.current?.reset();
     const socket = voiceSocketRef.current;
@@ -3864,7 +3884,7 @@ function App() {
     setGameplayMode(mode);
     if (mode) rivePlayAnimationRef.current?.("TalkingEmotion_Expectation");
     else rivePlayAnimationRef.current?.("TalkingEmotion_Normal");
-  }, [activeCharacter, clearCharacterSpeech, switchCharacterTo]);
+  }, [activeCharacter, cameraState, clearCharacterSpeech, setHiddenStoryFocus, switchCharacterTo]);
   startGameplayRef.current = startGameplay;
   useEffect(() => {
     if (cameraState !== "ready") { gameplayModeRef.current = ""; setGameplayMode(""); setGameplayMenuOpen(false); }
@@ -4023,6 +4043,19 @@ function App() {
             </Calligraph>
           </div>
           {!gameplayMode && <CharacterCaptionBubble reaction={characterBubble} canvasRendered={recording} />}
+          {cameraState === "ready" && gameplayMode && (
+            <GamePlayOverlay
+              mode={gameplayMode}
+              initialFoodId={gameplayFoodId}
+              onClose={() => { void startGameplay(""); }}
+              captureFrame={captureGameplayFrame}
+              onReaction={handleGameplayReaction}
+              onTarget={handleGameplayTarget}
+              onFound={handleGameplayFound}
+              character={activeCharacter}
+              characterRect={gameplayCharacterRect}
+            />
+          )}
           {storyFocus?.phase === "framing" && !mediaPreview && !mediaLibraryOpen && (
             <div className="dialogue-focus-frame" aria-live="polite" aria-label="把物品放进白色虚线框里">
               <span className="sr-only">把物品放进白色虚线框里</span>

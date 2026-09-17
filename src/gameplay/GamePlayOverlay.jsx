@@ -25,7 +25,7 @@ function foodOrigin(stage, panel) {
 }
 
 /** Mount inside the camera viewfinder. All coordinates use this element's CSS pixels. */
-export default function GamePlayOverlay({ mode, onClose, captureFrame, onReaction, onActivity, onTarget, onFound, character = "jiaojiao", characterRect, frameKey = "camera", transcript = "" }) {
+export default function GamePlayOverlay({ mode, onClose, captureFrame, onReaction, onActivity, onTarget, onFound, character = "jiaojiao", characterRect, frameKey = "camera", transcript = "", initialFoodId = "" }) {
   const elementRef = useRef(null);
   const panelRef = useRef(null);
   const callbacks = useRef({ captureFrame, onReaction, onActivity, onTarget, onFound, onClose });
@@ -44,7 +44,7 @@ export default function GamePlayOverlay({ mode, onClose, captureFrame, onReactio
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [retrySeconds, setRetrySeconds] = useState(0);
-  const [foodId, setFoodId] = useState(null);
+  const [foodId, setFoodId] = useState(() => mode === "feed" && FOOD_LABELS[initialFoodId] ? initialFoodId : null);
   const [foodSource, setFoodSource] = useState("");
   const [foodPosition, setFoodPosition] = useState(null);
   const [manualOpen, setManualOpen] = useState(false);
@@ -104,10 +104,11 @@ export default function GamePlayOverlay({ mode, onClose, captureFrame, onReactio
 
   useEffect(() => {
     stopTransient(); roundRef.current = makeId(); retryAtRef.current = 0;
-    setPhase("idle"); setError(""); setMessage(""); setTarget(null); setConfirmed(null);
-    setFoodId(null); setFoodPosition(null); setFoodSource(""); setNearMouth(false);
+    const voiceFoodId = mode === "feed" && FOOD_LABELS[initialFoodId] ? initialFoodId : null;
+    setPhase(voiceFoodId ? "ready" : "idle"); setError(""); setMessage(voiceFoodId ? `给叫叫准备了${FOOD_LABELS[voiceFoodId]}，拖给它尝尝吧` : ""); setTarget(null); setConfirmed(null);
+    setFoodId(voiceFoodId); setFoodPosition(null); setFoodSource(voiceFoodId ? "voice" : ""); setNearMouth(false);
     setSelection(null); setSteady(false); setManualOpen(false); setRetrySeconds(0); stabilityRef.current = null;
-  }, [mode, frameKey, stopTransient]);
+  }, [mode, frameKey, initialFoodId, stopTransient]);
 
   useEffect(() => {
     if (!retrySeconds) return undefined;

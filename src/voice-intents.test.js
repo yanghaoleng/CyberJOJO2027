@@ -9,6 +9,13 @@ test("fixed heart phrases trigger the heart action", () => {
   assert.equal(parseVoiceIntent("我今天很开心"), null);
 });
 
+test("food words begin the share-a-bite interaction", () => {
+  for (const text of ["我想吃东西", "我饿了", "我想吃", "这里有美食", "这个好吃的给你"]) {
+    assert.deepEqual(parseVoiceIntent(text), { type: "feed" });
+  }
+  assert.equal(parseVoiceIntent("我今天很开心"), null);
+});
+
 test("natural collection phrases identify the requested object", () => {
   assert.deepEqual(parseVoiceIntent("帮我收集这个小水杯"), { type: "collect", subject: "这个小水杯" });
   assert.deepEqual(parseVoiceIntent("把这盆植物做成一张单词贴纸"), { type: "collect", subject: "这盆植物" });
