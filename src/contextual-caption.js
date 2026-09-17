@@ -47,7 +47,7 @@ export function getContextualCaption({
   fallbackMode = "together",
   day,
 } = {}) {
-  if (gesture === "thumbs_up" || gesture === "heart") return createDayCaption(day);
+  if (gesture === "thumbs_up" || ["heart", "heart_small", "heart_large"].includes(gesture)) return createDayCaption(day);
 
   const topic = cleanSubject(conversationTopic);
   if (topic) return createConversationCaption(characterLabel, topic);

@@ -59,6 +59,15 @@ test("recognizes two hands forming one heart", () => {
   assert.equal(classifyCameraGesture({ landmarks: [left, right] }), CAMERA_GESTURES.HEART);
 });
 
+test("a completed two-hand heart can supersede the single-hand effect", () => {
+  let state = createGestureTracker();
+  for (const at of [0, 150, 300]) state = advanceGestureTracker(state, CAMERA_GESTURES.FINGER_HEART, at).state;
+  const first = advanceGestureTracker(state, CAMERA_GESTURES.HEART, 450); state = first.state;
+  const second = advanceGestureTracker(state, CAMERA_GESTURES.HEART, 600); state = second.state;
+  const third = advanceGestureTracker(state, CAMERA_GESTURES.HEART, 750);
+  assert.equal(third.trigger, CAMERA_GESTURES.HEART);
+});
+
 test("requires stable frames and a release before retriggering", () => {
   let state = createGestureTracker();
   let update = advanceGestureTracker(state, CAMERA_GESTURES.OK, 0);

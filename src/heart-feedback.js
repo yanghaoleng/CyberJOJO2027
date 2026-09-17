@@ -26,8 +26,41 @@ function heartPath(context, centerX, centerY, size) {
   context.closePath();
 }
 
+export function getFaceHeartPlacement(face, width, height) {
+  if (!face || !Number.isFinite(face.right) || !Number.isFinite(face.top)) return null;
+  const size = clamp(Math.min(width, height) * 0.078, 24, 72);
+  const horizontalExtent = size * 1.22;
+  const topExtent = size * 0.8;
+  const bottomExtent = size * 0.9;
+  return {
+    size,
+    x: clamp(face.right * width + size * 0.52, horizontalExtent, width - horizontalExtent),
+    y: clamp(face.top * height + size * 0.2, topExtent, height - bottomExtent),
+  };
+}
+
+/** A single-hand finger heart stays beside the child's face, never as a veil. */
+export function drawFaceHeartFeedback(context, width, height, elapsedMs, face) {
+  const frame = getHeartFeedbackFrame(elapsedMs);
+  const placement = getFaceHeartPlacement(face, width, height);
+  if (frame.opacity <= 0 || !placement) return;
+  const size = placement.size * frame.scale;
+  context.save();
+  context.globalAlpha = frame.opacity;
+  context.shadowColor = "rgba(255, 69, 142, 0.92)";
+  context.shadowBlur = size * (0.24 + frame.glow);
+  heartPath(context, placement.x, placement.y, size);
+  const gradient = context.createLinearGradient(placement.x, placement.y - size, placement.x, placement.y + size);
+  gradient.addColorStop(0, "#ffe1ee");
+  gradient.addColorStop(0.5, "#ff69a6");
+  gradient.addColorStop(1, "#d81d69");
+  context.fillStyle = gradient;
+  context.fill();
+  context.restore();
+}
+
 /** Drawn before the segmented child, so the heart remains behind their body. */
-export function drawHeartFeedback(context, width, height, elapsedMs) {
+export function drawLargeHeartFeedback(context, width, height, elapsedMs) {
   const frame = getHeartFeedbackFrame(elapsedMs);
   if (frame.opacity <= 0) return;
   const size = Math.min(width, height) * 0.31 * frame.scale;
@@ -48,3 +81,7 @@ export function drawHeartFeedback(context, width, height, elapsedMs) {
   context.fill();
   context.restore();
 }
+
+// Retained as a stable export for integrations that intentionally request the
+// old full-screen large-heart treatment.
+export const drawHeartFeedback = drawLargeHeartFeedback;

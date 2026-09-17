@@ -3,8 +3,9 @@ import test from "node:test";
 import { getCollectionFollowUp, parseVoiceIntent, shouldInspectAfterSpeech } from "./voice-intents.js";
 
 test("fixed heart phrases trigger the heart action", () => {
-  assert.deepEqual(parseVoiceIntent("叫叫，给我比个心"), { type: "heart" });
-  assert.deepEqual(parseVoiceIntent("我想看你比心"), { type: "heart" });
+  assert.deepEqual(parseVoiceIntent("叫叫，给我比个心"), { type: "heart", size: "small" });
+  assert.deepEqual(parseVoiceIntent("我想看你比心"), { type: "heart", size: "small" });
+  assert.deepEqual(parseVoiceIntent("叫叫，来一个大爱心"), { type: "heart", size: "large" });
   assert.equal(parseVoiceIntent("我今天很开心"), null);
 });
 

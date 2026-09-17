@@ -106,7 +106,8 @@ const GESTURE_PROMPTS = Object.freeze({
   thumbs_up: "用户刚刚对你比了一个赞，请自然回应这个动作。",
   victory: "用户刚刚对你比了一个胜利手势，请自然回应这个动作。",
   ok: "用户刚刚对你比了一个 OK 手势，请自然回应这个动作。",
-  finger_heart: "用户刚刚对你比了一个爱心手势，请自然回应这个动作。",
+  heart_small: "用户刚刚对你比了一个单手小爱心，请自然回应这个动作。",
+  heart_large: "用户刚刚用两只手比了一个大爱心，请自然回应这个动作。",
 });
 
 function normalizeCharacter(value) {

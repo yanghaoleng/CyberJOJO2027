@@ -2,10 +2,10 @@ export const CAMERA_GESTURES = Object.freeze({
   THUMBS_UP: "thumbs_up",
   VICTORY: "victory",
   OK: "ok",
-  // Both the two-hand heart and the single-hand finger heart are one product
-  // gesture. Keeping one event means they receive exactly the same feedback.
-  HEART: "heart",
-  FINGER_HEART: "heart",
+  // A two-hand heart is deliberately distinct from a single-hand finger
+  // heart: they have different on-camera feedback placements.
+  HEART: "heart_large",
+  FINGER_HEART: "heart_small",
 });
 
 const DEFAULT_TRACKER = Object.freeze({
@@ -123,7 +123,9 @@ export function advanceGestureTracker(
   if (
     next.stableFrames < requiredStableFrames
     || next.latched === candidate
-    || now < next.cooldownUntil
+    // Let a newly completed two-hand heart supersede a one-hand finger heart
+    // without making the child wait out the short single-heart cooldown.
+    || (now < next.cooldownUntil && !(candidate === CAMERA_GESTURES.HEART && next.latched === CAMERA_GESTURES.FINGER_HEART))
   ) return { state: next, trigger: null };
 
   return {

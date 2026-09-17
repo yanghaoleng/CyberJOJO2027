@@ -71,7 +71,7 @@ import CollectionFlight from "./friends/CollectionFlight.jsx";
 import { requestGameplay } from "./gameplay/gameplay-api.js";
 import { createCharacterInteraction } from "./character-interaction.js";
 import { CHARACTER_TIMELINES, resolveCharacterAnimation } from "./character-animations.js";
-import { drawHeartFeedback, HEART_FEEDBACK_DURATION_MS } from "./heart-feedback.js";
+import { drawFaceHeartFeedback, drawLargeHeartFeedback, HEART_FEEDBACK_DURATION_MS } from "./heart-feedback.js";
 const FriendCollection = lazy(() => import("./friends/FriendCollection.jsx"));
 import { getContextualCaption } from "./contextual-caption.js";
 import { getRecentConversationTopic } from "./conversation-topic.js";
@@ -382,7 +382,12 @@ const GESTURE_ACTIONS = {
     animation: CHARACTER_TIMELINES.HEART_FULL_BODY,
     toast: "接住你的比心",
   },
+  [CAMERA_GESTURES.HEART]: {
+    animation: CHARACTER_TIMELINES.HEART_FULL_BODY,
+    toast: "接住你的大爱心",
+  },
 };
+const HEART_GESTURES = new Set([CAMERA_GESTURES.FINGER_HEART, CAMERA_GESTURES.HEART]);
 const SILENT_AUDIO_DATA_URL = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQQAAACAgICA";
 const FRAME_SIZES = {
   portrait: { width: 720, height: 1280 },
@@ -812,7 +817,9 @@ function App() {
   const synthesizedAudioUrlRef = useRef("");
   const welcomeHeadlineTimerRef = useRef(null);
   const mouthAnchorRef = useRef(null);
+  const faceHeartAnchorRef = useRef(null);
   const lastFaceSeenAtRef = useRef(0);
+  const lastExplicitHeartAtRef = useRef(0);
   const frameRef = useRef(0);
   const lastRenderAtRef = useRef(0);
   const lastSegmentAtRef = useRef(0);
@@ -1453,7 +1460,7 @@ function App() {
     }));
   }, [activeCharacter]);
 
-  const triggerHeartVoice = useCallback(() => {
+  const triggerHeartVoice = useCallback((size = "small", { explicit = false } = {}) => {
     if (
       mediaPreviewRef.current
       || mediaLibraryOpenRef.current
@@ -1463,16 +1470,18 @@ function App() {
     const action = VOICE_ACTIONS.heart;
     if (!rivePlayAnimationRef.current?.(action.animation)) return false;
     const timestamp = performance.now();
-    setLastRecognizedGesture(CAMERA_GESTURES.HEART);
+    const gesture = size === "large" ? CAMERA_GESTURES.HEART : CAMERA_GESTURES.FINGER_HEART;
+    if (explicit) lastExplicitHeartAtRef.current = timestamp;
+    setLastRecognizedGesture(gesture);
     gestureEffectUntilRef.current = timestamp + HEART_FEEDBACK_DURATION_MS;
-    setActiveGestureEffect(CAMERA_GESTURES.HEART);
+    setActiveGestureEffect(gesture);
     if (gestureEffectTimerRef.current) window.clearTimeout(gestureEffectTimerRef.current);
     gestureEffectTimerRef.current = window.setTimeout(() => {
       gestureEffectTimerRef.current = null;
       gestureEffectUntilRef.current = 0;
       setActiveGestureEffect("");
     }, HEART_FEEDBACK_DURATION_MS);
-    scheduleAutoCapture("voice:heart", 720);
+    scheduleAutoCapture(`voice:${gesture}`, 720);
     showToast(`${CHARACTERS[activeCharacter].label}${action.toast}`);
     return true;
   }, [activeCharacter, scheduleAutoCapture, showToast]);
@@ -1493,7 +1502,8 @@ function App() {
     const action = GESTURE_ACTIONS[update.trigger];
     if (!action || !rivePlayAnimationRef.current?.(action.animation)) return;
     setLastRecognizedGesture(update.trigger);
-    const effectDuration = update.trigger === CAMERA_GESTURES.HEART
+    const isHeart = HEART_GESTURES.has(update.trigger);
+    const effectDuration = isHeart
       ? HEART_FEEDBACK_DURATION_MS
       : GESTURE_OUTLINE_DURATION_MS;
     if (shouldOutlineGesture(update.trigger) || update.trigger === CAMERA_GESTURES.HEART) {
@@ -1720,7 +1730,7 @@ function App() {
             const voiceIntent = parseVoiceIntent(text);
             if (voiceIntent?.type !== "collect") dismissCollection();
             if (voiceIntent?.type === "heart") {
-              triggerHeartVoiceRef.current?.();
+              triggerHeartVoiceRef.current?.(voiceIntent.size, { explicit: true });
             } else if (voiceIntent?.type === "collect") {
               startObjectCollectionRef.current?.({
                 subject: voiceIntent.subject,
@@ -1748,7 +1758,7 @@ function App() {
         if (message.type === "action") {
           if (gameplayModeRef.current) return;
           if (message.action === "heart") {
-            triggerHeartVoiceRef.current?.();
+            if (performance.now() - lastExplicitHeartAtRef.current > 2_400) triggerHeartVoiceRef.current?.();
             return;
           }
           const action = VOICE_ACTIONS[message.action];
@@ -1895,6 +1905,7 @@ function App() {
     if (!landmarks?.length || !outputCanvas || !video?.videoWidth) {
       if (performance.now() - lastFaceSeenAtRef.current > FACE_MISSING_TIMEOUT_MS) {
         mouthAnchorRef.current = null;
+        faceHeartAnchorRef.current = null;
       }
       return;
     }
@@ -1923,6 +1934,23 @@ function App() {
           eyeY: current.eyeY * 0.55 + next.eyeY * 0.45,
         }
       : next;
+    const faceBoundary = [10, 152, 234, 454].map((index) => landmarks[index]).filter(Boolean).map((point) => {
+      const unmirrored = rect.x + point.x * rect.width;
+      return {
+        x: clamp((shouldMirrorCamera(facingMode) ? targetWidth - unmirrored : unmirrored) / targetWidth, 0.02, 0.98),
+        y: clamp((rect.y + point.y * rect.height) / targetHeight, 0.02, 0.98),
+      };
+    });
+    if (faceBoundary.length) {
+      const faceNext = {
+        right: Math.max(...faceBoundary.map((point) => point.x)),
+        top: Math.min(...faceBoundary.map((point) => point.y)),
+      };
+      const faceCurrent = faceHeartAnchorRef.current;
+      faceHeartAnchorRef.current = faceCurrent
+        ? { right: faceCurrent.right * 0.55 + faceNext.right * 0.45, top: faceCurrent.top * 0.55 + faceNext.top * 0.45 }
+        : faceNext;
+    }
     lastFaceSeenAtRef.current = performance.now();
   }, [facingMode]);
 
@@ -2240,12 +2268,12 @@ function App() {
     drawCameraSource(outputContext, video, rect, targetWidth, mirrored);
 
     if (activeGestureEffect === CAMERA_GESTURES.HEART && timestamp < gestureEffectUntilRef.current) {
-      drawHeartFeedback(outputContext, targetWidth, targetHeight, HEART_FEEDBACK_DURATION_MS - (gestureEffectUntilRef.current - timestamp));
+      drawLargeHeartFeedback(outputContext, targetWidth, targetHeight, HEART_FEEDBACK_DURATION_MS - (gestureEffectUntilRef.current - timestamp));
     }
 
     const drawPerson = () => {
       if (!maskReadyRef.current || !maskCanvas?.width || !maskCanvas?.height) return;
-      if (timestamp < gestureEffectUntilRef.current) {
+      if (timestamp < gestureEffectUntilRef.current && (shouldOutlineGesture(activeGestureEffect) || activeGestureEffect === CAMERA_GESTURES.HEART)) {
         if (!gestureOutlineBuffersRef.current) {
           gestureOutlineBuffersRef.current = createGestureOutlineBuffers();
         }
@@ -2287,6 +2315,9 @@ function App() {
     if (personLayer === "front") drawPerson();
 
     drawFrontCameraPip(outputContext, targetWidth, targetHeight);
+    if (activeGestureEffect === CAMERA_GESTURES.FINGER_HEART && timestamp < gestureEffectUntilRef.current) {
+      drawFaceHeartFeedback(outputContext, targetWidth, targetHeight, HEART_FEEDBACK_DURATION_MS - (gestureEffectUntilRef.current - timestamp), faceHeartAnchorRef.current);
+    }
     if (includeCaption) drawCaption(outputContext, targetWidth, targetHeight);
     drawSpeechBubble(outputContext, targetWidth, targetHeight, includeSpeechText);
     if (includeSpeechText) {
@@ -2996,6 +3027,8 @@ function App() {
     visionThrottleRef.current = 1;
     personMaskRevisionRef.current = 0;
     gestureEffectUntilRef.current = 0;
+    lastExplicitHeartAtRef.current = 0;
+    faceHeartAnchorRef.current = null;
     gestureOutlineBuffersRef.current = null;
     if (gestureEffectTimerRef.current) window.clearTimeout(gestureEffectTimerRef.current);
     gestureEffectTimerRef.current = null;
