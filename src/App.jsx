@@ -783,6 +783,22 @@ function applyRivePlaybackRate(instance, playbackRateRef) {
   };
 }
 
+function drawHeartCelebrationBackdrop(context, width, height) {
+  const backdrop = context.createLinearGradient(0, 0, width, height);
+  backdrop.addColorStop(0, "#ffbfd9");
+  backdrop.addColorStop(0.48, "#f4629e");
+  backdrop.addColorStop(1, "#bc1c63");
+  context.fillStyle = backdrop;
+  context.fillRect(0, 0, width, height);
+
+  const glow = context.createRadialGradient(width * 0.48, height * 0.32, 0, width * 0.48, height * 0.32, Math.max(width, height) * 0.7);
+  glow.addColorStop(0, "rgba(255, 244, 249, 0.92)");
+  glow.addColorStop(0.34, "rgba(255, 181, 215, 0.46)");
+  glow.addColorStop(1, "rgba(137, 11, 65, 0)");
+  context.fillStyle = glow;
+  context.fillRect(0, 0, width, height);
+}
+
 function App() {
   const [isMobileDevice] = useState(getIsMobileDevice);
   const [isTabletDevice, setIsTabletDevice] = useState(getIsTabletDevice);
@@ -2345,7 +2361,15 @@ function App() {
 
     outputContext.fillStyle = "#181b14";
     outputContext.fillRect(0, 0, targetWidth, targetHeight);
-    drawCameraSource(outputContext, video, rect, targetWidth, mirrored);
+    const activeProp = activePropEffectRef.current;
+    const heartPropIsActive = activeProp.kind && timestamp < activeProp.until;
+    // The portrait mask is the boundary: never replace the camera until it can
+    // keep the child in front of the celebration background.
+    if (heartPropIsActive && maskReadyRef.current && maskCanvas?.width && maskCanvas?.height) {
+      drawHeartCelebrationBackdrop(outputContext, targetWidth, targetHeight);
+    } else {
+      drawCameraSource(outputContext, video, rect, targetWidth, mirrored);
+    }
     // Props are composed before the segmented person and character, leaving the
     // heart balloon / wreath visibly behind them instead of masking their face.
     drawPropRiveLayer(outputContext, targetWidth, targetHeight, timestamp);
