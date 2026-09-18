@@ -61,6 +61,7 @@ import {
   loadMediaCaptures,
   storeMediaCapture,
 } from "./media-library.js";
+import { getLibraryTabAfterSwipe, LIBRARY_TABS } from "./library-tabs.js";
 import useDailyJournal from "./journal/useDailyJournal.js";
 import JournalDay from "./journal/JournalDay.jsx";
 import { isUnreadCollection, loadFriends, markCollectionsSeen, saveFriend } from "./friends/friend-store.js";
@@ -918,7 +919,15 @@ function App() {
   const triggerHeartVoiceRef = useRef(() => {});
   const triggerWreathVoiceRef = useRef(() => {});
   const mediaPreviewCloseTimerRef = useRef(null);
-  const mediaLibrarySwipeRef = useRef({ active: false, startX: 0, startY: 0, dragY: 0 });
+  const mediaLibrarySwipeRef = useRef({
+    active: false,
+    axis: "",
+    canDismiss: false,
+    deltaX: 0,
+    startX: 0,
+    startY: 0,
+    dragY: 0,
+  });
   const mediaPreviewSwipeRef = useRef({ active: false, pointerId: null, startX: 0, startY: 0 });
   const shutterAudioContextRef = useRef(null);
   const uiSfxRef = useRef(null);
@@ -1039,6 +1048,13 @@ function App() {
   const [cameraMenuOpen, setCameraMenuOpen] = useState(false);
   const [videoDurations, setVideoDurations] = useState({});
   const frameSize = FRAME_SIZES[frameOrientation];
+
+  const selectLibraryTab = useCallback((tab) => {
+    setLibraryTab(tab);
+    window.requestAnimationFrame(() => {
+      if (mediaLibraryGridRef.current) mediaLibraryGridRef.current.scrollTop = 0;
+    });
+  }, []);
 
   const setHiddenStoryFocus = useCallback((next) => {
     storyFocusRef.current = next;
@@ -3529,10 +3545,13 @@ function App() {
   }, [mediaPreviewClosing, playInterfaceSound]);
 
   const onMediaLibraryTouchStart = useCallback((event) => {
-    if (event.touches.length !== 1 || (mediaLibraryGridRef.current?.scrollTop || 0) > 1) return;
+    if (event.touches.length !== 1) return;
     const touch = event.touches[0];
     mediaLibrarySwipeRef.current = {
       active: true,
+      axis: "",
+      canDismiss: (mediaLibraryGridRef.current?.scrollTop || 0) <= 1,
+      deltaX: 0,
       startX: touch.clientX,
       startY: touch.clientY,
       dragY: 0,
@@ -3545,7 +3564,15 @@ function App() {
     const touch = event.touches[0];
     const deltaX = touch.clientX - swipe.startX;
     const deltaY = touch.clientY - swipe.startY;
-    if (deltaY <= 0 || Math.abs(deltaX) > deltaY) return;
+    if (!swipe.axis && Math.max(Math.abs(deltaX), Math.abs(deltaY)) >= 8) {
+      swipe.axis = Math.abs(deltaX) > Math.abs(deltaY) ? "horizontal" : "vertical";
+    }
+    if (swipe.axis === "horizontal") {
+      swipe.deltaX = deltaX;
+      if (event.cancelable) event.preventDefault();
+      return;
+    }
+    if (!swipe.canDismiss || deltaY <= 0) return;
     if (event.cancelable) event.preventDefault();
     swipe.dragY = Math.min(148, deltaY * 0.58);
     setMediaLibraryDragging(true);
@@ -3554,14 +3581,28 @@ function App() {
 
   const finishMediaLibraryTouch = useCallback(() => {
     const swipe = mediaLibrarySwipeRef.current;
-    mediaLibrarySwipeRef.current = { active: false, startX: 0, startY: 0, dragY: 0 };
+    mediaLibrarySwipeRef.current = {
+      active: false,
+      axis: "",
+      canDismiss: false,
+      deltaX: 0,
+      startX: 0,
+      startY: 0,
+      dragY: 0,
+    };
     setMediaLibraryDragging(false);
+    if (swipe.axis === "horizontal") {
+      const nextTab = getLibraryTabAfterSwipe(libraryTab, swipe.deltaX);
+      if (nextTab !== libraryTab) selectLibraryTab(nextTab);
+      setMediaLibraryDragY(0);
+      return;
+    }
     if (swipe.dragY >= 72) {
       closeMediaLibrary();
       return;
     }
     setMediaLibraryDragY(0);
-  }, [closeMediaLibrary]);
+  }, [closeMediaLibrary, libraryTab, selectLibraryTab]);
 
   const showAdjacentPreview = useCallback((step) => {
     const current = mediaPreviewRef.current;
@@ -4478,9 +4519,22 @@ function App() {
               </button>
             </header>
             <nav className="library-tabs" aria-label="相册分类">
-              <button type="button" aria-pressed={libraryTab === "days"} onClick={() => setLibraryTab("days")} aria-label="时光小记" title="时光小记"><BookOpenText size={22} weight="bold" aria-hidden="true" /></button>
-              <button type="button" aria-pressed={libraryTab === "all"} onClick={() => setLibraryTab("all")} aria-label="全部" title="全部"><SquaresFour size={22} weight="fill" aria-hidden="true" /></button>
-              <button type="button" aria-pressed={libraryTab === "friends"} onClick={() => setLibraryTab("friends")} aria-label="收集" title="收集"><Sticker size={22} weight="bold" aria-hidden="true" /></button>
+              {LIBRARY_TABS.map(({ id, label }) => {
+                const selected = libraryTab === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => selectLibraryTab(id)}
+                    aria-label={label}
+                    title={label}
+                  >
+                    {id === "days" ? <BookOpenText size={21} weight="bold" aria-hidden="true" /> : id === "all" ? <SquaresFour size={21} weight="fill" aria-hidden="true" /> : <Sticker size={21} weight="bold" aria-hidden="true" />}
+                    {selected && <span>{label}</span>}
+                  </button>
+                );
+              })}
             </nav>
             {libraryTab === "friends" ? <div className="media-library-timeline" ref={mediaLibraryGridRef}><Suspense fallback={<p>收集正在打开…</p>}><FriendCollection friends={friends} onSeen={onCollectionsSeen} onRetry={retryCollection} /></Suspense></div> : (mediaTimeline.length || libraryTab === "all") ? (
               <div className="media-library-timeline" ref={mediaLibraryGridRef}>
