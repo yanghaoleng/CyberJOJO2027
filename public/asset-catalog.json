@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-18T08:46:14.620Z",
+  "generatedAt": "2026-09-18T09:13:53.052Z",
   "publicFileCount": 56,
-  "totalBytes": 59197137,
+  "totalBytes": 58914914,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -355,9 +355,9 @@
       "name": "叫叫",
       "category": "rive",
       "format": "RIV",
-      "bytes": 6751167,
-      "sha256": "ccfc2d8e7f36baf1c0b3bec3a1ed4595d3503e699598f67ab804f8fc053b16ff",
-      "sourceLabel": "叫叫 · 2026-09-16 群内更新版"
+      "bytes": 6468944,
+      "sha256": "a927bba5b9c82b6a27863148295498e1b0a03fe2e679d5ab2de7f21360123f18",
+      "sourceLabel": "叫叫 · 2026-09-18 斗篷修正版"
     },
     {
       "id": "media/lvdou.riv",

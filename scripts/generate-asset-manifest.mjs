@@ -72,7 +72,7 @@ for (const file of await walk(publicRoot)) {
     ...(imageDimensions(buffer, extension) ? { dimensions: imageDimensions(buffer, extension) } : {}),
     ...(model ? { foodId: model.id, description: model.description, triangles: model.triangles, meshes: model.meshes, materials: model.materials, dimensions: model.dimensions, license: model.license } : {}),
     ...(relative === 'media/lvdou.riv' ? { source: 'https://rive.mikeywa.site/4KM', sourceLabel: '绿豆 · 黑版原文件' } : {}),
-    ...(relative === 'media/jiaojiao.riv' ? { sourceLabel: '叫叫 · 2026-09-16 群内更新版' } : {}),
+    ...(relative === 'media/jiaojiao.riv' ? { sourceLabel: '叫叫 · 2026-09-18 斗篷修正版' } : {}),
   });
 }
 // Only imports in the actual application count as functional icons, not the full package.

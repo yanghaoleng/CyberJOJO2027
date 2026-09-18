@@ -453,7 +453,7 @@ const PERSON_FEATHER_RANGE_PX = 5;
 const LONG_PRESS_MS = 430;
 const MAX_RECORDING_MS = 15_000;
 const CORE_LOAD_ASSETS = [
-  { key: "riveFile", path: "media/jiaojiao.riv?v=ccfc2d8e", bytes: 6_751_167, retain: true },
+  { key: "riveFile", path: "media/jiaojiao.riv?v=a927bba5", bytes: 6_468_944, retain: true },
   { key: "heartBalloonFile", path: "media/heart-balloon.riv?v=f119ed11e935", bytes: 26_614, retain: true },
   { key: "heartWreathFile", path: "media/heart-garden.riv?v=9539c97e7c3", bytes: 310_880, retain: true },
   { key: "visionWasm", path: "mediapipe/wasm/vision_wasm_internal.wasm", bytes: 11_756_954, retain: false },
@@ -497,7 +497,7 @@ function getLoadAssets(rendererMode) {
   return [CORE_LOAD_ASSETS[0], ...RIVE_RUNTIME_ASSETS[runtimeKey], ...CORE_LOAD_ASSETS.slice(1)];
 }
 const CHARACTERS = {
-  jiaojiao: { label: "叫叫", path: "media/jiaojiao.riv?v=ccfc2d8e" },
+  jiaojiao: { label: "叫叫", path: "media/jiaojiao.riv?v=a927bba5" },
   lvdou: { label: "绿豆", path: "media/lvdou.riv?v=b7105cd1" },
 };
 const CHARACTER_TAP_WINDOW_MS = 720;

@@ -28,7 +28,7 @@ Rive 必须点击载入才请求文件；只有可见卡片保留运行实例，
 
 绿豆文件来自 https://rive.mikeywa.site/4KM，原名为 `ai叫叫学伴_源文件_绿豆_（黑).riv`。页面展示原始 Rive 画板构图，并提供原文件下载。
 
-叫叫文件使用 2026-09-16 群内更新并在测试环境使用的主角色导出，6,751,167 字节，SHA-256 为 `ccfc2d8e7f36baf1c0b3bec3a1ed4595d3503e699598f67ab804f8fc053b16ff`。主相机的闭嘴采样和缺失回应适配见 `src/character-interaction.js`、`src/character-animations.js`；资源页直接下载原文件字节。心形气球、花园导出随附保存，当前背景反馈仍采用相机合成效果。
+叫叫文件使用 2026-09-18 维尼潘群内发送的斗篷修正版主角色导出，6,468,944 字节，SHA-256 为 `a927bba5b9c82b6a27863148295498e1b0a03fe2e679d5ab2de7f21360123f18`。主相机的闭嘴采样和缺失回应适配见 `src/character-interaction.js`、`src/character-animations.js`；资源页直接下载原文件字节。心形气球、花园导出随附保存，当前背景反馈仍采用相机合成效果。
 
 ## 参考与验证
 
