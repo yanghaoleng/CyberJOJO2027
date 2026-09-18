@@ -200,6 +200,17 @@ button {
   pointer-events: none;
 }
 
+/* Off-screen Rive render targets are composited into camera-output in JS. */
+.prop-rive-source {
+  position: fixed;
+  top: 0;
+  left: -2048px;
+  width: 1024px;
+  height: 1024px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .camera-output {
   display: block;
   width: 100%;

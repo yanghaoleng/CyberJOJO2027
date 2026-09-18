@@ -413,6 +413,19 @@ const RIVE_MOUTH_ANIMATION = "Talking_Normal";
 const COVER_RIVE_PLAYBACK_RATE = 0.25;
 const CAMERA_RIVE_PLAYBACK_RATE = 0.8;
 const RIVE_CAPTURE_ADVANCE_FRAMES = 4;
+const PROP_RIVE_CANVAS_SIZE = 1024;
+const PROP_RIVE_EFFECTS = Object.freeze({
+  balloon: {
+    assetKey: "heartBalloonFile",
+    animation: "Prop_HeartBalloon_Float_Loop",
+    duration: 3_800,
+  },
+  wreath: {
+    assetKey: "heartWreathFile",
+    animation: "Prop_HeartWreath_Pop",
+    duration: 2_200,
+  },
+});
 const MAX_RANDOM_DAY = 520;
 const VOLUME_SHUTTER_KEYS = new Set([
   "AudioVolumeUp",
@@ -440,6 +453,8 @@ const LONG_PRESS_MS = 430;
 const MAX_RECORDING_MS = 15_000;
 const CORE_LOAD_ASSETS = [
   { key: "riveFile", path: "media/jiaojiao.riv?v=ccfc2d8e", bytes: 6_751_167, retain: true },
+  { key: "heartBalloonFile", path: "media/heart-balloon.riv?v=f119ed11e935", bytes: 26_614, retain: true },
+  { key: "heartWreathFile", path: "media/heart-garden.riv?v=9539c97e7c3", bytes: 310_880, retain: true },
   { key: "visionWasm", path: "mediapipe/wasm/vision_wasm_internal.wasm", bytes: 11_756_954, retain: false },
   { key: "visionLoader", path: "mediapipe/wasm/vision_wasm_internal.js", bytes: 323_377, retain: false },
   { key: "segmentModel", path: "mediapipe/selfie_segmenter.tflite", bytes: 249_537, retain: true },
@@ -783,6 +798,11 @@ function App() {
   const photoCanvasRef = useRef(null);
   const riveCanvasRef = useRef(null);
   const riveCaptureCanvasRef = useRef(null);
+  const heartBalloonCanvasRef = useRef(null);
+  const heartWreathCanvasRef = useRef(null);
+  const propRiveRefs = useRef({ balloon: null, wreath: null });
+  const activePropEffectRef = useRef({ kind: "", until: 0 });
+  const propEffectTimerRef = useRef(null);
   const foregroundCanvasRef = useRef(null);
   const maskCanvasRef = useRef(null);
   const gestureOutlineBuffersRef = useRef(null);
@@ -880,6 +900,7 @@ function App() {
   const collectionDialogueRef = useRef(() => {});
   const startObjectCollectionRef = useRef(() => {});
   const triggerHeartVoiceRef = useRef(() => {});
+  const triggerWreathVoiceRef = useRef(() => {});
   const mediaPreviewCloseTimerRef = useRef(null);
   const mediaLibrarySwipeRef = useRef({ active: false, startX: 0, startY: 0, dragY: 0 });
   const mediaPreviewSwipeRef = useRef({ active: false, pointerId: null, startX: 0, startY: 0 });
@@ -1465,6 +1486,29 @@ function App() {
     }));
   }, [activeCharacter]);
 
+  const triggerPropEffect = useCallback((kind) => {
+    const effect = PROP_RIVE_EFFECTS[kind];
+    const instance = propRiveRefs.current[kind];
+    if (!effect || !instance) return false;
+    try {
+      instance.stop();
+      instance.play(effect.animation);
+    } catch (error) {
+      console.warn(`Unable to play ${kind} Rive prop`, error);
+      return false;
+    }
+    activePropEffectRef.current = {
+      kind,
+      until: performance.now() + effect.duration,
+    };
+    if (propEffectTimerRef.current) window.clearTimeout(propEffectTimerRef.current);
+    propEffectTimerRef.current = window.setTimeout(() => {
+      activePropEffectRef.current = { kind: "", until: 0 };
+      propEffectTimerRef.current = null;
+    }, effect.duration);
+    return true;
+  }, []);
+
   const triggerHeartVoice = useCallback((size = "small", { explicit = false } = {}) => {
     if (
       mediaPreviewRef.current
@@ -1473,24 +1517,41 @@ function App() {
       || gameplayModeRef.current
     ) return false;
     const action = VOICE_ACTIONS.heart;
-    if (!rivePlayAnimationRef.current?.(action.animation)) return false;
+    const characterPlayed = rivePlayAnimationRef.current?.(action.animation);
+    const propPlayed = triggerPropEffect("balloon");
+    if (!characterPlayed && !propPlayed) return false;
     const timestamp = performance.now();
     const gesture = size === "large" ? CAMERA_GESTURES.HEART : CAMERA_GESTURES.FINGER_HEART;
     if (explicit) lastExplicitHeartAtRef.current = timestamp;
     setLastRecognizedGesture(gesture);
-    gestureEffectUntilRef.current = timestamp + HEART_FEEDBACK_DURATION_MS;
-    setActiveGestureEffect(gesture);
-    if (gestureEffectTimerRef.current) window.clearTimeout(gestureEffectTimerRef.current);
-    gestureEffectTimerRef.current = window.setTimeout(() => {
-      gestureEffectTimerRef.current = null;
-      gestureEffectUntilRef.current = 0;
-      setActiveGestureEffect("");
-    }, HEART_FEEDBACK_DURATION_MS);
+    if (!explicit) {
+      gestureEffectUntilRef.current = timestamp + HEART_FEEDBACK_DURATION_MS;
+      setActiveGestureEffect(gesture);
+      if (gestureEffectTimerRef.current) window.clearTimeout(gestureEffectTimerRef.current);
+      gestureEffectTimerRef.current = window.setTimeout(() => {
+        gestureEffectTimerRef.current = null;
+        gestureEffectUntilRef.current = 0;
+        setActiveGestureEffect("");
+      }, HEART_FEEDBACK_DURATION_MS);
+    }
     scheduleAutoCapture(`voice:${gesture}`, 720);
     showToast(`${CHARACTERS[activeCharacter].label}${action.toast}`);
     return true;
-  }, [activeCharacter, scheduleAutoCapture, showToast]);
+  }, [activeCharacter, scheduleAutoCapture, showToast, triggerPropEffect]);
   triggerHeartVoiceRef.current = triggerHeartVoice;
+
+  const triggerWreathVoice = useCallback(() => {
+    if (
+      mediaPreviewRef.current
+      || mediaLibraryOpenRef.current
+      || characterSwitchingRef.current
+      || gameplayModeRef.current
+    ) return false;
+    if (!triggerPropEffect("wreath")) return false;
+    showToast("爱心花圈来啦");
+    return true;
+  }, [showToast, triggerPropEffect]);
+  triggerWreathVoiceRef.current = triggerWreathVoice;
 
   const handleGestureResult = useCallback((result, timestamp) => {
     const candidate = classifyCameraGesture(result);
@@ -1736,6 +1797,8 @@ function App() {
             if (voiceIntent?.type !== "collect") dismissCollection();
             if (voiceIntent?.type === "heart") {
               triggerHeartVoiceRef.current?.(voiceIntent.size, { explicit: true });
+            } else if (voiceIntent?.type === "wreath") {
+              triggerWreathVoiceRef.current?.();
             } else if (voiceIntent?.type === "feed" && !gameplayModeRef.current) {
               void startGameplayRef.current?.("feed");
             } else if (voiceIntent?.type === "collect") {
@@ -2249,6 +2312,16 @@ function App() {
     context.restore();
   }, [pipVisible]);
 
+  const drawPropRiveLayer = useCallback((context, targetWidth, targetHeight, timestamp) => {
+    const active = activePropEffectRef.current;
+    if (!active.kind || timestamp >= active.until) return;
+    const canvas = active.kind === "balloon"
+      ? heartBalloonCanvasRef.current
+      : heartWreathCanvasRef.current;
+    if (!canvas?.width || !canvas?.height) return;
+    context.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, targetWidth, targetHeight);
+  }, []);
+
   const renderFrame = useCallback((
     includeCaption = recordingRef.current,
     riveCanvasOverride = null,
@@ -2273,6 +2346,9 @@ function App() {
     outputContext.fillStyle = "#181b14";
     outputContext.fillRect(0, 0, targetWidth, targetHeight);
     drawCameraSource(outputContext, video, rect, targetWidth, mirrored);
+    // Props are composed before the segmented person and character, leaving the
+    // heart balloon / wreath visibly behind them instead of masking their face.
+    drawPropRiveLayer(outputContext, targetWidth, targetHeight, timestamp);
 
     if (activeGestureEffect === CAMERA_GESTURES.HEART && timestamp < gestureEffectUntilRef.current) {
       drawLargeHeartFeedback(outputContext, targetWidth, targetHeight, HEART_FEEDBACK_DURATION_MS - (gestureEffectUntilRef.current - timestamp));
@@ -2336,7 +2412,7 @@ function App() {
         { isTabletDevice },
       );
     }
-  }, [characterBubble, drawCaption, drawFrontCameraPip, drawRiveLayer, drawSpeechBubble, facingMode, isTabletDevice, personLayer]);
+  }, [characterBubble, drawCaption, drawFrontCameraPip, drawPropRiveLayer, drawRiveLayer, drawSpeechBubble, facingMode, isTabletDevice, personLayer]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2369,6 +2445,10 @@ function App() {
         const downloads = await Promise.all(loadAssets.map((asset) => fetchAsset(asset, onProgress)));
         if (cancelled) return;
         const riveBuffer = downloads[loadAssets.findIndex((asset) => asset.key === "riveFile")];
+        const propBuffers = Object.fromEntries(Object.values(PROP_RIVE_EFFECTS).map((effect) => [
+          effect.assetKey,
+          downloads[loadAssets.findIndex((asset) => asset.key === effect.assetKey)],
+        ]));
         const modelBuffer = downloads[loadAssets.findIndex((asset) => asset.key === "segmentModel")];
         const subjectModelBuffer = downloads[loadAssets.findIndex((asset) => asset.key === "subjectModel")];
         const faceModelBuffer = downloads[loadAssets.findIndex((asset) => asset.key === "faceModel")];
@@ -2376,6 +2456,53 @@ function App() {
 
         setLoadProgress(84);
         setEngineMessage("正在唤醒叫叫");
+
+        const preparePropRives = async () => {
+          CanvasRuntimeLoader.setWasmUrl(`${BASE_URL}rive/canvas.wasm`);
+          CanvasRuntimeLoader.setWasmFallbackUrl(`${BASE_URL}rive/canvas_fallback.wasm`);
+          const propCanvasRefs = { balloon: heartBalloonCanvasRef, wreath: heartWreathCanvasRef };
+          await Promise.all(Object.entries(PROP_RIVE_EFFECTS).map(([kind, effect]) => new Promise((resolve) => {
+            const canvas = propCanvasRefs[kind].current;
+            const buffer = propBuffers[effect.assetKey];
+            if (!canvas || !buffer) {
+              resolve(false);
+              return;
+            }
+            let instance;
+            try {
+              instance = new CanvasRive({
+                buffer,
+                canvas,
+                autoplay: false,
+                enableRiveAssetCDN: false,
+                layout: new CanvasLayout({ fit: CanvasFit.Contain, alignment: CanvasAlignment.Center }),
+                onLoad: () => {
+                  if (cancelled) {
+                    instance.cleanup();
+                    resolve(false);
+                    return;
+                  }
+                  if (!instance.animationNames?.includes(effect.animation)) {
+                    console.warn(`Rive prop is missing ${effect.animation}`);
+                    instance.cleanup();
+                    resolve(false);
+                    return;
+                  }
+                  instance.resizeDrawingSurfaceToCanvas(Math.min(window.devicePixelRatio || 1, 2));
+                  propRiveRefs.current[kind] = instance;
+                  resolve(true);
+                },
+                onLoadError: () => {
+                  instance?.cleanup();
+                  resolve(false);
+                },
+              });
+            } catch (error) {
+              console.warn(`Unable to initialize ${kind} Rive prop`, error);
+              resolve(false);
+            }
+          })));
+        };
 
         const loadRiveCharacter = (characterBuffer) => new Promise((resolve) => {
           riveCropTimeoutsRef.current.forEach((timeout) => window.clearTimeout(timeout));
@@ -2835,7 +2962,7 @@ function App() {
           return { segmenterLoaded, subjectSegmenterLoaded, faceLoaded, gestureLoaded };
         })();
 
-        const [riveLoaded, visionLoaded] = await Promise.all([prepareRive, prepareVision]);
+        const [riveLoaded, visionLoaded] = await Promise.all([prepareRive, prepareVision, preparePropRives()]);
         if (cancelled) return;
         if (!riveLoaded) throw new Error("Rive failed to initialize");
         setLoadProgress(100);
@@ -2872,6 +2999,13 @@ function App() {
       riveMarkCaptureRef.current = null;
       rivePrepareCaptureRef.current = null;
       riveCaptureMomentRef.current = null;
+      if (propEffectTimerRef.current) window.clearTimeout(propEffectTimerRef.current);
+      propEffectTimerRef.current = null;
+      activePropEffectRef.current = { kind: "", until: 0 };
+      for (const key of Object.keys(propRiveRefs.current)) {
+        propRiveRefs.current[key]?.cleanup();
+        propRiveRefs.current[key] = null;
+      }
       jiaojiaoBufferRef.current = null;
       lvdouBufferRef.current = null;
       lvdouLoadPromiseRef.current = null;
@@ -4025,6 +4159,8 @@ function App() {
           <video ref={videoRef} className="camera-source" playsInline muted aria-hidden="true" />
           <video ref={pipVideoRef} className="camera-source pip-camera-source" playsInline muted aria-hidden="true" />
           <canvas ref={riveCanvasRef} className="rive-source" width={RIVE_SOURCE_SIZE.width} height={RIVE_SOURCE_SIZE.height} aria-hidden="true" />
+          <canvas ref={heartBalloonCanvasRef} className="prop-rive-source" width={PROP_RIVE_CANVAS_SIZE} height={PROP_RIVE_CANVAS_SIZE} aria-hidden="true" />
+          <canvas ref={heartWreathCanvasRef} className="prop-rive-source" width={PROP_RIVE_CANVAS_SIZE} height={PROP_RIVE_CANVAS_SIZE} aria-hidden="true" />
           <canvas ref={foregroundCanvasRef} className="render-source" width={frameSize.width} height={frameSize.height} aria-hidden="true" />
           <canvas ref={maskCanvasRef} className="render-source" width="256" height="256" aria-hidden="true" />
           <canvas ref={outputCanvasRef} className="camera-output" width={frameSize.width} height={frameSize.height} aria-label="实时合拍画面" />

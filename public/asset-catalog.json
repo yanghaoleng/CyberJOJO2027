@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-18T03:52:26.345Z",
+  "generatedAt": "2026-09-18T06:26:57.727Z",
   "publicFileCount": 55,
-  "totalBytes": 59182276,
+  "totalBytes": 59182448,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -324,8 +324,8 @@
       "name": "heart-balloon.riv",
       "category": "rive",
       "format": "RIV",
-      "bytes": 26436,
-      "sha256": "7a37a4eb62ba5fa800abe28724b80a807bc3c3ce39ea038a6e705e2c2081c9e7"
+      "bytes": 26614,
+      "sha256": "f119ed11e935e8226020a3fc7b0f1c1915b30d2cd189741f404e0558f390d006"
     },
     {
       "id": "media/heart-garden.riv",
@@ -333,8 +333,8 @@
       "name": "heart-garden.riv",
       "category": "rive",
       "format": "RIV",
-      "bytes": 310886,
-      "sha256": "95036d31a2b826bce72adcbbc335f14f5fb70c22a0793499281ca7364b89b8a3"
+      "bytes": 310880,
+      "sha256": "9539c97e7c3f2b9a26ff12d8166b943a519e31c0d53eb4677a9950be6a40ddf9"
     },
     {
       "id": "media/jiaojiao.riv",

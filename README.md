@@ -173,7 +173,7 @@ npm run voice-server
 - MediaPipe 手势模型：SHA-256 `97952348cf6a6a4915c2ea1496b4b37ebabc50cbbf80571435643c455f2b0482`
 - MediaPipe DeepLab V3：SHA-256 `ff36e24d40547fe9e645e2f4e8745d1876d6e38b332d39a82f0bf0f5d1d561b3`
 
-当前 `public/media/jiaojiao.riv` 为 2026-09-16 群内更新并在 `/jocam-test/` 使用的主角色文件，大小 6,751,167 字节。角色缓存版本与文件 SHA 同步更新；随附的心形气球和花园文件保存为 `media/heart-balloon.riv`、`media/heart-garden.riv`。当前背景比心仍由相机合成层绘制。旧版 ZHc 的历史验证见 `docs/rive-ZHc-validation-2026-09-11.md`。
+当前 `public/media/jiaojiao.riv` 为 2026-09-16 群内更新并在 `/jocam-test/` 使用的主角色文件，大小 6,751,167 字节。角色缓存版本与文件 SHA 同步更新；随附的心形气球和花园文件保存为 `media/heart-balloon.riv`、`media/heart-garden.riv`。明确语音“比心”播放 `Prop_HeartBalloon_Float_Loop`，语音“花圈／比花圈”播放 `Prop_HeartWreath_Pop`，两者均在相机中合成到人像与叫叫之后；手势识别的即时反馈仍由相机合成层绘制。旧版 ZHc 的历史验证见 `docs/rive-ZHc-validation-2026-09-11.md`。
 
 当前 `public/media/lvdou.riv` 来自[绿豆原文件页面](https://rive.mikeywa.site/4KM)，原文件名为 `ai叫叫学伴_源文件_绿豆_（黑).riv`，大小 1,465,175 字节。上面的校验和对应仓库中的这份文件；替换素材后应同步更新资源清单与校验信息。具体预览和资源维护方式见 `src/assets-gallery/README.md`。
 

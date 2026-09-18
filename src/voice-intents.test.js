@@ -6,6 +6,8 @@ test("fixed heart phrases trigger the heart action", () => {
   assert.deepEqual(parseVoiceIntent("叫叫，给我比个心"), { type: "heart", size: "small" });
   assert.deepEqual(parseVoiceIntent("我想看你比心"), { type: "heart", size: "small" });
   assert.deepEqual(parseVoiceIntent("叫叫，来一个大爱心"), { type: "heart", size: "large" });
+  assert.deepEqual(parseVoiceIntent("叫叫，比个花圈"), { type: "wreath" });
+  assert.deepEqual(parseVoiceIntent("我要看爱心花圈"), { type: "wreath" });
   assert.equal(parseVoiceIntent("我今天很开心"), null);
 });
 
