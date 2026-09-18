@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-18T08:03:44.951Z",
-  "publicFileCount": 55,
-  "totalBytes": 59186305,
+  "generatedAt": "2026-09-18T08:46:14.620Z",
+  "publicFileCount": 56,
+  "totalBytes": 59197137,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -310,13 +310,26 @@
       "sha256": "e5f837458cba94e8c507644a960754948d1f4b6e8bc68c35afdb89e58a2fdb30"
     },
     {
+      "id": "intro/assets/need-case-01.webp",
+      "path": "intro/assets/need-case-01.webp",
+      "name": "need-case-01.webp",
+      "category": "icon",
+      "format": "WEBP",
+      "bytes": 10888,
+      "sha256": "eec79bf135b532462f2411f1387b2837f941df6fabcaea53cb23e49601aaa44c",
+      "dimensions": [
+        802,
+        463
+      ]
+    },
+    {
       "id": "intro/index.html",
       "path": "intro/index.html",
       "name": "index.html",
       "category": "other",
       "format": "HTML",
-      "bytes": 36162,
-      "sha256": "5f3caaf4c9f9c466f90f9fa26520f7d701dabe10fd43459215df84bf290e39c6"
+      "bytes": 36106,
+      "sha256": "5fdd09fa5a9079b45d03840755db269f4cfc0a77bcabd59b8fd63b4b8d14d7cc"
     },
     {
       "id": "media/heart-balloon.riv",
