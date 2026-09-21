@@ -101,13 +101,13 @@ function sendJson(socket, payload) {
   if (socket.readyState === 1) socket.send(JSON.stringify(payload));
 }
 
-const OPENING_TEXT = "我来啦。今天有没有一件想跟我说说的事？";
+const OPENING_TEXT = "我来啦！今天读了什么好玩的，还是吃了什么好吃的呀？";
 const GESTURE_PROMPTS = Object.freeze({
-  thumbs_up: "用户刚刚对你比了一个赞，请自然回应这个动作。",
+  thumbs_up: "用户刚刚对你比了一个赞。高兴地回赞他，像朋友之间打招呼一样自然。",
   victory: "用户刚刚对你比了一个胜利手势，请自然回应这个动作。",
   ok: "用户刚刚对你比了一个 OK 手势，请自然回应这个动作。",
-  heart_small: "用户刚刚对你比了一个单手小爱心，请自然回应这个动作。",
-  heart_large: "用户刚刚用两只手比了一个大爱心，请自然回应这个动作。",
+  heart_small: "用户刚刚对你比了一个单手小爱心。高兴地回他一个爱心。",
+  heart_large: "用户刚刚用两只手比了一个大爱心。开心地回应这份喜欢。",
 });
 
 function normalizeCharacter(value) {

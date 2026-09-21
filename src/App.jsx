@@ -4672,8 +4672,7 @@ function App() {
       {!isMobileDevice && (
         <aside className="desktop-note">
           <span className="desktop-kicker">推荐使用移动设备</span>
-          <h2>扫码和叫叫合影</h2>
-          <p>用手机或 Pad 打开，取景框会自动放大，更适合拍照和录像。</p>
+          <h2>扫码召唤叫叫</h2>
           <div className="desktop-qr">
             {qrCodeUrl ? (
               <img src={qrCodeUrl} alt={`打开 ${shareUrl} 的二维码`} />
