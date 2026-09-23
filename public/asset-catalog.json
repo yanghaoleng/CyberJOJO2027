@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-23T10:37:45.442Z",
-  "publicFileCount": 84,
-  "totalBytes": 100411836,
+  "generatedAt": "2026-09-23T16:36:58.030Z",
+  "publicFileCount": 89,
+  "totalBytes": 100923933,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -160,6 +160,51 @@
       "format": "MP3",
       "bytes": 33017,
       "sha256": "b45e5230040c3c1cde3137900bb502eb9bd033f2d72adea122bd3b74758db91b"
+    },
+    {
+      "id": "demo-audio/leave-note-2026-08-24.mp3",
+      "path": "demo-audio/leave-note-2026-08-24.mp3",
+      "name": "相机引导 · leave-note-2026-08-24.mp3",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 108141,
+      "sha256": "0341a19b007368ef0bd5f0c13a63c08e5efa59e5f30b3f63e3796397d05c8bee"
+    },
+    {
+      "id": "demo-audio/leave-note-2026-09-02.mp3",
+      "path": "demo-audio/leave-note-2026-09-02.mp3",
+      "name": "相机引导 · leave-note-2026-09-02.mp3",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 98925,
+      "sha256": "1e7e2bea07f085037b2f7bae61e2cc5bcce66db3be99db611a6b19ce3ff23a23"
+    },
+    {
+      "id": "demo-audio/leave-note-2026-09-10.mp3",
+      "path": "demo-audio/leave-note-2026-09-10.mp3",
+      "name": "相机引导 · leave-note-2026-09-10.mp3",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 97773,
+      "sha256": "0a6f87b7676832427eff5d4ad5593a08e5fe679645b05e85cdf013a168e8be33"
+    },
+    {
+      "id": "demo-audio/leave-note-2026-09-20.mp3",
+      "path": "demo-audio/leave-note-2026-09-20.mp3",
+      "name": "相机引导 · leave-note-2026-09-20.mp3",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 102189,
+      "sha256": "2e7404a9ebaa4c51f9875dd810eeba073f16ebe9e084cf59a7c1964c6ae8bafc"
+    },
+    {
+      "id": "demo-audio/leave-note-2026-09-22.mp3",
+      "path": "demo-audio/leave-note-2026-09-22.mp3",
+      "name": "相机引导 · leave-note-2026-09-22.mp3",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 105069,
+      "sha256": "921274b5b3232df3d1db0c9291020dbc0889d6c0ddcb4cdfb3d75d8e4a7cdc60"
     },
     {
       "id": "demo-photos/demo-2026-08-20-cat-fish.jpg",
@@ -907,27 +952,13 @@
       "sha256": "dcc8ab8b251fd8dce795243074f6a16613f5ab86a5a87815e260be350dfa8445"
     },
     {
-      "id": "phosphor:ArrowClockwise",
-      "name": "重新开始",
-      "iconName": "ArrowClockwise",
-      "category": "interface",
-      "format": "SVG",
-      "weights": [
-        "bold"
-      ],
-      "usedIn": [
-        "src/App.jsx"
-      ],
-      "license": "MIT"
-    },
-    {
-      "id": "phosphor:ArrowsLeftRight",
+      "id": "iconoir:ArrowSeparate",
       "name": "切换镜头",
-      "iconName": "ArrowsLeftRight",
+      "iconName": "ArrowSeparate",
       "category": "interface",
       "format": "SVG",
       "weights": [
-        "bold"
+        "2.5"
       ],
       "usedIn": [
         "src/App.jsx"
@@ -935,41 +966,13 @@
       "license": "MIT"
     },
     {
-      "id": "phosphor:BookOpenText",
-      "name": "BookOpenText",
-      "iconName": "BookOpenText",
-      "category": "interface",
-      "format": "SVG",
-      "weights": [
-        "bold"
-      ],
-      "usedIn": [
-        "src/App.jsx"
-      ],
-      "license": "MIT"
-    },
-    {
-      "id": "phosphor:CaretDown",
-      "name": "展开",
-      "iconName": "CaretDown",
-      "category": "interface",
-      "format": "SVG",
-      "weights": [
-        "bold"
-      ],
-      "usedIn": [
-        "src/App.jsx"
-      ],
-      "license": "MIT"
-    },
-    {
-      "id": "phosphor:Check",
+      "id": "iconoir:Check",
       "name": "确认",
       "iconName": "Check",
       "category": "interface",
       "format": "SVG",
       "weights": [
-        "bold"
+        "2.5"
       ],
       "usedIn": [
         "src/App.jsx"
@@ -977,13 +980,13 @@
       "license": "MIT"
     },
     {
-      "id": "phosphor:DownloadSimple",
+      "id": "iconoir:Download",
       "name": "下载",
-      "iconName": "DownloadSimple",
+      "iconName": "Download",
       "category": "interface",
       "format": "SVG",
       "weights": [
-        "bold"
+        "2.5"
       ],
       "usedIn": [
         "src/App.jsx"
@@ -991,28 +994,13 @@
       "license": "MIT"
     },
     {
-      "id": "phosphor:ImagesSquare",
-      "name": "相册",
-      "iconName": "ImagesSquare",
-      "category": "interface",
-      "format": "SVG",
-      "weights": [
-        "bold",
-        "duotone"
-      ],
-      "usedIn": [
-        "src/App.jsx"
-      ],
-      "license": "MIT"
-    },
-    {
-      "id": "phosphor:LockSimple",
+      "id": "iconoir:Lock",
       "name": "锁定",
-      "iconName": "LockSimple",
+      "iconName": "Lock",
       "category": "interface",
       "format": "SVG",
       "weights": [
-        "fill"
+        "2.5"
       ],
       "usedIn": [
         "src/App.jsx"
@@ -1020,13 +1008,13 @@
       "license": "MIT"
     },
     {
-      "id": "phosphor:MagnifyingGlass",
-      "name": "搜索",
-      "iconName": "MagnifyingGlass",
+      "id": "iconoir:MediaImageList",
+      "name": "相册",
+      "iconName": "MediaImageList",
       "category": "interface",
       "format": "SVG",
       "weights": [
-        "bold"
+        "2.5"
       ],
       "usedIn": [
         "src/App.jsx"
@@ -1034,13 +1022,13 @@
       "license": "MIT"
     },
     {
-      "id": "phosphor:PictureInPicture",
+      "id": "iconoir:MultiWindow",
       "name": "画中画",
-      "iconName": "PictureInPicture",
+      "iconName": "MultiWindow",
       "category": "interface",
       "format": "SVG",
       "weights": [
-        "regular"
+        "2.5"
       ],
       "usedIn": [
         "src/App.jsx"
@@ -1048,13 +1036,70 @@
       "license": "MIT"
     },
     {
-      "id": "phosphor:PlayCircle",
+      "id": "iconoir:NavArrowDown",
+      "name": "展开",
+      "iconName": "NavArrowDown",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "2.5"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "iconoir:OpenBook",
+      "name": "日志",
+      "iconName": "OpenBook",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "2.5"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "iconoir:PauseSolid",
+      "name": "PauseSolid",
+      "iconName": "PauseSolid",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "2.5"
+      ],
+      "usedIn": [
+        "src/components/leave-note-card.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "iconoir:PlaySolid",
       "name": "播放",
-      "iconName": "PlayCircle",
+      "iconName": "PlaySolid",
       "category": "interface",
       "format": "SVG",
       "weights": [
-        "fill"
+        "2.5"
+      ],
+      "usedIn": [
+        "src/App.jsx",
+        "src/components/leave-note-card.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "iconoir:Refresh",
+      "name": "重新开始",
+      "iconName": "Refresh",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "2.5"
       ],
       "usedIn": [
         "src/App.jsx"
@@ -1062,13 +1107,13 @@
       "license": "MIT"
     },
     {
-      "id": "phosphor:SquaresFour",
-      "name": "SquaresFour",
-      "iconName": "SquaresFour",
+      "id": "iconoir:Search",
+      "name": "搜索",
+      "iconName": "Search",
       "category": "interface",
       "format": "SVG",
       "weights": [
-        "fill"
+        "2.5"
       ],
       "usedIn": [
         "src/App.jsx"
@@ -1076,13 +1121,13 @@
       "license": "MIT"
     },
     {
-      "id": "phosphor:Sticker",
-      "name": "Sticker",
-      "iconName": "Sticker",
+      "id": "iconoir:Sparks",
+      "name": "灵感",
+      "iconName": "Sparks",
       "category": "interface",
       "format": "SVG",
       "weights": [
-        "bold"
+        "2.5"
       ],
       "usedIn": [
         "src/App.jsx"
@@ -1090,13 +1135,27 @@
       "license": "MIT"
     },
     {
-      "id": "phosphor:X",
+      "id": "iconoir:ViewGrid",
+      "name": "全部",
+      "iconName": "ViewGrid",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "2.5"
+      ],
+      "usedIn": [
+        "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "iconoir:Xmark",
       "name": "关闭",
-      "iconName": "X",
+      "iconName": "Xmark",
       "category": "interface",
       "format": "SVG",
       "weights": [
-        "bold"
+        "2.5"
       ],
       "usedIn": [
         "src/App.jsx",

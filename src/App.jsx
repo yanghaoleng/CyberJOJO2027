@@ -1,21 +1,22 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal, flushSync } from "react-dom";
 import {
-  ArrowClockwise,
-  ArrowsLeftRight,
-  CaretDown,
+  ArrowSeparate,
   Check,
-  DownloadSimple,
-  ImagesSquare,
-  LockSimple,
-  MagnifyingGlass,
-  PictureInPicture,
-  PlayCircle,
-  BookOpenText,
-  SquaresFour,
-  Sticker,
-  X,
-} from "@phosphor-icons/react";
+  Download,
+  Lock,
+  MediaImageList,
+  MultiWindow,
+  NavArrowDown,
+  OpenBook,
+  PlaySolid,
+  Refresh,
+  Search,
+  Sparks,
+  ViewGrid,
+  Xmark,
+  IconoirProvider,
+} from "iconoir-react";
 import {
   Rive as CanvasRive,
   Layout as CanvasLayout,
@@ -4239,6 +4240,7 @@ function App() {
     : null;
 
   return (
+    <IconoirProvider iconProps={{ strokeWidth: 2.5 }}>
     <main className={`app-shell is-${frameOrientation} ${isMobileDevice ? "is-mobile-device" : "is-desktop-device"} ${isTabletDevice ? "is-tablet-device" : ""}`}>
       <section
         className={`camera-stage is-${frameOrientation} ${cameraState === "ready" ? "is-live" : ""} ${riveReady ? "is-rive-ready" : ""} ${characterSwitching ? "is-character-switching" : ""}`}
@@ -4420,11 +4422,11 @@ function App() {
                       ) : (
                         <video src={latestMedia.url} muted playsInline preload="metadata" aria-label="最近拍摄的短视频" />
                       )}
-                      {latestMedia.type === "video" && <PlayCircle className="media-entry-play" size={19} weight="fill" aria-hidden="true" />}
+                      {latestMedia.type === "video" && <PlaySolid width={19} height={19} className="media-entry-play" aria-hidden="true" />}
                       <span className="media-entry-count">{mediaLibrary.length}</span>
                     </>
                   ) : (
-                    <ImagesSquare size={24} weight="bold" aria-hidden="true" />
+                    <MediaImageList width={24} height={24} aria-hidden="true" />
                   )}
                 </button>
               </div>
@@ -4457,7 +4459,7 @@ function App() {
                     aria-label={pipVisible ? "关闭前置摄像头小窗" : "显示前置摄像头小窗"}
                     onClick={togglePipCamera}
                   >
-                    <PictureInPicture size={21} weight={pipVisible ? "fill" : "bold"} aria-hidden="true" />
+                    <MultiWindow width={21} height={21} strokeWidth={pipVisible ? 3 : 2} aria-hidden="true" />
                     <span className="pip-control-state" aria-hidden="true">{pipVisible ? "×" : "+"}</span>
                   </button>
                 )}
@@ -4471,7 +4473,7 @@ function App() {
                     aria-label={cameraMenuOpen ? "收起相机设置菜单" : "展开相机设置菜单"}
                     onClick={toggleCameraMenu}
                   >
-                    <CaretDown className="camera-menu-chevron" size={24} weight="bold" aria-hidden="true" />
+                    <NavArrowDown width={24} height={24} className="camera-menu-chevron" aria-hidden="true" />
                   </button>
                   {cameraMenuOpen && (
                     <div className="camera-menu-popover" role="menu" aria-label="相机设置">
@@ -4484,7 +4486,7 @@ function App() {
                           setCameraMenuOpen(false);
                         }}
                       >
-                        <ArrowsLeftRight size={19} weight="bold" aria-hidden="true" />
+                        <ArrowSeparate width={19} height={19} aria-hidden="true" />
                         <span>{personLayer === "front" ? "切换为鸡在前" : "切换为人在前"}</span>
                       </button>
                       <button
@@ -4495,7 +4497,7 @@ function App() {
                           switchCamera();
                         }}
                       >
-                        <ArrowClockwise size={20} weight="bold" aria-hidden="true" />
+                        <Refresh width={20} height={20} aria-hidden="true" />
                         <span>翻转镜头</span>
                       </button>
                     </div>
@@ -4540,12 +4542,12 @@ function App() {
               {cameraState === "opening" ? (
                 <><span className="button-loader" />正在打开相机</>
               ) : (
-                <><MagnifyingGlass size={21} weight="bold" />开始和叫叫聊聊</>
+                <><Search width={21} height={21} />开始和叫叫聊聊</>
               )}
             </button>
 
             <div className={`engine-status is-${engineState}`} role="status">
-              {engineState === "ready" ? <Check size={15} weight="bold" /> : <span className="status-pulse" />}
+              {engineState === "ready" ? <Check width={15} height={15} /> : <span className="status-pulse" />}
               <span>{engineMessage}</span>
             </div>
             {engineState === "loading" && (
@@ -4558,7 +4560,7 @@ function App() {
               </div>
             )}
             <p className="privacy-note">
-              <LockSimple size={14} weight="fill" />
+              <Lock width={14} height={14} />
               <span>AI 识物、收集抠图和相册小记会按需发送压缩画面；原图与贴纸保存在本机，服务器抠图后不留存图片；对话文字在本机留作日记，并发送给豆包 Mini 生成小记</span>
             </p>
           </div>
@@ -4592,7 +4594,7 @@ function App() {
                 </span>
               </div>
               <button type="button" onClick={closeMediaLibrary} aria-label="关闭作品列表">
-                <X size={25} weight="bold" aria-hidden="true" />
+                <Xmark width={25} height={25} aria-hidden="true" />
               </button>
             </header>
             <nav className="library-tabs" aria-label="相册分类">
@@ -4607,7 +4609,7 @@ function App() {
                     aria-label={label}
                     title={label}
                   >
-                    {id === "days" ? <BookOpenText size={21} weight="bold" aria-hidden="true" /> : id === "all" ? <SquaresFour size={21} weight="fill" aria-hidden="true" /> : <Sticker size={21} weight="bold" aria-hidden="true" />}
+                    {id === "days" ? <OpenBook width={21} height={21} aria-hidden="true" /> : id === "all" ? <ViewGrid width={21} height={21} aria-hidden="true" /> : <Sparks width={21} height={21} aria-hidden="true" />}
                     {selected && <span>{label}</span>}
                   </button>
                 );
@@ -4671,7 +4673,7 @@ function App() {
                               )}
                               {item.type === "video" && (
                                 <span className="media-video-badge" aria-hidden="true">
-                                  <PlayCircle size={15} weight="fill" />
+                                  <PlaySolid width={15} height={15} />
                                   <span>{formatMediaDuration(item.durationMs || videoDurations[item.id])}</span>
                                 </span>
                               )}
@@ -4711,7 +4713,7 @@ function App() {
               </div>
             ) : (
               <div className="media-library-empty">
-                <ImagesSquare size={42} weight="duotone" aria-hidden="true" />
+                <MediaImageList width={42} height={42} aria-hidden="true" />
                 <strong>把今天的小事留下来</strong>
                 <span>拍张照片，或和叫叫聊聊今天</span>
               </div>
@@ -4722,7 +4724,7 @@ function App() {
         {libraryFriendPreview && createPortal(
           <div className="friend-detail-backdrop" role="dialog" aria-modal="true" aria-label={`${libraryFriendPreview.name}的收集`} onClick={() => setLibraryFriendPreview(null)}>
             <article className="friend-detail-sheet" onClick={(event) => event.stopPropagation()}>
-              <button className="friend-icon-button" type="button" aria-label="关闭收集" onClick={() => setLibraryFriendPreview(null)}><X size={20} weight="bold" /></button>
+              <button className="friend-icon-button" type="button" aria-label="关闭收集" onClick={() => setLibraryFriendPreview(null)}><Xmark width={20} height={20} /></button>
               <FriendCard friend={libraryFriendPreview} />
               <p className="friend-dialogue-note">想给它换个名字，直接对叫叫说“它叫……”就好。</p>
             </article>
@@ -4761,7 +4763,7 @@ function App() {
                   )}
                 </div>
                 <button className="preview-close" type="button" onClick={closePreview} aria-label="关闭预览">
-                  <X size={28} weight="bold" />
+                  <Xmark width={28} height={28} />
                 </button>
               </div>
             </div>
@@ -4772,7 +4774,7 @@ function App() {
                 <small>{formatCaptureDate(mediaPreview.createdAt)}{mediaPreview.type === "photo" ? " · 左右滑切换，上下滑返回" : ""}</small>
               </div>
               <button type="button" onClick={savePreview}>
-                <DownloadSimple size={20} weight="bold" />
+                <Download width={20} height={20} />
                 分享
               </button>
             </div>
@@ -4795,6 +4797,7 @@ function App() {
         </aside>
       )}
     </main>
+    </IconoirProvider>
   );
 }
 

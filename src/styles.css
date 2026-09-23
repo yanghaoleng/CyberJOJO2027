@@ -1414,20 +1414,23 @@ button {
   flex: 0 0 auto;
   width: 42px;
   height: 42px;
+  padding: 0;
   border-radius: 50%;
   border: 0;
   cursor: pointer;
   background: rgba(233, 202, 151, 0.22);
   color: #f4e3c2;
   font-size: 15px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: background 0.2s ease, transform 0.15s ease;
 }
 .leave-note-play:hover { background: rgba(233, 202, 151, 0.34); }
 .leave-note-play:active { transform: scale(0.94); }
-.leave-note-play-icon { transform: translateX(1px); }
-.leave-note-pause { font-size: 12px; letter-spacing: 0.02em; }
+.leave-note-play svg { display: block; flex: 0 0 auto; }
+.leave-note-play-icon { transform: translateX(1px); display: flex; align-items: center; justify-content: center; }
+.leave-note-pause { display: flex; align-items: center; justify-content: center; }
 .leave-note-body { flex: 1 1 auto; min-width: 0; }
 .leave-note-meta {
   display: flex;
@@ -1482,24 +1485,25 @@ button {
 }
 /* 贴纸卡 = 正方形贴纸区 + 固定名字行，防止被压扁压窄 */
 .media-library-card.is-friend {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  gap: 0;
+  display: block;
   padding: 0;
   text-align: left;
 }
+/* 贴纸视觉区：padding-top 100% 经典正方形，与照片卡同宽高 */
 .media-library-card.is-friend .media-library-visual {
   position: relative;
-  display: grid;
-  place-items: center;
+  display: block;
   width: 100%;
-  aspect-ratio: 1;
-  padding: 12px;
+  height: 0;
+  padding-top: 100%;
+  aspect-ratio: auto;
   box-sizing: border-box;
   overflow: hidden;
   background: rgba(41, 34, 19, 0.7);
 }
 .media-library-card.is-friend img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -1537,7 +1541,7 @@ button {
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 7px;
 }
-.app-shell.is-mobile-device:not(.is-tablet-device).is-portrait .media-library-card.is-friend .media-library-visual { padding: 7px; }
+.app-shell.is-mobile-device:not(.is-tablet-device).is-portrait .media-library-card.is-friend .media-library-visual { padding-top: 100%; aspect-ratio: auto; }
 .app-shell.is-mobile-device:not(.is-tablet-device).is-portrait .media-library-card.is-friend .media-friend-name { min-height: 30px; font-size: 11px; padding: 5px 4px 6px; }
 
 .media-day-summary {

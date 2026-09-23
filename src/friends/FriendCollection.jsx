@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { X } from "@phosphor-icons/react";
+import { Xmark } from "iconoir-react";
 import FriendCard from "./FriendCard.jsx";
 import { isUnreadCollection, loadFriends } from "./friend-store.js";
 import "./friends.css";
@@ -52,7 +52,7 @@ export default function FriendCollection({ friends: supplied, onSeen, onRetry })
     {error && <p className="friend-error" role="alert">{error}</p>}
     {selected && createPortal(<div className="friend-detail-backdrop" role="dialog" aria-modal="true" aria-label={`${selectedRecord.name}的收集`} onClick={() => setSelected(null)}>
       <article className="friend-detail-sheet" onClick={(event) => event.stopPropagation()}>
-        <button className="friend-icon-button" type="button" aria-label="关闭收集" onClick={() => setSelected(null)}><X size={20} weight="bold" /></button>
+        <button className="friend-icon-button" type="button" aria-label="关闭收集" onClick={() => setSelected(null)}><Xmark width={20} height={20} /></button>
         <FriendCard friend={selectedRecord} />
         {selectedRecord.status === "failed" && <button className="collection-retry" type="button" onClick={() => void onRetry?.(selectedRecord)?.catch(() => setError("暂时没能重试，原图仍保存在这里"))}>用这张原图重新制作贴纸</button>}
         {["pending", "processing"].includes(selectedRecord.status) && <p className="friend-dialogue-note">原图已保存，贴纸会在做好后自动出现。你可以先去做别的事。</p>}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pause, Play } from "@phosphor-icons/react";
+import { PauseSolid, PlaySolid } from "iconoir-react";
 
 function formatDuration(totalSeconds) {
   const seconds = Math.max(0, Math.round(totalSeconds));
@@ -131,9 +131,9 @@ export function LeaveNoteCard({ note, onFinished }) {
     <div className={`leave-note-card${playing ? " is-playing" : ""}`}>
       <button type="button" className="leave-note-play" onClick={toggle} aria-label={playing ? "暂停留言" : "播放留言"}>
         {playing ? (
-          <span className="leave-note-pause" aria-hidden="true"><Pause size={20} weight="fill" /></span>
+          <span className="leave-note-pause" aria-hidden="true"><PauseSolid width={20} height={20} /></span>
         ) : (
-          <span className="leave-note-play-icon" aria-hidden="true"><Play size={20} weight="fill" /></span>
+          <span className="leave-note-play-icon" aria-hidden="true"><PlaySolid width={20} height={20} /></span>
         )}
       </button>
       <div className="leave-note-body">

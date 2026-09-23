@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowCounterClockwise, Pause, Play } from '@phosphor-icons/react';
+import { PauseSolid, PlaySolid, Undo } from 'iconoir-react';
 import { assetUrl, useInViewport } from './asset-utils.js';
 import './food-model.css';
 
@@ -115,8 +115,8 @@ export default function FoodModel({ foodId = 'apple', className = '', interactiv
     {visible && status === 'loading' && <span className="food-model__status" role="status">正在端上来…</span>}
     {visible && status === 'error' && <div className="food-model__status" role="status">模型暂时无法显示{interactive && <button type="button" onClick={() => setRetry((n) => n + 1)}>重新加载</button>}</div>}
     {interactive && status === 'ready' && <div className="food-model__tools">
-      <button type="button" title="复位视角" aria-label="复位视角" onClick={() => actionsRef.current?.reset()}><ArrowCounterClockwise size={18} /></button>
-      <button type="button" title={rotating ? '暂停旋转' : '自动旋转'} aria-label={rotating ? '暂停旋转' : '自动旋转'} aria-pressed={rotating} onClick={() => setRotating((value) => !value)}>{rotating ? <Pause size={18} /> : <Play size={18} />}</button>
+      <button type="button" title="复位视角" aria-label="复位视角" onClick={() => actionsRef.current?.reset()}><Undo width={18} height={18} /></button>
+      <button type="button" title={rotating ? '暂停旋转' : '自动旋转'} aria-label={rotating ? '暂停旋转' : '自动旋转'} aria-pressed={rotating} onClick={() => setRotating((value) => !value)}>{rotating ? <PauseSolid width={18} height={18} /> : <PlaySolid width={18} height={18} />}</button>
     </div>}
   </div>;
 }
