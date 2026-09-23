@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Pause, Play } from "@phosphor-icons/react";
 
 function formatDuration(totalSeconds) {
   const seconds = Math.max(0, Math.round(totalSeconds));
@@ -130,9 +131,9 @@ export function LeaveNoteCard({ note, onFinished }) {
     <div className={`leave-note-card${playing ? " is-playing" : ""}`}>
       <button type="button" className="leave-note-play" onClick={toggle} aria-label={playing ? "暂停留言" : "播放留言"}>
         {playing ? (
-          <span className="leave-note-pause" aria-hidden="true">❚❚</span>
+          <span className="leave-note-pause" aria-hidden="true"><Pause size={20} weight="fill" /></span>
         ) : (
-          <span className="leave-note-play-icon" aria-hidden="true">▶</span>
+          <span className="leave-note-play-icon" aria-hidden="true"><Play size={20} weight="fill" /></span>
         )}
       </button>
       <div className="leave-note-body">
@@ -144,7 +145,6 @@ export function LeaveNoteCard({ note, onFinished }) {
             return <i key={index} style={{ height: `${height}%` }} className={active ? "is-active" : ""} />;
           })}
         </div>
-        <p className="leave-note-text">{note?.text}</p>
       </div>
     </div>
   );
