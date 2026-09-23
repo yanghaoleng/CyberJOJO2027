@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-23T04:38:04.881Z",
-  "publicFileCount": 74,
-  "totalBytes": 68995305,
+  "generatedAt": "2026-09-23T06:29:46.033Z",
+  "publicFileCount": 84,
+  "totalBytes": 100403128,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -306,6 +306,110 @@
       "sha256": "2dac1b182ca8ac26c2bf24c89bf6a1b2421564775f00a4d8ea41a17165d8c3f2"
     },
     {
+      "id": "demo-photos/sticker-apple.png",
+      "path": "demo-photos/sticker-apple.png",
+      "name": "sticker-apple.png",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 2849908,
+      "sha256": "dd83ea1914d0380cb252d1a4929a9981b1d6bdba9698d4cd1787e484648c04ab",
+      "dimensions": [
+        1446,
+        1706
+      ]
+    },
+    {
+      "id": "demo-photos/sticker-ball.png",
+      "path": "demo-photos/sticker-ball.png",
+      "name": "sticker-ball.png",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 5482432,
+      "sha256": "e90f7ab4678c5da9218f035821d2ae8882f04ae03f8b98b33a72b07b374435bc",
+      "dimensions": [
+        2048,
+        1975
+      ]
+    },
+    {
+      "id": "demo-photos/sticker-banana.png",
+      "path": "demo-photos/sticker-banana.png",
+      "name": "sticker-banana.png",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 1145743,
+      "sha256": "547abdc00e0d0c84a0f338412fb58978a5ffe17e2b76cecbf6ebee255a84cd95",
+      "dimensions": [
+        1506,
+        1255
+      ]
+    },
+    {
+      "id": "demo-photos/sticker-bear.png",
+      "path": "demo-photos/sticker-bear.png",
+      "name": "sticker-bear.png",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 3892694,
+      "sha256": "cfe4fb75fa1610636a9fc0af3b466064fbc90c40d9d57449e8376760b6b4c6ad",
+      "dimensions": [
+        1663,
+        1887
+      ]
+    },
+    {
+      "id": "demo-photos/sticker-car.png",
+      "path": "demo-photos/sticker-car.png",
+      "name": "sticker-car.png",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 3170658,
+      "sha256": "25a9cd4e5eb0dc6ef22fb790c8d6442bcb3af492d31ec0ab71765aff0e8217c5",
+      "dimensions": [
+        1990,
+        1327
+      ]
+    },
+    {
+      "id": "demo-photos/sticker-cat.png",
+      "path": "demo-photos/sticker-cat.png",
+      "name": "sticker-cat.png",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 3502975,
+      "sha256": "0c217cf737bbed707fa30065de3be92745cefaa06a117471864874af86322a78",
+      "dimensions": [
+        1573,
+        1900
+      ]
+    },
+    {
+      "id": "demo-photos/sticker-cookie.png",
+      "path": "demo-photos/sticker-cookie.png",
+      "name": "sticker-cookie.png",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 3659315,
+      "sha256": "fe777c6684f5a5b54d36dc52ddb1ce064723100ebff4eabc49c057037020c06e",
+      "dimensions": [
+        1618,
+        1595
+      ]
+    },
+    {
+      "id": "demo-photos/sticker-cup.png",
+      "path": "demo-photos/sticker-cup.png",
+      "name": "sticker-cup.png",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 1971721,
+      "sha256": "f5b01cad191ff58232a5ddabbaeece8fe4ff2026c35427a085cfb1936598a86d",
+      "dimensions": [
+        1282,
+        2038
+      ]
+    },
+    {
       "id": "demo-photos/sticker-daju.jpg",
       "path": "demo-photos/sticker-daju.jpg",
       "name": "sticker-daju.jpg",
@@ -315,6 +419,19 @@
       "sha256": "30dd968498c0000b9deb59baa3f0019acb400c8d4953cc5bd7de9cce1a1def13"
     },
     {
+      "id": "demo-photos/sticker-dinosaur.png",
+      "path": "demo-photos/sticker-dinosaur.png",
+      "name": "sticker-dinosaur.png",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 1892168,
+      "sha256": "129e79f25750898dd3b2ea77ee04133ca2d46c578d5a47deab94b18de2971b06",
+      "dimensions": [
+        1469,
+        1461
+      ]
+    },
+    {
       "id": "demo-photos/sticker-maomao.jpg",
       "path": "demo-photos/sticker-maomao.jpg",
       "name": "sticker-maomao.jpg",
@@ -322,6 +439,19 @@
       "format": "JPG",
       "bytes": 1103863,
       "sha256": "940993962fa41767c0aaf01ddfbccd58fb88aa2ede3152db93b9a6768148fc64"
+    },
+    {
+      "id": "demo-photos/sticker-milk.png",
+      "path": "demo-photos/sticker-milk.png",
+      "name": "sticker-milk.png",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 3840209,
+      "sha256": "3c3309d30cc7143df550e516890e7cb47a4dd6a78e9af32d53d5d4f598ef7d66",
+      "dimensions": [
+        1532,
+        1937
+      ]
     },
     {
       "id": "favicon-1024.png",

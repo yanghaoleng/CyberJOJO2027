@@ -11,3 +11,13 @@
 .friend-card-photo.is-original img { border-radius:14px; filter:none; }
 .collection-retry { display:block; width:100%; margin-top:18px; padding:12px; border:1px solid #ffdc5555; border-radius:12px; background:#ffdc5518; color:#ffdc55; font:inherit; font-size:13px; cursor:pointer; }
 @media(prefers-reduced-motion:reduce) { .friend-open-card.is-new-arrival { animation:none; } }
+
+
+/* —— 收集贴纸英语单词卡 —— */
+.friend-card-word{display:block;margin:2px 0 0;color:#ffdc55;font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
+.friend-card-word-row{display:flex;align-items:center;gap:10px;margin:0}
+.friend-card-word-big{margin:0;color:#ffdc55;font-size:32px;font-weight:900;letter-spacing:.01em;line-height:1.15;text-transform:uppercase;overflow-wrap:anywhere}
+.friend-speak-button{display:grid;place-items:center;flex:none;width:38px;height:38px;padding:0;border:1px solid rgba(255,216,77,.35);border-radius:50%;background:rgba(255,216,77,.12);color:#ffdc55;cursor:pointer;transition:transform .12s ease,background .12s ease}
+.friend-speak-button:active{transform:scale(.9);background:rgba(255,216,77,.25)}
+.friend-detail-sheet .friend-card-word-big{font-size:32px}
+.friend-detail-sheet .friend-card-kind{color:rgba(247,248,241,.5);font-size:11px;margin-top:2px;letter-spacing:.04em}
