@@ -1,7 +1,7 @@
 import http from "node:http";
 import { randomUUID } from "node:crypto";
 import { WebSocketServer } from "ws";
-import { getArkConfig, inferCharacterResponse, sanitizeConversationContext } from "./ark-command.js";
+import { buildCharacterInstructions, getArkConfig, inferCharacterResponse, parseCharacterSignal, sanitizeConversationContext } from "./ark-command.js";
 import { correctBrandTranscript } from "./brand-lexicon.js";
 import { detectCharacterSwitchCommand } from "./character-switch-command.js";
 import { getVolcAsrConfig, VolcAsrSession } from "./volc-asr.js";
@@ -10,6 +10,7 @@ import { createVisionRequestHandler } from "./vision-route.js";
 import { createSummaryRequestHandler } from "./summary-route.js";
 import { createGameplayRequestHandler } from "./gameplay-route.js";
 import { createMattingRequestHandler } from "./matting-route.js";
+import { getSeeduplexConfig, SeeduplexSession } from "./seeduplex-session.js";
 
 const PORT = Number(process.env.PORT || 8787);
 const MAX_SESSION_MS = Number(process.env.JOCAM_MAX_SESSION_MS || 0);
@@ -26,10 +27,12 @@ const allowedOrigins = new Set((process.env.JOCAM_ALLOWED_ORIGINS || [
 let asrConfig;
 let arkConfig;
 let ttsConfig;
+let seeduplexConfig;
 try {
   asrConfig = getVolcAsrConfig();
   arkConfig = getArkConfig();
   ttsConfig = getVolcTtsConfig();
+  seeduplexConfig = getSeeduplexConfig();
 } catch (error) {
   console.error(error.message);
   process.exit(1);
@@ -138,6 +141,7 @@ websocketServer.on("connection", (client) => {
   const ip = client.clientIp;
   activeByIp.set(ip, (activeByIp.get(ip) || 0) + 1);
   let asr = null;
+  let seeduplex = null;
   let started = false;
   let closed = false;
   let activeCharacter = "jiaojiao";
@@ -157,6 +161,7 @@ websocketServer.on("connection", (client) => {
   const cancelPending = () => {
     epoch += 1;
     inferenceController?.abort();
+    seeduplex?.interrupt();
     sendJson(client, { type: "ai", state: "idle" });
   };
 
@@ -238,12 +243,23 @@ websocketServer.on("connection", (client) => {
     }
   };
 
+  const runClassicTurn = (text, character = activeCharacter) => {
+    if (!seeduplex) {
+      void runInference(text, character);
+      return;
+    }
+    seeduplex.interrupt();
+    seeduplex.setMuted(true);
+    void runInference(text, character).finally(() => seeduplex?.setMuted(false));
+  };
+
   const endSession = () => {
     if (closed) return;
     closed = true;
     cancelPending();
     clearPendingSpeech();
     asr?.close();
+    seeduplex?.close();
     activeByIp.set(ip, Math.max(0, (activeByIp.get(ip) || 1) - 1));
     if (!activeByIp.get(ip)) activeByIp.delete(ip);
   };
@@ -257,7 +273,8 @@ websocketServer.on("connection", (client) => {
   client.on("message", async (data, isBinary) => {
     try {
     if (isBinary) {
-      asr?.sendAudio(data);
+      if (seeduplex) seeduplex.sendAudio(data);
+      else asr?.sendAudio(data);
       return;
     }
     let message;
@@ -272,6 +289,12 @@ websocketServer.on("connection", (client) => {
     }
     if (message.type === "character") {
       activeCharacter = normalizeCharacter(message.character);
+      if (seeduplex) {
+        seeduplex.update({
+          instructions: buildCharacterInstructions(activeCharacter),
+          voice: seeduplexConfig.voices[activeCharacter] || ttsConfig.voices[activeCharacter],
+        });
+      }
       return;
     }
     if (message.type === "context") {
@@ -323,7 +346,7 @@ websocketServer.on("connection", (client) => {
       const label = String(observation.label || "").replace(/\s+/g, " ").trim().slice(0, 48);
       const category = ["book", "food", "plant", "animal", "object"].includes(observation.category) ? observation.category : "object";
       if (!label) return;
-      void runInference(`孩子拿到镜头前的物品看起来是${label}（${category}）。请自然接着聊，别声称看见了没提供的细节。`);
+      runClassicTurn(`孩子拿到镜头前的物品看起来是${label}（${category}）。请自然接着聊，别声称看见了没提供的细节。`);
       return;
     }
     if (message.type === "resume_conversation") {
@@ -333,6 +356,10 @@ websocketServer.on("connection", (client) => {
       recentGameplayTranscripts.delete(message.transcriptId);
       cancelPending();
       interactionMode = "none";
+      if (seeduplex) {
+        seeduplex.setMuted(false);
+        return;
+      }
       void runInference(entry.text);
       return;
     }
@@ -341,6 +368,7 @@ websocketServer.on("connection", (client) => {
       if (!["none", "toy", "find", "feed"].includes(message.mode)) return;
       cancelPending();
       interactionMode = message.mode;
+      seeduplex?.setMuted(message.mode !== "none");
       return;
     }
     if (message.type === "local_speech") {
@@ -354,7 +382,7 @@ websocketServer.on("connection", (client) => {
     }
     if (message.type === "interaction" && message.kind === "gesture") {
       const prompt = GESTURE_PROMPTS[message.gesture];
-      if (started && prompt) runInference(prompt, message.character || activeCharacter);
+      if (started && prompt) runClassicTurn(prompt, message.character || activeCharacter);
       return;
     }
     if (message.type !== "start" || started) return;
@@ -362,6 +390,63 @@ websocketServer.on("connection", (client) => {
     activeCharacter = normalizeCharacter(message.character);
     if (message.inputMode === "text" || message.textOnly === true) {
       sendJson(client, { type: "ready", inputMode: "text", sessionId });
+      return;
+    }
+    if (seeduplexConfig?.enabled) {
+      seeduplex = new SeeduplexSession({
+        config: seeduplexConfig,
+        instructions: buildCharacterInstructions(activeCharacter),
+        voice: seeduplexConfig.voices[activeCharacter] || ttsConfig.voices[activeCharacter],
+        context: context.entries,
+        onTranscript: (transcript) => {
+          const corrected = correctBrandTranscript(transcript.text);
+          const normalizedTranscript = { ...transcript, text: corrected.text.slice(0, 1000),
+            id: transcript.final ? `dialogue-${randomUUID()}` : undefined,
+            sessionId, source: interactionMode === "none" ? "child_speech" : "gameplay" };
+          sendJson(client, { type: "transcript", ...normalizedTranscript });
+          if (transcript.final && corrected.corrections.length) {
+            const applied = corrected.corrections.reduce((sum, item) => sum + item.occurrences, 0);
+            correctionMetrics.applied += applied;
+            correctionMetrics.lastAppliedAt = new Date().toISOString();
+            console.info("ASR brand correction", {
+              rules: corrected.corrections.map(({ heard, brandTerm, occurrences }) => ({ heard, brandTerm, occurrences })),
+            });
+          }
+          if (transcript.final) {
+            if (interactionMode !== "none") {
+              recentGameplayTranscripts.set(normalizedTranscript.id, { text: normalizedTranscript.text, createdAt: Date.now() });
+              if (recentGameplayTranscripts.size > 8) recentGameplayTranscripts.delete(recentGameplayTranscripts.keys().next().value);
+              return;
+            }
+            context.entries = [...context.entries, { role: "user", text: String(corrected.text).replace(/\s+/g, " ").trim().slice(0, 1000) }].slice(-16);
+          }
+        },
+        onAudioDone: ({ audio, text, statusCode }) => {
+          if (!audio || closed) return;
+          const cleanText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 48);
+          sendJson(client, { type: "speech", text: cleanText, character: activeCharacter, sessionId, mime: "audio/ogg; codecs=opus", audio });
+          if (cleanText) context.entries = [...context.entries, { role: "assistant", text: cleanText }].slice(-16);
+        },
+        onFunctionCall: ({ callId, arguments: raw }) => {
+          const signal = parseCharacterSignal(raw);
+          if (signal.action) sendJson(client, { type: "action", action: signal.action });
+          if (signal.thread !== "none") sendJson(client, { type: "story", thread: signal.thread });
+          seeduplex?.sendToolResult(callId);
+        },
+        onError: (error) => {
+          console.error("Seeduplex session failed", { name: error.name, message: error.message });
+          sendJson(client, { type: "error", code: "ASR_UNAVAILABLE", message: "语音识别暂时不可用" });
+        },
+        onReady: () => {
+          sendJson(client, { type: "ready" });
+          seeduplex?.greet(OPENING_TEXT);
+        },
+      });
+      try {
+        await seeduplex.connect();
+      } catch {
+        client.close(1011);
+      }
       return;
     }
     asr = new VolcAsrSession({
