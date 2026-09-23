@@ -64,6 +64,7 @@ import {
 import { getLibraryTabAfterSwipe, LIBRARY_TABS } from "./library-tabs.js";
 import useDailyJournal from "./journal/useDailyJournal.js";
 import JournalDay from "./journal/JournalDay.jsx";
+import { DEMO_COUNT, DEMO_FRIENDS, DEMO_RECORDS, DEMO_TIMELINE } from "./library-demo-data.js";
 import { isUnreadCollection, loadFriends, markCollectionsSeen, saveFriend } from "./friends/friend-store.js";
 import { runCollectionJob } from "./friends/collection-job.js";
 import { parseCollectionDialogue } from "./friends/collection-dialogue.js";
@@ -890,6 +891,7 @@ function App() {
   const cameraReadyRef = useRef(false);
   const mediaPreviewRef = useRef(null);
   const mediaLibraryRef = useRef([]);
+  const libraryDemoRef = useRef(false);
   const gameplayModeRef = useRef("");
   const feedFoodCursorRef = useRef(0);
   const storyFocusRef = useRef(null);
@@ -1027,6 +1029,8 @@ function App() {
   const [mediaPreviewClosing, setMediaPreviewClosing] = useState(false);
   const [mediaPreviewDirection, setMediaPreviewDirection] = useState("open");
   const [mediaLibrary, setMediaLibrary] = useState([]);
+  const [libraryDemo, setLibraryDemo] = useState(false);
+  const [demoRecords, setDemoRecords] = useState(DEMO_RECORDS);
   const [friends, setFriends] = useState([]);
   const [collectionFlight, setCollectionFlight] = useState(null);
   const [collectionQueueTick, setCollectionQueueTick] = useState(0);
@@ -1048,6 +1052,36 @@ function App() {
   const [cameraMenuOpen, setCameraMenuOpen] = useState(false);
   const [videoDurations, setVideoDurations] = useState({});
   const frameSize = FRAME_SIZES[frameOrientation];
+
+  const toggleLibraryDemo = useCallback(() => {
+    setLibraryDemo((current) => !current);
+  }, []);
+  const updateDemoMoment = useCallback((dayKey, momentId, patch) => {
+    setDemoRecords((current) => {
+      const record = current[dayKey];
+      if (!record) return current;
+      return {
+        ...current,
+        [dayKey]: {
+          ...record,
+          moments: (record.moments || []).map((moment) => moment.id === momentId ? { ...moment, ...patch, userEdited: true } : moment),
+        },
+      };
+    });
+  }, []);
+  const forgetDemoMoment = useCallback((dayKey, momentId) => {
+    setDemoRecords((current) => {
+      const record = current[dayKey];
+      if (!record) return current;
+      return {
+        ...current,
+        [dayKey]: {
+          ...record,
+          moments: (record.moments || []).filter((moment) => moment.id !== momentId),
+        },
+      };
+    });
+  }, []);
 
   const selectLibraryTab = useCallback((tab) => {
     setLibraryTab(tab);
@@ -1071,7 +1105,8 @@ function App() {
 
   useEffect(() => {
     mediaLibraryRef.current = mediaLibrary;
-  }, [mediaLibrary]);
+    libraryDemoRef.current = libraryDemo;
+  }, [mediaLibrary, libraryDemo]);
 
   useEffect(() => {
     mediaLibraryOpenRef.current = mediaLibraryOpen;
@@ -1160,6 +1195,8 @@ function App() {
     sessionActive: cameraState === "ready", onMemoryChange: handleMemoryChange });
   const { entries: conversationEntries, records: conversationSummaries, states: conversationSummaryStates,
     entriesByDay: conversationEntriesByDay, timeline: mediaTimeline, recordMessage: recordConversationMessage } = journal;
+  const visibleTimeline = libraryDemo ? DEMO_TIMELINE : mediaTimeline;
+  const visibleFriends = libraryDemo ? DEMO_FRIENDS : friends;
   journalContextRef.current = journal.getContext;
   useEffect(() => { let alive = true; loadFriends().then((records) => { if (alive) setFriends(records); }).catch(() => {}); return () => { alive = false; }; }, []);
 
@@ -3607,7 +3644,9 @@ function App() {
   const showAdjacentPreview = useCallback((step) => {
     const current = mediaPreviewRef.current;
     if (!current) return;
-    const items = mediaLibraryRef.current;
+    const items = libraryDemoRef.current
+      ? DEMO_TIMELINE.flatMap(({ items: dayItems }) => dayItems)
+      : mediaLibraryRef.current;
     const currentIndex = items.findIndex(({ id }) => id === current.id);
     const nextItem = items[currentIndex + step];
     if (!nextItem) return;
@@ -4502,7 +4541,7 @@ function App() {
             className={`media-library-panel ${mediaLibraryClosing ? "is-closing" : ""} ${mediaLibraryDragging ? "is-dragging" : ""}`}
             role="dialog"
             aria-modal="true"
-            aria-label="我的合拍作品"
+            aria-label="叫叫和我作品"
             style={{ "--library-drag-y": `${mediaLibraryDragY}px` }}
             onTouchStart={onMediaLibraryTouchStart}
             onTouchMove={onMediaLibraryTouchMove}
@@ -4511,8 +4550,15 @@ function App() {
           >
             <header className="media-library-header">
               <div>
-                <strong>我的合拍</strong>
-                <span>{mediaLibrary.length ? `${mediaLibrary.length} 个作品 · 仅保存在本机` : "作品仅保存在本机"}</span>
+                <strong>叫叫和我</strong>
+                <span className="library-demo-line">
+                  {libraryDemo
+                    ? `${DEMO_COUNT} 个作品 · 正在查看模拟数据`
+                    : mediaLibrary.length ? `${mediaLibrary.length} 个作品 · 仅保存在本机` : "作品仅保存在本机"}
+                  <button type="button" className="library-demo-toggle" aria-pressed={libraryDemo} onClick={toggleLibraryDemo}>
+                    {libraryDemo ? "本地数据" : "模拟数据"}
+                  </button>
+                </span>
               </div>
               <button type="button" onClick={closeMediaLibrary} aria-label="关闭作品列表">
                 <X size={25} weight="bold" aria-hidden="true" />
@@ -4536,13 +4582,13 @@ function App() {
                 );
               })}
             </nav>
-            {libraryTab === "friends" ? <div className="media-library-timeline" ref={mediaLibraryGridRef}><Suspense fallback={<p>收集正在打开…</p>}><FriendCollection friends={friends} onSeen={onCollectionsSeen} onRetry={retryCollection} /></Suspense></div> : (mediaTimeline.length || libraryTab === "all") ? (
+            {libraryTab === "friends" ? <div className="media-library-timeline" ref={mediaLibraryGridRef}><Suspense fallback={<p>收集正在打开…</p>}><FriendCollection friends={visibleFriends} onSeen={onCollectionsSeen} onRetry={retryCollection} /></Suspense></div> : (visibleTimeline.length || libraryTab === "all") ? (
               <div className="media-library-timeline" ref={mediaLibraryGridRef}>
-                {libraryTab === "all" && <Suspense fallback={<p>收集正在打开…</p>}><FriendCollection friends={friends} onSeen={onCollectionsSeen} onRetry={retryCollection} /></Suspense>}
-                {mediaTimeline.map(({ dayKey, items }, dayIndex) => {
-                  const entries = conversationEntriesByDay.get(dayKey) || [];
-                  const summaryRecord = conversationSummaries[dayKey];
-                  const summaryState = conversationSummaryStates[dayKey] || "idle";
+                {libraryTab === "all" && <Suspense fallback={<p>收集正在打开…</p>}><FriendCollection friends={visibleFriends} onSeen={onCollectionsSeen} onRetry={retryCollection} /></Suspense>}
+                {visibleTimeline.map(({ dayKey, items }, dayIndex) => {
+                  const entries = libraryDemo ? [] : (conversationEntriesByDay.get(dayKey) || []);
+                  const summaryRecord = libraryDemo ? demoRecords[dayKey] : conversationSummaries[dayKey];
+                  const summaryState = libraryDemo ? "ready" : (conversationSummaryStates[dayKey] || "idle");
                   const summaryText = summaryRecord?.summary
                     || (summaryState === "error"
                       ? "这次没能整理出来，下次打开相册会再试一次。"
@@ -4604,7 +4650,7 @@ function App() {
                         ))}
                       </div>
                       <JournalDay record={summaryRecord || { dayKey }} state={summaryState}
-                        onChange={journal.updateMoment} onForget={journal.forgetMoment} onRetry={() => journal.retry(dayKey)} />
+                        onChange={libraryDemo ? updateDemoMoment : journal.updateMoment} onForget={libraryDemo ? forgetDemoMoment : journal.forgetMoment} onRetry={libraryDemo ? undefined : () => journal.retry(dayKey)} />
                     </section>
                   );
                 })}

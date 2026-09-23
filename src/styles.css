@@ -2206,3 +2206,31 @@ button {
   .app-shell.is-mobile-device .welcome-headline { font-size: clamp(24px, 4vw, 32px); }
   .app-shell.is-mobile-device .welcome-copy { margin-bottom: 12px; }
 }
+
+/* 相册「模拟数据体验」开关（叫叫和我 · 左上角标题下小字处） */
+.media-library-header .library-demo-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.media-library-header .library-demo-toggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid rgba(79, 227, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(79, 227, 255, 0.12);
+  color: #8beaff;
+  font-size: 10px;
+  line-height: 1.6;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.media-library-header .library-demo-toggle[aria-pressed="true"] {
+  border-color: rgba(255, 216, 77, 0.5);
+  background: rgba(255, 216, 77, 0.16);
+  color: #ffd24a;
+}
