@@ -54,12 +54,16 @@ export function LeaveNoteCard({ note, onFinished }) {
 
     if (audioUrl) {
       // 真实音频资源：用 <audio> 播放叫叫音色，进度跟随真实播放时长。
+      // 若资源缺失/加载失败（如 TTS 配额不足未生成），自动降级为浏览器语音合成。
       const audio = new Audio(audioUrl);
       audioElementRef.current = audio;
-      audio.play().catch(() => {
-        stop();
-        onFinished?.();
-      });
+      const fallbackToSpeech = () => {
+        audioElementRef.current = null;
+        clearTimers();
+        speakViaBrowser(text);
+      };
+      audio.addEventListener("error", fallbackToSpeech, { once: true });
+      audio.play().catch(fallbackToSpeech);
       timerRef.current = window.setInterval(() => {
         if (audio.ended) {
           stop();
@@ -81,7 +85,10 @@ export function LeaveNoteCard({ note, onFinished }) {
       return;
     }
 
-    // 降级：浏览器语音合成朗读。
+    speakViaBrowser(text);
+  };
+
+  const speakViaBrowser = (text) => {
     const start = performance.now();
     timerRef.current = window.setInterval(() => {
       const progress = (performance.now() - start) / 1000;

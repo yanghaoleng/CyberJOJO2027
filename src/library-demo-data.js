@@ -286,6 +286,34 @@ export const DEMO_RECORDS = {
       },
     ],
   },
+  "2026-09-22": {
+    dayKey: "2026-09-22",
+    source: "dialogue",
+    summary: "傍晚楼下飘来饭菜香，小雨一下子想妈妈了。她说妈妈做的番茄炒蛋是全世界最好吃的，说着说着声音变小了。叫叫陪她把这份想念记了下来。",
+    moments: [
+      {
+        id: "demo-moment-miss-dinner",
+        event: "闻到楼下飘来的饭菜香，突然好想妈妈做的番茄炒蛋。",
+        feeling: "想妈妈了，鼻子有点酸",
+        thought: "妈妈做的番茄炒蛋是全世界最好吃的，等我学会了也做给她吃。",
+        evidenceQuote: "妈妈，你什么时候回来呀……",
+      },
+    ],
+  },
+  "2026-09-23": {
+    dayKey: "2026-09-23",
+    source: "dialogue",
+    summary: "吃晚饭时小雨和叫叫聊起妈妈做的饭。她说妈妈做的番茄炒蛋和红烧肉是全世界最好吃的，比谁做的都好吃。叫叫把这句话认真记了下来，说等妈妈回来要让她做一大盘。",
+    moments: [
+      {
+        id: "demo-moment-mom-cooking",
+        event: "和叫叫聊到妈妈做的饭，我觉得谁做的都没有妈妈做的好吃。",
+        feeling: "开心，还有点骄傲",
+        thought: "等妈妈回来，我要让妈妈做一大盘番茄炒蛋，分给叫叫一起吃。",
+        evidenceQuote: "妈妈做的饭是全世界最好吃的！",
+      },
+    ],
+  },
 };
 
 // —— 叫叫的语音留言（模拟；偶尔出现，不是每天都有）——
@@ -322,6 +350,14 @@ export const DEMO_LEAVE_NOTES = [
     createdAt: 1756209600000,
     durationSec: 9,
     text: "粉色天空是你自己发现的，这个我特别服气。明天傍晚我们再一起看，如果它换颜色了，我们就给天空也记一笔小账。",
+  },
+  {
+    dayKey: "2026-09-22",
+    character: "jiaojiao",
+    audioUrl: "/demo-audio/leave-note-2026-09-22.mp3",
+    createdAt: 1756263600000,
+    durationSec: 10,
+    text: "想妈妈的时候不用忍住，我陪你一起想。你记下的那个番茄炒蛋的味道，我也替你收好了，等妈妈回来，我们请她做一大盘，好不好？",
   },
 ];
 
