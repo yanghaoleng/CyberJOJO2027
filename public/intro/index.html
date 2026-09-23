@@ -46,6 +46,18 @@
     .quote{background:linear-gradient(140deg,#1c144c,#2e1c68);color:white;border-radius:28px;padding:clamp(28px,4vw,54px);position:relative;overflow:hidden}.quote:after{content:"";position:absolute;width:230px;height:230px;border:1px solid rgba(102,232,255,.25);border-radius:50%;right:-90px;bottom:-110px;box-shadow:0 0 80px rgba(96,230,255,.1)}.quote p{position:relative;z-index:1;font-size:clamp(25px,3vw,42px);line-height:1.45;margin:0}.quote small{display:block;margin-top:24px;color:#9eefff;letter-spacing:.08em}
     body.policy-open{overflow:hidden}.policy-modal[hidden]{display:none}.policy-modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:24px}.policy-backdrop{position:absolute;inset:0;background:rgba(8,6,30,.78);backdrop-filter:blur(10px)}.policy-dialog{position:relative;width:min(1120px,100%);max-height:min(86dvh,860px);overflow:auto;border:1px solid rgba(255,255,255,.15);border-radius:28px;background:#17123e;color:white;box-shadow:0 32px 90px rgba(7,4,28,.45);padding:clamp(24px,4vw,48px)}.policy-modal-head{display:flex;align-items:start;justify-content:space-between;gap:24px;margin-bottom:28px}.policy-modal-head h2{margin:7px 0 0;font-size:clamp(28px,3.5vw,46px);line-height:1.12;letter-spacing:-.035em}.policy-updated{color:#9eefff;font-size:12px;font-weight:760;letter-spacing:.1em}.policy-close{flex:0 0 auto;width:42px;height:42px;border:1px solid rgba(255,255,255,.18);border-radius:50%;background:rgba(255,255,255,.07);color:white;cursor:pointer;font-size:25px;line-height:1}.policy-close:hover,.policy-close:focus-visible{background:white;color:#20183f}.policy-close:focus-visible{outline:2px solid #9eefff;outline-offset:3px}.policy-close:active{transform:translateY(1px)}.policy-regions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.policy-region{border:1px solid rgba(255,255,255,.12);border-radius:22px;background:rgba(255,255,255,.055);padding:22px}.policy-region h3{margin:0 0 6px;font-size:22px}.policy-status{display:block;margin-bottom:17px;color:#9eefff;font-size:12px;line-height:1.5}.policy-region ul{margin:0;padding-left:18px;color:rgba(255,255,255,.76);font-size:14px;line-height:1.65}.policy-region li+li{margin-top:10px}.policy-sources{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:18px}.policy-sources a{color:#9eefff;font-size:12px;border-bottom:1px solid rgba(158,239,255,.42)}.policy-sources a:hover,.policy-sources a:focus-visible{border-color:#9eefff}.policy-note{margin:22px 0 0;color:rgba(255,255,255,.5);font-size:12px;line-height:1.6}
     footer{padding:34px clamp(24px,7vw,110px);background:#0d0928;color:rgba(255,255,255,.58);display:flex;justify-content:space-between;gap:20px;font-size:13px}
+    /* —— 剧情主线与陪伴策略（新增章节） —— */
+    .story{background:#15103c;color:white}.story .kicker{color:#89ecff}.story .display{color:#fffdf4}.story .lead{color:rgba(255,255,255,.72)}
+    .arc-flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:clamp(34px,5vw,54px)}
+    .arc-step{position:relative;border:1px solid rgba(255,255,255,.14);border-radius:20px;padding:22px 20px;background:rgba(255,255,255,.06);display:flex;flex-direction:column}
+    .arc-step .num{color:#89ecff;font-size:12px;font-weight:800;letter-spacing:.12em}.arc-step b{display:block;margin:12px 0 8px;color:#fff;font-size:17px;line-height:1.35}.arc-step p{margin:0;color:rgba(255,255,255,.66);font-size:13.5px;line-height:1.65}
+    .arc-step-arrow{position:absolute;right:-12px;top:50%;transform:translateY(-50%);z-index:1;color:#7fd8ea;font-size:18px;font-weight:700}.arc-step:last-child .arc-step-arrow{display:none}
+    .daily-note{margin-top:clamp(30px,4vw,44px);display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,.9fr);gap:clamp(28px,5vw,72px);align-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:clamp(24px,3vw,40px)}
+    .daily-note-copy .kicker{color:#ffd875}.daily-note-copy p{margin:12px 0 0;color:rgba(255,255,255,.7);font-size:15px;line-height:1.75}
+    .bubble{position:relative;border-radius:22px;background:linear-gradient(140deg,#241a58,#38257e);padding:26px 26px 22px;box-shadow:0 18px 44px rgba(7,4,28,.4)}.bubble:before{content:"";position:absolute;left:-9px;top:26px;width:18px;height:18px;background:#38257e;border-radius:4px;transform:rotate(45deg)}.bubble p{margin:0;color:#fffdf4;font-size:clamp(17px,1.9vw,23px);line-height:1.6}.bubble small{display:block;margin-top:14px;color:#9eefff;font-size:12px;letter-spacing:.06em}
+    .talk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:clamp(34px,5vw,54px)}.talk-card{border:1px solid rgba(74,52,142,.13);border-radius:20px;background:#fff;padding:24px}.talk-card b{display:block;margin-bottom:9px;color:#765dc0;font-size:16px}.talk-card p{margin:0;color:#625d78;font-size:14px;line-height:1.7}
+    .retention{margin-top:clamp(34px,5vw,56px)}.retention-head{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:clamp(28px,5vw,80px);align-items:end}.retention .guardrails{margin-top:26px}
+    @media(max-width:850px){.arc-flow,.talk-grid,.daily-note,.retention-head{grid-template-columns:1fr}.arc-step-arrow{display:none}}
     @media(prefers-reduced-motion:no-preference){.motion-ready [data-reveal]{opacity:0;transform:translateY(14px) scale(1.01);filter:blur(14px);transition:opacity 760ms cubic-bezier(.22,1,.36,1),transform 760ms cubic-bezier(.22,1,.36,1),filter 760ms cubic-bezier(.22,1,.36,1);transition-delay:var(--reveal-delay,0ms);will-change:transform,opacity,filter}.motion-ready [data-reveal].is-visible{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}.motion-ready .hero [data-reveal]{transform:translateY(20px) scale(1.012);filter:blur(18px);transition-duration:1280ms,1280ms,1280ms;transition-timing-function:cubic-bezier(.16,1,.3,1);transition-delay:var(--reveal-delay,0ms)}.motion-ready .hero [data-reveal].is-visible{transform:translateY(0) scale(1);filter:blur(0)}.motion-ready .hero-title .title-character{opacity:0;transform:translateY(18px) scale(1.045);transition:opacity 900ms cubic-bezier(.16,1,.3,1),transform 900ms cubic-bezier(.16,1,.3,1);transition-delay:calc(1480ms + var(--title-char-delay));will-change:transform,opacity}.motion-ready .hero-title.title-ready .title-character{opacity:1;transform:translateY(0) scale(1)}.motion-ready .hero-slogan .slogan-character{opacity:0;transform:translateY(11px) scale(1.04);filter:blur(9px);transition:opacity 700ms cubic-bezier(.16,1,.3,1),transform 700ms cubic-bezier(.16,1,.3,1),filter 700ms cubic-bezier(.16,1,.3,1);transition-delay:calc(1640ms + var(--char-delay));will-change:transform,opacity,filter}.motion-ready .hero-slogan.slogan-ready .slogan-character{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}}
     @media(max-width:850px){.hero{min-height:760px;background-position:64% 50%}.hero-video{object-position:64% 50%}.hero:before{background:linear-gradient(90deg,rgba(8,6,38,.82),rgba(12,9,46,.22))}.hero-copy{padding-top:180px}.need-case,.intro,.boundary-grid,.question-card.wide{grid-template-columns:1fr}.case-carousel{width:min(100%,280px);justify-self:start}.audience-head{display:block}.switch{width:max-content;margin-top:24px}.cards,.question-grid,.guardrails,.policy-regions,.feature-groups,.strategy-flow{grid-template-columns:1fr}.step-arrow{display:none}.card:nth-child(1),.card:nth-child(4){grid-column:auto}.feature-item{grid-template-columns:1fr;gap:7px}.question-card.wide{grid-column:auto}.principles{grid-template-columns:1fr}.principle:nth-child(odd){padding-right:0}.nav-note{display:none}.policy-modal{padding:12px}.policy-dialog{max-height:92dvh;border-radius:22px;padding:22px}.policy-line{margin-top:-10px}}
     @media(prefers-reduced-transparency:reduce){.policy-backdrop{backdrop-filter:none;background:rgba(8,6,30,.92)}}
@@ -101,6 +113,48 @@
         <article class="step" data-reveal style="--reveal-delay:140ms"><span class="num">STEP 03 · 主线</span><b>把东西拿给叫叫看</b><p>绘本、食物、植物、动物拿到镜头前，叫叫看清楚后围绕它继续聊——这是平时互动的主线。</p><span class="step-arrow">→</span></article>
         <article class="step" data-reveal style="--reveal-delay:210ms"><span class="num">STEP 04 · 支线</span><b>看到什么聊什么</b><p>叫叫不布置“找个红色”的任务；只有孩子在屏幕里看到身边的东西并指出来，才顺着看一句。</p><span class="step-arrow">→</span></article>
         <article class="step gap-step" data-reveal style="--reveal-delay:280ms"><span class="num">STEP 05 · 感受</span><b>感受放后面聊</b><p>聊完眼前的东西、空闲下来时，才轻轻开启一个感受话题；孩子不想说就立刻停。</p></article>
+      </div>
+    </section>
+    <section class="section story" id="story">
+      <div class="strategy-head" data-reveal>
+        <div class="kicker">STORY ARC · 剧情主线</div>
+        <h2 class="display">从“认识你”到“一起长大”，<br />叫叫和孩子之间有一条慢慢长出来的线。</h2>
+        <p class="lead">陪伴不是一次次孤立的对话，而是一条持续的故事线：叫叫记得上次聊到哪儿，孩子知道明天还会见面。</p>
+      </div>
+      <div class="arc-flow">
+        <article class="arc-step" data-reveal><span class="num">第一幕 · 认识你</span><b>先打声招呼</b><p>从打招呼开始，叫叫记住孩子的名字、称呼和喜欢的东西；孩子第一次收到叫叫的留言。</p><span class="arc-step-arrow">→</span></article>
+        <article class="arc-step" data-reveal style="--reveal-delay:70ms"><span class="num">第二幕 · 每天的小事</span><b>聊今天，收集发现</b><p>聊今天、收集身边的东西、留下当天小记；孩子开始把叫叫当成“会记得我的伙伴”。</p><span class="arc-step-arrow">→</span></article>
+        <article class="arc-step" data-reveal style="--reveal-delay:140ms"><span class="num">第三幕 · 记得你</span><b>接住上次的话题</b><p>叫叫接续上次聊过的事，成长图鉴慢慢成形，成为孩子自己的作品集。</p><span class="arc-step-arrow">→</span></article>
+        <article class="arc-step" data-reveal style="--reveal-delay:210ms"><span class="num">第四幕 · 一起长大</span><b>回到真实生活</b><p>兴趣延伸成现实行动，叫叫把爸爸妈妈拉进来，一起完成小事、一起看周报。</p></article>
+      </div>
+      <div class="daily-note" data-reveal>
+        <div class="daily-note-copy"><div class="kicker">DAILY MESSAGE · 叫叫每天的留言</div><p>每天结束时，叫叫会留下一句基于当天相处的话：可能是一个提问、一句夸奖，或一个明天的约定。它不是推送轰炸，而是一个“明天见”的理由——孩子知道回来时，叫叫还记得昨天的事。</p></div>
+        <div class="bubble"><p>“今天你搭的积木塔，比我还高呢。明天我们试试，能不能搭一座桥？”</p><small>—— 叫叫 · 晚安留言</small></div>
+      </div>
+    </section>
+    <section class="section feature-details" id="companionship">
+      <div class="feature-head" data-reveal><div class="kicker">WAYS WE TALK · 沟通方式</div><h2 class="display">孩子可以用很多种方式，和叫叫说上话。</h2><p>没有复杂的菜单：想说的话、想给看的东西、想做的动作，都可以成为一次对话的开始。</p></div>
+      <div class="talk-grid">
+        <article class="talk-card" data-reveal><b>语音对话</b><p>主入口。孩子想说什么就说什么，“比个心”“我饿了”“看看这个”都行。</p></article>
+        <article class="talk-card" data-reveal style="--reveal-delay:60ms"><b>点赞与比心</b><p>动作也有回应。孩子点赞、比心，叫叫立刻回赞、回心。</p></article>
+        <article class="talk-card" data-reveal style="--reveal-delay:120ms"><b>镜头观察</b><p>孩子说“拿给你看”后，镜头才一起看；看不清时出现白色虚线框。</p></article>
+        <article class="talk-card" data-reveal style="--reveal-delay:180ms"><b>当天小记</b><p>叫叫把孩子真的说过的话整理成小记，孩子可以查看、修改、回忆。</p></article>
+        <article class="talk-card" data-reveal style="--reveal-delay:240ms"><b>收集与单词卡</b><p>身边的东西变成贴纸收集，点开还能当英语单词卡读一读。</p></article>
+        <article class="talk-card" data-reveal style="--reveal-delay:300ms"><b>每日留言</b><p>每天留下一句话，让第二天从“叫叫还记得我”开始。</p></article>
+      </div>
+      <div class="retention" data-reveal>
+        <div class="retention-head">
+          <div><div class="kicker" style="color:#765dc0">WHY KIDS STAY · 怎么让孩子愿意一直相处</div><h3 class="display" style="font-size:clamp(26px,3vw,42px);margin:15px 0 0">留住孩子的不是时长，<br />而是“被记得、被回应”。</h3></div>
+          <p class="lead" style="margin:0">留存不靠打卡和焦虑，靠六件小事：</p>
+        </div>
+        <div class="guardrails">
+          <div class="guardrail"><b>它真的记得</b><br />细节会延续：昨天搭的塔、上次说的名字，再次见面时被接住。</div>
+          <div class="guardrail"><b>每天都有点新东西</b><br />新的留言、新的收集、新的问题，让孩子有理由明天回来。</div>
+          <div class="guardrail"><b>奖励发生在真实世界</b><br />叫叫不“充值变强”，而是推动孩子去画、搭、观察、找家人聊天。</div>
+          <div class="guardrail"><b>家长也参与进来</b><br />周报、亲子任务、家庭共育，让陪伴成为全家的事。</div>
+          <div class="guardrail"><b>随时离开，回来还在</b><br />不打卡、不惩罚、不挽留；孩子离开多久，故事都还在原地等他。</div>
+          <div class="guardrail"><b>不靠焦虑和依赖</b><br />拒绝成瘾机制，关系靠“被记得、被回应”而不是“怕失去”维系。</div>
+        </div>
       </div>
     </section>
     <section class="section questions" id="questions">
