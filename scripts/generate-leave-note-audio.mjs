@@ -20,9 +20,13 @@ const outDir = join(root, "public", "demo-audio");
 //  2. 环境变量 VOLC_TTS_APP_ID+VOLC_TTS_ACCESS_KEY 或 VOLC_SPEECH_APP_ID+VOLC_SPEECH_ACCESS_TOKEN（旧版双头）
 
 function loadLocalEnv() {
-  // 查找本机其他项目里可复用的火山语音凭据（旧版双头鉴权）。
+  // 凭据查找顺序：
+  //  1. server/voice.env（本仓库，可放入按量计费的 API Key，见 voice.env.example）
+  //  2. 本机其他项目里可复用的火山语音凭据（旧版双头鉴权，免费配额）
   const home = homedir();
+  const repoEnv = join(dirname(dirname(fileURLToPath(import.meta.url))), "server", "voice.env");
   const candidates = [
+    repoEnv,
     join(home, "VibeCoding/萌萌新的奇妙图鉴/.env.local"),
     join(home, ".codex/.chatgpt-projects/g-p-6a8c679ea01481919a02ad9b9b4df2c1/kindergrimm/.env.local"),
   ];
@@ -33,7 +37,7 @@ function loadLocalEnv() {
       const m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*["']?([^"'\n]*)["']?\s*$/.exec(line);
       if (m) out[m[1]] = m[2];
     }
-    if (out.VOLC_SPEECH_APP_ID && out.VOLC_SPEECH_ACCESS_TOKEN) {
+    if (out.VOLC_TTS_API_KEY || out.VOLC_SPEECH_API_KEY || (out.VOLC_SPEECH_APP_ID && out.VOLC_SPEECH_ACCESS_TOKEN)) {
       console.log(`本地凭据：${file}`);
       return out;
     }
@@ -42,7 +46,7 @@ function loadLocalEnv() {
 }
 
 const local = loadLocalEnv();
-const key = process.env.VOLC_TTS_API_KEY || process.env.VOLC_SPEECH_API_KEY || "";
+const key = process.env.VOLC_TTS_API_KEY || process.env.VOLC_SPEECH_API_KEY || local.VOLC_TTS_API_KEY || local.VOLC_SPEECH_API_KEY || "";
 const appId = process.env.VOLC_TTS_APP_ID || process.env.VOLC_SPEECH_APP_ID || local.VOLC_SPEECH_APP_ID || "";
 const accessKey = process.env.VOLC_TTS_ACCESS_KEY || process.env.VOLC_SPEECH_ACCESS_TOKEN || local.VOLC_SPEECH_ACCESS_TOKEN || "";
 if (!key && !(appId && accessKey)) {

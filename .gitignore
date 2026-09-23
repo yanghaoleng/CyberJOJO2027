@@ -8,3 +8,6 @@ dist/
 # Generated from Git history for development and production builds.
 /public/changelog.json
 __pycache__/
+
+# 本地语音服务凭据（含 TTS / Seeduplex / ARK Key），禁止提交
+server/voice.env
