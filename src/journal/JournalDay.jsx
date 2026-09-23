@@ -20,6 +20,7 @@ export default function JournalDay({ record, state = "idle", onChange, onForget,
   return <div className="journal-day">
     <div className="journal-day-heading"><span>✦ 当天小记</span>{moments.length > 0 && <button type="button" onClick={() => setExpanded(!expanded)}>{expanded ? "收起" : "看看 / 修改"}</button>}</div>
     <p className="journal-day-copy">{record?.summary || (state === "loading" ? "叫叫正在整理今天的小故事…" : record?.suppressedEntryIds?.length ? "这件事已经忘记了。" : "聊聊今天的小事，回忆会留在这里。")}</p>
+    {record?.leaveNote && <blockquote className="journal-leave-note"><span>叫叫留言</span>“{record.leaveNote}”</blockquote>}
     {state === "error" && <button className="journal-retry" type="button" onClick={onRetry}>这次没整理好，点此重试</button>}
     {expanded && <div className="journal-moments">{moments.map((moment) => <article key={moment.id} className="journal-moment">
       {editing === moment.id ? <form onSubmit={(event) => { event.preventDefault(); void save(moment); }}>

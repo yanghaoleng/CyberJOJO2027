@@ -123,23 +123,24 @@ export function sanitizeConversationContext(value = {}) {
   };
 }
 
-export function buildCharacterInstructions(character) {
+export function buildCharacterInstructions(character, extra = "") {
   const activeCharacter = character === "lvdou" ? "lvdou" : "jiaojiao";
-  return `${CHARACTER_PROMPTS[activeCharacter]}${CHARACTER_SYSTEM_PROMPT}`;
+  const base = `${CHARACTER_PROMPTS[activeCharacter]}${CHARACTER_SYSTEM_PROMPT}`;
+  return extra ? `${base}\n\n${extra}` : base;
 }
 
-export function createCharacterInput(text, character, context = {}) {
+export function createCharacterInput(text, character, context = {}, extra = "") {
   const safe = sanitizeConversationContext(context);
   const activeCharacter = character === "lvdou" ? "lvdou" : "jiaojiao";
   return [
-    { role: "system", content: [{ type: "input_text", text: buildCharacterInstructions(activeCharacter) }] },
+    { role: "system", content: [{ type: "input_text", text: buildCharacterInstructions(activeCharacter, extra) }] },
     ...(safe.moments.length ? [{ role: "user", content: [{ type: "input_text", text: `本机保存的少量过往生活片段（日期不代表今天）：${JSON.stringify(safe.moments)}` }] }] : []),
     ...safe.entries.map((entry) => ({ role: entry.role, content: [{ type: "input_text", text: entry.text }] })),
     { role: "user", content: [{ type: "input_text", text: String(text || "").slice(0, 1000) }] },
   ];
 }
 
-export async function inferCharacterResponse(text, character, config, onDelta, context = {}, externalSignal) {
+export async function inferCharacterResponse(text, character, config, onDelta, context = {}, externalSignal, extra = "") {
   const activeCharacter = character === "lvdou" ? "lvdou" : "jiaojiao";
   const controller = new AbortController();
   const abort = () => controller.abort();
@@ -154,7 +155,7 @@ export async function inferCharacterResponse(text, character, config, onDelta, c
         model: config.model,
         stream: true,
         store: false,
-        input: createCharacterInput(text, activeCharacter, context),
+        input: createCharacterInput(text, activeCharacter, context, extra),
         tools: [{
           type: "function",
           name: "respond_as_character",
@@ -182,6 +183,49 @@ export async function inferCharacterResponse(text, character, config, onDelta, c
       throw new Error(`Ark request failed (${response.status}): ${detail}`);
     }
     return await readSse(response, onDelta);
+  } finally {
+    clearTimeout(timeout);
+    externalSignal?.removeEventListener("abort", abort);
+  }
+}
+
+
+const LEAVE_NOTE_PROMPT = "现在请根据刚才和孩子的对话，以你自己的口吻给孩子留一条语音留言，像朋友睡前留一段话一样。留言分两部分：先说你此刻真实的感受或小想法（一两句，具体有画面，不说空话）；再留下一个小小的钩子，吸引孩子下次继续来找你聊。如果提到今天的剧情，就顺着剧情埋钩子。整条留言不超过 80 个汉字，口语化，不要用问句结尾，不要重复刚才已经说过的话。直接输出留言内容本身，不要任何前缀或称呼。";
+
+export async function inferLeaveNote(character, config, context = {}, storyHint = "", externalSignal) {
+  const activeCharacter = character === "lvdou" ? "lvdou" : "jiaojiao";
+  const safe = sanitizeConversationContext(context);
+  const system = `${CHARACTER_PROMPTS[activeCharacter]}${LEAVE_NOTE_PROMPT}${storyHint ? `\n今日剧情钩子（可自然带进留言）：${storyHint}` : ""}`;
+  const input = [
+    { role: "system", content: [{ type: "input_text", text: system }] },
+    ...(safe.moments.length ? [{ role: "user", content: [{ type: "input_text", text: `本机保存的少量过往生活片段（日期不代表今天）：${JSON.stringify(safe.moments)}` }] }] : []),
+    ...safe.entries.map((entry) => ({ role: entry.role, content: [{ type: "input_text", text: entry.text }] })),
+    { role: "user", content: [{ type: "input_text", text: "给小朋友留一条语音留言。" }] },
+  ];
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  externalSignal?.addEventListener("abort", abort, { once: true });
+  if (externalSignal?.aborted) controller.abort();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const response = await fetch(config.endpoint, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: config.model,
+        stream: true,
+        store: false,
+        input,
+      }),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const detail = (await response.text()).slice(0, 300);
+      throw new Error(`Ark leave-note request failed (${response.status}): ${detail}`);
+    }
+    let text = "";
+    await readSse(response, (delta) => { text += delta || ""; });
+    return String(text).replace(/\s+/g, " ").trim().slice(0, 160);
   } finally {
     clearTimeout(timeout);
     externalSignal?.removeEventListener("abort", abort);

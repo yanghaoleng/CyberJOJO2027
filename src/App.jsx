@@ -108,7 +108,7 @@ import {
   isTabletViewport,
 } from "./device-layout.js";
 import { useCameraSceneAnalysis } from "./use-camera-scene-analysis.js";
-import { getCollectionFollowUp, parseVoiceIntent, shouldInspectAfterSpeech } from "./voice-intents.js";
+import { getCollectionFollowUp, parseVoiceIntent, shouldInspectAfterSpeech, shouldTriggerSceneAnalysis } from "./voice-intents.js";
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -125,7 +125,8 @@ const FEED_FOOD_IDS = ["apple", "cake", "noodles"];
 const WELCOME_CHARACTER_DELAY_MS = 76;
 const WELCOME_ANIMATION_SETTLE_MS = 420;
 const WELCOME_HEADLINE_HOLD_MS = 3_000;
-const THINKING_VOICE_DELAY_MS = 2_200;
+// 实时语音链路下回复通常 1-2 秒内返回，等待词只在确实超时才说（8 秒无返回）。
+const THINKING_VOICE_DELAY_MS = 8_000;
 
 const WAITING_VOICE_LINES = {
   recognizing: ["我听到你说的了，让我想想", "收到啦，我先听清楚这句话"],
@@ -894,8 +895,10 @@ function App() {
   const libraryDemoRef = useRef(false);
   const gameplayModeRef = useRef("");
   const feedFoodCursorRef = useRef(0);
+  const lastFeedTriggerAtRef = useRef(-Infinity);
   const storyFocusRef = useRef(null);
   const inspectStoryRef = useRef(null);
+  const sceneTriggerRef = useRef(null);
   const storyFrameTimerRef = useRef(null);
   const lastStoryInspectAtRef = useRef(-Infinity);
   const gameplayTargetRef = useRef(null);
@@ -1674,12 +1677,13 @@ function App() {
     }
   }, [activeCharacter, enqueueSynthesizedSpeech, recordConversationMessage, replaceCharacterBubble]);
 
-  const { visionState: sceneVisionState, sceneReaction } = useCameraSceneAnalysis({
+  const { visionState: sceneVisionState, sceneReaction, triggerSceneAnalysis } = useCameraSceneAnalysis({
     enabled: cameraState === "ready" && !recording && !mediaPreview && !mediaLibraryOpen && !gameplayMode && !storyFocus,
     videoRef,
     activeCharacter,
     onReaction: handleSceneReaction,
   });
+  sceneTriggerRef.current = triggerSceneAnalysis;
 
   const recentConversationTopic = useMemo(
     () => getRecentConversationTopic(conversationEntries),
@@ -1869,13 +1873,20 @@ function App() {
             } else if (voiceIntent?.type === "wreath") {
               triggerWreathVoiceRef.current?.();
             } else if (voiceIntent?.type === "feed" && !gameplayModeRef.current) {
-              void startGameplayRef.current?.("feed");
+              const now = performance.now();
+              if (now - lastFeedTriggerAtRef.current > 45_000) {
+                lastFeedTriggerAtRef.current = now;
+                void startGameplayRef.current?.("feed");
+              }
             } else if (voiceIntent?.type === "collect") {
               startObjectCollectionRef.current?.({
                 subject: voiceIntent.subject,
                 category: "object",
                 repeatKey: `voice-collect:${voiceIntent.subject}`,
               });
+            }
+            if (shouldTriggerSceneAnalysis(text)) {
+              sceneTriggerRef.current?.();
             }
             if (/^(?:没有|没找到|不找了|不想找|算了|先不看了)[。！!，, ]*$/.test(text)) {
               setHiddenStoryFocus(null);
@@ -1929,6 +1940,22 @@ function App() {
             });
           }
           enqueueSynthesizedSpeech(message);
+          return;
+        }
+        if (message.type === "leave_note") {
+          if (gameplayModeRef.current) return;
+          recordConversationMessage({
+            role: "assistant",
+            text: message.text,
+            character: message.character || activeCharacter,
+            source: "leave_note",
+          });
+          enqueueSynthesizedSpeech({
+            ...message,
+            opening: false,
+            local: false,
+            mime: message.mime || "audio/mpeg",
+          });
           return;
         }
         if (message.type === "error") {

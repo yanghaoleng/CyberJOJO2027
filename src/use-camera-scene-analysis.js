@@ -1,7 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import {
-  SCENE_SAMPLE_INTERVAL_MS,
-  advanceSceneGate,
   beginImmediateSceneRequest,
   createSceneFingerprint,
   createSceneGate,
@@ -13,6 +11,7 @@ import {
 const REACTION_VISIBLE_MS = 5_800;
 const FINGERPRINT_WIDTH = 64;
 const FINGERPRINT_HEIGHT = 40;
+const INITIAL_SCENE_SAMPLE_DELAY_MS = 2_000;
 
 function getVisionApiUrl() {
   const configured = import.meta.env.VITE_JOCAM_VISION_URL;
@@ -65,6 +64,7 @@ export function useCameraSceneAnalysis({
   const reactionTimerRef = useRef(null);
   const fingerprintCanvasRef = useRef(null);
   const captureCanvasRef = useRef(null);
+  const analyzeStableSceneRef = useRef(null);
 
   useEffect(() => {
     onReactionRef.current = onReaction;
@@ -153,39 +153,50 @@ export function useCameraSceneAnalysis({
       }
     };
 
-    const sample = ({ immediate = false } = {}) => {
+    analyzeStableSceneRef.current = analyzeStableScene;
+
+    // 接通后约 2 秒识别一次当前场景，用于开场找话题。
+    // 之后不再自动轮询，只由语义触发（孩子说"让叫叫看"等）再次识别。
+    const initialTimer = window.setTimeout(() => {
+      if (cancelled) return;
       const video = videoRef.current;
       if (!video || video.readyState < 2 || gateRef.current.inFlight) return;
       try {
         const fingerprint = captureFingerprint(video, fingerprintCanvasRef.current);
-        const update = immediate
-          ? beginImmediateSceneRequest(gateRef.current, fingerprint, performance.now())
-          : advanceSceneGate(gateRef.current, fingerprint, performance.now());
+        const update = beginImmediateSceneRequest(gateRef.current, fingerprint, performance.now());
         gateRef.current = update.state;
-        if (update.shouldRequest) void analyzeStableScene(update.fingerprint, { forceReaction: immediate });
+        if (update.shouldRequest) void analyzeStableScene(update.fingerprint, { forceReaction: true });
       } catch (error) {
         console.warn("Camera scene sampling unavailable", error);
       }
-    };
-
-    // Start with the same stable-scene gate as later samples. This avoids a
-    // cloud request the instant the camera opens and gives the child time to
-    // finish placing an object in view.
-    sample();
-    const interval = window.setInterval(sample, SCENE_SAMPLE_INTERVAL_MS);
+    }, INITIAL_SCENE_SAMPLE_DELAY_MS);
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
+      window.clearTimeout(initialTimer);
       requestController?.abort();
+      analyzeStableSceneRef.current = null;
       gateRef.current = createSceneGate(performance.now());
     };
   }, [enabled, videoRef]);
+
+  const triggerSceneAnalysis = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || video.readyState < 2 || gateRef.current.inFlight) return;
+    try {
+      const fingerprint = captureFingerprint(video, fingerprintCanvasRef.current);
+      const update = beginImmediateSceneRequest(gateRef.current, fingerprint, performance.now());
+      gateRef.current = update.state;
+      if (update.shouldRequest) void analyzeStableSceneRef.current?.(update.fingerprint, { forceReaction: true });
+    } catch (error) {
+      console.warn("Camera scene sampling unavailable", error);
+    }
+  }, [videoRef]);
 
   useEffect(() => () => {
     if (reactionTimerRef.current) window.clearTimeout(reactionTimerRef.current);
   }, []);
 
-  return { visionState, sceneReaction };
+  return { visionState, sceneReaction, triggerSceneAnalysis };
 }
 
 export const cameraSceneInternals = {

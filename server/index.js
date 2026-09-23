@@ -1,7 +1,8 @@
 import http from "node:http";
 import { randomUUID } from "node:crypto";
 import { WebSocketServer } from "ws";
-import { buildCharacterInstructions, getArkConfig, inferCharacterResponse, parseCharacterSignal, sanitizeConversationContext } from "./ark-command.js";
+import { buildCharacterInstructions, getArkConfig, inferCharacterResponse, inferLeaveNote, parseCharacterSignal, sanitizeConversationContext } from "./ark-command.js";
+import { buildStoryInstructions, getStoryArc } from "./story-arc.js";
 import { correctBrandTranscript } from "./brand-lexicon.js";
 import { detectCharacterSwitchCommand } from "./character-switch-command.js";
 import { getVolcAsrConfig, VolcAsrSession } from "./volc-asr.js";
@@ -15,6 +16,13 @@ import { getSeeduplexConfig, SeeduplexSession } from "./seeduplex-session.js";
 const PORT = Number(process.env.PORT || 8787);
 const MAX_SESSION_MS = Number(process.env.JOCAM_MAX_SESSION_MS || 0);
 const MAX_CONNECTIONS_PER_IP = Number(process.env.JOCAM_MAX_CONNECTIONS_PER_IP || 2);
+const STORY_CLOSING_MS = 3 * 60_000;
+const LEAVE_NOTE_IDLE_MS = Number(process.env.JOCAM_LEAVE_NOTE_IDLE_MS || 75_000);
+const STORY_EPOCH = Date.UTC(2026, 8, 23);
+const storyDayFromDate = (date = new Date()) => {
+  const diff = Math.floor((date.getTime() - STORY_EPOCH) / 86_400_000);
+  return ((diff % 7) + 7) % 7 + 1;
+};
 const allowedOrigins = new Set((process.env.JOCAM_ALLOWED_ORIGINS || [
   "https://mikeywa.site",
   "https://www.mikeywa.site",
@@ -105,6 +113,10 @@ function sendJson(socket, payload) {
 }
 
 const OPENING_TEXT = "我来啦！今天读了什么好玩的，还是吃了什么好吃的呀？";
+const buildOpeningText = (storyDayValue, storyAgeGroupValue) => {
+  const arc = getStoryArc(storyDayValue, storyAgeGroupValue);
+  return `${OPENING_TEXT} 对了，${arc.opening}`;
+};
 const GESTURE_PROMPTS = Object.freeze({
   thumbs_up: "用户刚刚对你比了一个赞。高兴地回赞他，像朋友之间打招呼一样自然。",
   victory: "用户刚刚对你比了一个胜利手势，请自然回应这个动作。",
@@ -143,6 +155,19 @@ websocketServer.on("connection", (client) => {
   let asr = null;
   let seeduplex = null;
   let started = false;
+  let storyDay = storyDayFromDate();
+  let storyAgeGroup = "mid";
+  let sessionStartedAt = 0;
+  let storyClosingSent = false;
+  let leaveNoteTimer = null;
+  const storyInstructions = (closing = false) => buildStoryInstructions(storyDay, storyAgeGroup, { closing });
+  const armLeaveNote = () => {
+    if (closed || leaveNoteTimer) return;
+    leaveNoteTimer = setTimeout(() => { leaveNoteTimer = null; void generateLeaveNote(); }, LEAVE_NOTE_IDLE_MS);
+  };
+  const disarmLeaveNote = () => {
+    if (leaveNoteTimer) { clearTimeout(leaveNoteTimer); leaveNoteTimer = null; }
+  };
   let closed = false;
   let activeCharacter = "jiaojiao";
   let interactionMode = "none";
@@ -193,6 +218,23 @@ websocketServer.on("connection", (client) => {
     pendingSpeechTimer.unref?.();
   };
 
+  const generateLeaveNote = async () => {
+    if (closed || !started || interactionMode !== "none" || !context.entries.length) return;
+    const noteCharacter = activeCharacter;
+    try {
+      const arc = getStoryArc(storyDay, storyAgeGroup);
+      const text = await inferLeaveNote(noteCharacter, arkConfig, context, arc.hook);
+      if (closed || !text) return;
+      const audio = await synthesizeSpeech(text, noteCharacter, ttsConfig, fetch);
+      if (closed) return;
+      context.entries = [...context.entries, { role: "assistant", text: String(text).slice(0, 1000) }].slice(-16);
+      sendJson(client, { type: "leave_note", text, character: noteCharacter, sessionId, mime: "audio/mpeg", audio: audio.toString("base64") });
+    } catch (error) {
+      if (closed || error.name === "AbortError") return;
+      console.error("Leave note generation failed", { name: error.name, message: error.message });
+    }
+  };
+
   const sendSpeech = async (text, { opening = false, character = activeCharacter, local = false, expectedEpoch = epoch, expectedLocalSequence = localSpeechSequence, signal } = {}) => {
     const speechCharacter = normalizeCharacter(character);
     const audio = await synthesizeSpeech(text, speechCharacter, ttsConfig, fetch, signal);
@@ -224,7 +266,9 @@ websocketServer.on("connection", (client) => {
     inferenceController = controller;
     try {
       sendJson(client, { type: "ai", state: "thinking" });
-      const response = await inferCharacterResponse(text, responseCharacter, arkConfig, null, context, controller.signal);
+      const closing = !storyClosingSent && Date.now() - sessionStartedAt >= STORY_CLOSING_MS;
+      if (closing) storyClosingSent = true;
+      const response = await inferCharacterResponse(text, responseCharacter, arkConfig, null, context, controller.signal, storyInstructions(closing));
       if (closed || expectedEpoch !== epoch || interactionMode !== "none") return;
       if (!response?.text) throw new Error("Ark returned an empty character response");
       context.entries = [...context.entries, { role: "user", text: String(text).slice(0, 1000) }, { role: "assistant", text: response.text }].slice(-16);
@@ -233,6 +277,7 @@ websocketServer.on("connection", (client) => {
         sendJson(client, { type: "story", ...response.story });
       }
       await sendSpeech(response.text, { character: responseCharacter, expectedEpoch, signal: controller.signal });
+      armLeaveNote();
     } catch (error) {
       if (expectedEpoch !== epoch || closed || error.name === "AbortError") return;
       console.error("Character response failed", { name: error.name });
@@ -260,6 +305,7 @@ websocketServer.on("connection", (client) => {
     clearPendingSpeech();
     asr?.close();
     seeduplex?.close();
+    if (leaveNoteTimer) { clearTimeout(leaveNoteTimer); leaveNoteTimer = null; }
     activeByIp.set(ip, Math.max(0, (activeByIp.get(ip) || 1) - 1));
     if (!activeByIp.get(ip)) activeByIp.delete(ip);
   };
@@ -291,7 +337,7 @@ websocketServer.on("connection", (client) => {
       activeCharacter = normalizeCharacter(message.character);
       if (seeduplex) {
         seeduplex.update({
-          instructions: buildCharacterInstructions(activeCharacter),
+          instructions: buildCharacterInstructions(activeCharacter, storyInstructions(false)),
           voice: seeduplexConfig.voices[activeCharacter] || ttsConfig.voices[activeCharacter],
         });
       }
@@ -315,6 +361,7 @@ websocketServer.on("connection", (client) => {
       const text = String(message.text || "").replace(/\s+/g, " ").trim().slice(0, 1000);
       if (!text) { sendJson(client, { type: "error", code: "INVALID_TEXT", message: "先写一句想说的话吧。", clientMessageId }); return; }
       lastTextAt = Date.now();
+      disarmLeaveNote();
       const transcript = { type: "transcript", text, final: true, id: `dialogue-${clientMessageId || randomUUID()}`,
         sessionId, clientMessageId, inputMode: "text", source: interactionMode === "none" ? "child_speech" : "gameplay" };
       if (clientMessageId) {
@@ -388,6 +435,12 @@ websocketServer.on("connection", (client) => {
     if (message.type !== "start" || started) return;
     started = true;
     activeCharacter = normalizeCharacter(message.character);
+    if (Number.isInteger(Number(message.storyDay))) {
+      storyDay = Math.min(7, Math.max(1, Number(message.storyDay)));
+    }
+    if (["low", "mid", "high"].includes(message.ageGroup)) {
+      storyAgeGroup = message.ageGroup;
+    }
     if (message.inputMode === "text" || message.textOnly === true) {
       sendJson(client, { type: "ready", inputMode: "text", sessionId });
       return;
@@ -395,7 +448,7 @@ websocketServer.on("connection", (client) => {
     if (seeduplexConfig?.enabled) {
       seeduplex = new SeeduplexSession({
         config: seeduplexConfig,
-        instructions: buildCharacterInstructions(activeCharacter),
+        instructions: buildCharacterInstructions(activeCharacter, storyInstructions(false)),
         voice: seeduplexConfig.voices[activeCharacter] || ttsConfig.voices[activeCharacter],
         context: context.entries,
         onTranscript: (transcript) => {
@@ -413,6 +466,7 @@ websocketServer.on("connection", (client) => {
             });
           }
           if (transcript.final) {
+            disarmLeaveNote();
             if (interactionMode !== "none") {
               recentGameplayTranscripts.set(normalizedTranscript.id, { text: normalizedTranscript.text, createdAt: Date.now() });
               if (recentGameplayTranscripts.size > 8) recentGameplayTranscripts.delete(recentGameplayTranscripts.keys().next().value);
@@ -426,6 +480,7 @@ websocketServer.on("connection", (client) => {
           const cleanText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 48);
           sendJson(client, { type: "speech", text: cleanText, character: activeCharacter, sessionId, mime: "audio/ogg; codecs=opus", audio });
           if (cleanText) context.entries = [...context.entries, { role: "assistant", text: cleanText }].slice(-16);
+          armLeaveNote();
         },
         onFunctionCall: ({ callId, arguments: raw }) => {
           const signal = parseCharacterSignal(raw);
@@ -439,7 +494,7 @@ websocketServer.on("connection", (client) => {
         },
         onReady: () => {
           sendJson(client, { type: "ready" });
-          seeduplex?.greet(OPENING_TEXT);
+          seeduplex?.greet(buildOpeningText(storyDay, storyAgeGroup));
         },
       });
       try {
@@ -453,7 +508,7 @@ websocketServer.on("connection", (client) => {
       config: asrConfig,
       onReady: () => {
         sendJson(client, { type: "ready" });
-        sendSpeech(OPENING_TEXT, { opening: true, character: activeCharacter }).catch((error) => {
+        sendSpeech(buildOpeningText(storyDay, storyAgeGroup), { opening: true, character: activeCharacter }).catch((error) => {
           console.error("Opening speech failed", { name: error.name, message: error.message });
         });
       },
@@ -472,6 +527,7 @@ websocketServer.on("connection", (client) => {
           });
         }
         if (transcript.final) {
+          disarmLeaveNote();
           if (interactionMode !== "none") {
             recentGameplayTranscripts.set(normalizedTranscript.id, { text: normalizedTranscript.text, createdAt: Date.now() });
             if (recentGameplayTranscripts.size > 8) recentGameplayTranscripts.delete(recentGameplayTranscripts.keys().next().value);
