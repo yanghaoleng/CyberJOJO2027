@@ -4,6 +4,11 @@
 // 照片为 AI 生成的真实照片风格模拟图（public/demo-photos/），仅用于演示。
 
 const DAY = "2026";
+const dayKeyOf = (createdAt) => {
+  const date = new Date(Number(createdAt));
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
 // 相对固定日期构造时间戳（本地时区，均为傍晚拍摄时间）
 const at = (month, date, hour = 17, minute = 40) => new Date(DAY, month - 1, date, hour, minute).getTime();
 
@@ -151,19 +156,7 @@ export const DEMO_CAPTURES = [
 
 export const DEMO_COUNT = DEMO_CAPTURES.length;
 
-// —— 相册时间线（按天分组，与 useDailyJournal 输出结构一致）——
-// 有照片的日子按照片分组；2026-09-10 只有对话小记没有照片（体现「不拍照也能留下小记」）
-export const DEMO_TIMELINE = [
-  { dayKey: "2026-08-20", items: DEMO_CAPTURES.filter((item) => item.day === "2026-08-20") },
-  { dayKey: "2026-08-24", items: DEMO_CAPTURES.filter((item) => item.day === "2026-08-24") },
-  { dayKey: "2026-08-28", items: DEMO_CAPTURES.filter((item) => item.day === "2026-08-28") },
-  { dayKey: "2026-09-02", items: DEMO_CAPTURES.filter((item) => item.day === "2026-09-02") },
-  { dayKey: "2026-09-08", items: DEMO_CAPTURES.filter((item) => item.day === "2026-09-08") },
-  { dayKey: "2026-09-10", items: [] },
-  { dayKey: "2026-09-12", items: DEMO_CAPTURES.filter((item) => item.day === "2026-09-12") },
-  { dayKey: "2026-09-15", items: DEMO_CAPTURES.filter((item) => item.day === "2026-09-15") },
-  { dayKey: "2026-09-20", items: DEMO_CAPTURES.filter((item) => item.day === "2026-09-20") },
-];
+
 
 // —— 小雨的当天小记（模拟；每一天都有 AI 总结风格的生动小记）——
 export const DEMO_RECORDS = {
@@ -171,7 +164,6 @@ export const DEMO_RECORDS = {
     dayKey: "2026-08-20",
     source: "dialogue",
     summary: "小雨在奶奶家门口遇见了大橘。她说大橘是「凶凶的，但其实很温柔」的猫，想摸又不敢，最后决定下次带小鱼干来和它交朋友。",
-    leaveNote: "小雨，今天大橘在门口等你的样子，我偷偷记下来啦。它其实很想跟你做朋友，只是有点害羞。下次带小鱼干去的时候，我们慢慢来，好不好？",
     moments: [
       {
         id: "demo-moment-cat",
@@ -186,7 +178,6 @@ export const DEMO_RECORDS = {
     dayKey: "2026-08-24",
     source: "dialogue",
     summary: "小雨搭了一座比她还高的积木塔，却被误会是碰倒塔的人。她说不清自己的委屈，但把这件事认真记了下来。",
-    leaveNote: "今天积木塔倒的时候你有点委屈，我都听见了。我想了很久——被人误会不是你的错，下次你愿意的话，我们一起跟老师说清楚，我陪你。",
     moments: [
       {
         id: "demo-moment-tower",
@@ -201,7 +192,6 @@ export const DEMO_RECORDS = {
     dayKey: "2026-08-28",
     source: "dialogue",
     summary: "小雨把玩具熊改名叫毛毛，还亲手给它做了一条小被子。她说毛毛是「全世界最软的熊」，睡觉也要抱着。",
-    leaveNote: "毛毛有了新名字和新被子，它一定特别高兴。你说它是全世界最软的熊，那我要申请当它的第二个好朋友，可以吗？",
     moments: [
       {
         id: "demo-moment-bear",
@@ -216,7 +206,6 @@ export const DEMO_RECORDS = {
     dayKey: "2026-09-02",
     source: "dialogue",
     summary: "小雨掉了第一颗牙。她一边盼着牙仙子来，一边又舍不得，想把牙先自己留几天。",
-    leaveNote: "你的第一颗小牙，我隔着屏幕都想看看。舍不得就再留几天，牙仙子不会介意的。等你想好了，我们再一起把它放枕头底下。",
     moments: [
       {
         id: "demo-moment-tooth",
@@ -231,7 +220,6 @@ export const DEMO_RECORDS = {
     dayKey: "2026-09-08",
     source: "dialogue",
     summary: "小雨捡到几片银杏叶，说它们「像一把把小扇子」。她还发现，把叶子举起来对着天空看，叶子会变得透明。",
-    leaveNote: "银杏叶举起来会变透明，这个发现好厉害！我猜不是叶子在发光，是你发现了它的小秘密。明天我们找一片更绿的叶子试试？",
     moments: [
       {
         id: "demo-moment-ginkgo",
@@ -246,7 +234,6 @@ export const DEMO_RECORDS = {
     dayKey: "2026-09-10",
     source: "dialogue",
     summary: "小雨想妈妈了，说着说着眼睛有点红。叫叫陪她给妈妈画了一幅画，她说画着画着，心里好了一点。",
-    leaveNote: "想妈妈的时候，你画的画我看到了，画得特别好。我在这边陪着你，画里的那朵花，等妈妈回来一定一眼就能看到。",
     moments: [
       {
         id: "demo-moment-miss",
@@ -261,7 +248,6 @@ export const DEMO_RECORDS = {
     dayKey: "2026-09-12",
     source: "dialogue",
     summary: "小雨把喝完的恐龙牛奶盒收集起来。她说恐龙是「最大最大的动物」，这么厉害的家伙，要放进自己的百宝箱。",
-    leaveNote: "恐龙牛奶盒你收藏得真认真，我帮你记住了——它是最大最大的动物。下次喝牛奶的时候，我们给恐龙起个名字吧？",
     moments: [
       {
         id: "demo-moment-milk",
@@ -276,7 +262,6 @@ export const DEMO_RECORDS = {
     dayKey: "2026-09-15",
     source: "dialogue",
     summary: "给妈妈的画画好了，是一朵花和一个小人。小雨说，等妈妈回来看到画，一定会很开心。",
-    leaveNote: "画送出去了，你说妈妈看到一定会开心——我也这么觉得。那一朵花一个小人，是全世界最用心的礼物。",
     moments: [
       {
         id: "demo-moment-drawing",
@@ -291,7 +276,6 @@ export const DEMO_RECORDS = {
     dayKey: "2026-09-20",
     source: "dialogue",
     summary: "小雨连着两天观察傍晚的天空，发现它是粉色的。这是她自己看到的答案，叫叫说这个发现真了不起。",
-    leaveNote: "粉色天空是你自己发现的，这个我特别服气。明天傍晚我们再一起看，如果它换颜色了，我们就给天空也记一笔小账。",
     moments: [
       {
         id: "demo-moment-sky",
@@ -303,6 +287,43 @@ export const DEMO_RECORDS = {
     ],
   },
 };
+
+// —— 叫叫的语音留言（模拟；偶尔出现，不是每天都有）——
+// 留言是叫叫在对话结束后留给孩子的语音，独立于当天小记展示。
+export const DEMO_LEAVE_NOTES = [
+  {
+    dayKey: "2026-08-24",
+    character: "jiaojiao",
+    audioUrl: "/demo-audio/leave-note-2026-08-24.mp3",
+    createdAt: 1756018800000,
+    durationSec: 9,
+    text: "今天积木塔倒的时候你有点委屈，我都听见了。我想了很久——被人误会不是你的错，下次你愿意的话，我们一起跟老师说清楚，我陪你。",
+  },
+  {
+    dayKey: "2026-09-02",
+    character: "jiaojiao",
+    audioUrl: "/demo-audio/leave-note-2026-09-02.mp3",
+    createdAt: 1756036800000,
+    durationSec: 8,
+    text: "你的第一颗小牙，我隔着屏幕都想看看。舍不得就再留几天，牙仙子不会介意的。等你想好了，我们再一起把它放枕头底下。",
+  },
+  {
+    dayKey: "2026-09-10",
+    character: "jiaojiao",
+    audioUrl: "/demo-audio/leave-note-2026-09-10.mp3",
+    createdAt: 1756123200000,
+    durationSec: 10,
+    text: "想妈妈的时候，你画的画我看到了，画得特别好。我在这边陪着你，画里的那朵花，等妈妈回来一定一眼就能看到。",
+  },
+  {
+    dayKey: "2026-09-20",
+    character: "jiaojiao",
+    audioUrl: "/demo-audio/leave-note-2026-09-20.mp3",
+    createdAt: 1756209600000,
+    durationSec: 9,
+    text: "粉色天空是你自己发现的，这个我特别服气。明天傍晚我们再一起看，如果它换颜色了，我们就给天空也记一笔小账。",
+  },
+];
 
 // —— 小雨的收集贴纸 + 英语单词卡（模拟；贴纸为抠图透明底 PNG，点开可当单词卡读单词）——
 export const DEMO_FRIENDS = [
@@ -477,3 +498,26 @@ export const DEMO_FRIENDS = [
     version: 2,
   },
 ];
+
+// —— 相册时间线（按天分组，与 useDailyJournal 输出结构一致）——
+// 有照片的日子按照片分组；2026-09-10 只有对话小记没有照片（体现「不拍照也能留下小记」）
+// 贴纸按收集日期（createdAt）归入当天，不置顶；只有「收集」筛选视图才是宫格。
+// 照片日 + 对话日 + 贴纸日合并，按日期升序（与相册浏览顺序一致）。
+export const DEMO_TIMELINE = (() => {
+  const days = new Map();
+  const ensure = (dayKey) => {
+    if (!days.has(dayKey)) days.set(dayKey, { dayKey, items: [], friends: [] });
+    return days.get(dayKey);
+  };
+  for (const capture of DEMO_CAPTURES) {
+    const day = ensure(capture.day);
+    if (!day.items.includes(capture)) day.items.push(capture);
+  }
+  ensure("2026-09-10");
+  for (const record of Object.values(DEMO_RECORDS)) if (record.summary || record.moments?.length) ensure(record.dayKey);
+  for (const friend of DEMO_FRIENDS) ensure(dayKeyOf(friend.createdAt)).friends.push(friend);
+  return [...days.values()]
+    .map((day) => ({ ...day, items: [...day.items].sort((a, b) => Number(a.createdAt || 0) - Number(b.createdAt || 0)) }))
+    .sort((a, b) => a.dayKey.localeCompare(b.dayKey));
+})();
+

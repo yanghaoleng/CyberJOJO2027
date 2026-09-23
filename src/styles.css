@@ -1398,6 +1398,148 @@ button {
   gap: 6px;
 }
 
+/* 叫叫语音留言卡：独立于当天小记的语音条板块（模拟数据偶尔出现） */
+.leave-note-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 14px 0 4px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(233, 202, 151, 0.14), rgba(233, 202, 151, 0.06));
+  border: 1px solid rgba(233, 202, 151, 0.22);
+  box-sizing: border-box;
+}
+.leave-note-play {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 0;
+  cursor: pointer;
+  background: rgba(233, 202, 151, 0.22);
+  color: #f4e3c2;
+  font-size: 15px;
+  display: grid;
+  place-items: center;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+.leave-note-play:hover { background: rgba(233, 202, 151, 0.34); }
+.leave-note-play:active { transform: scale(0.94); }
+.leave-note-play-icon { transform: translateX(1px); }
+.leave-note-pause { font-size: 12px; letter-spacing: 0.02em; }
+.leave-note-body { flex: 1 1 auto; min-width: 0; }
+.leave-note-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.leave-note-badge {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: #e9ca97;
+}
+.leave-note-time {
+  font-size: 11px;
+  color: rgba(244, 227, 194, 0.66);
+  font-variant-numeric: tabular-nums;
+}
+.leave-note-wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 26px;
+  margin: 0 0 8px;
+}
+.leave-note-wave i {
+  flex: 1 1 0;
+  min-width: 2px;
+  max-width: 5px;
+  border-radius: 999px;
+  background: rgba(233, 202, 151, 0.35);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.leave-note-wave i.is-active { background: #e9ca97; }
+.leave-note-card.is-playing .leave-note-wave i { animation: leave-note-bounce 0.9s ease-in-out infinite alternate; }
+.leave-note-card.is-playing .leave-note-wave i:nth-child(3n) { animation-delay: 0.2s; }
+.leave-note-card.is-playing .leave-note-wave i:nth-child(3n + 1) { animation-delay: 0.45s; }
+.leave-note-card.is-playing .leave-note-wave i:nth-child(2n) { animation-delay: 0.1s; }
+@keyframes leave-note-bounce {
+  from { transform: scaleY(0.55); }
+  to { transform: scaleY(1.15); }
+}
+.leave-note-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #f4e3c2;
+  overflow-wrap: anywhere;
+}
+@media (prefers-reduced-motion: reduce) {
+  .leave-note-card.is-playing .leave-note-wave i { animation: none; }
+}
+
+/* 时间线里的贴纸卡：按收集日期归入当天，不置顶 */
+.media-day-friends {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 11px;
+  margin-top: 4px;
+}
+.media-library-card.is-friend {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 4px;
+  padding: 6px;
+  text-align: left;
+}
+.media-library-card.is-friend .media-library-visual {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 74px;
+  padding: 6px;
+  box-sizing: border-box;
+}
+.media-library-card.is-friend img {
+  max-width: 100%;
+  max-height: 66px;
+  object-fit: contain;
+  border-radius: 10px;
+}
+.media-friend-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: #e9ca97;
+  background: rgba(0, 0, 0, 0.32);
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+.media-friend-name {
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #f4e3c2;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.media-friend-name small {
+  font-size: 11px;
+  color: rgba(244, 227, 194, 0.6);
+}
+.app-shell.is-mobile-device:not(.is-tablet-device).is-portrait .media-day-friends {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+.app-shell.is-mobile-device:not(.is-tablet-device).is-portrait .media-library-card.is-friend .media-library-visual { min-height: 56px; }
+.app-shell.is-mobile-device:not(.is-tablet-device).is-portrait .media-library-card.is-friend img { max-height: 48px; }
+
 .media-day-summary {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { flushSync } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import {
   ArrowClockwise,
   ArrowsLeftRight,
@@ -64,8 +64,10 @@ import {
 import { getLibraryTabAfterSwipe, LIBRARY_TABS } from "./library-tabs.js";
 import useDailyJournal from "./journal/useDailyJournal.js";
 import JournalDay from "./journal/JournalDay.jsx";
-import { DEMO_COUNT, DEMO_FRIENDS, DEMO_RECORDS, DEMO_TIMELINE } from "./library-demo-data.js";
+import { DEMO_COUNT, DEMO_FRIENDS, DEMO_LEAVE_NOTES, DEMO_RECORDS, DEMO_TIMELINE } from "./library-demo-data.js";
 import { isUnreadCollection, loadFriends, markCollectionsSeen, saveFriend } from "./friends/friend-store.js";
+import FriendCard from "./friends/FriendCard.jsx";
+import "./friends/friends.css";
 import { runCollectionJob } from "./friends/collection-job.js";
 import { parseCollectionDialogue } from "./friends/collection-dialogue.js";
 import { createStickerFromCapture } from "./sticker-matting.js";
@@ -90,6 +92,7 @@ import {
 import { getNextVisionThrottle, getThrottledInterval } from "./vision-performance.js";
 import { TypingIndicator } from "./components/amicro/typing-indicator.jsx";
 import { CharacterCaptionBubble } from "./components/character-caption-bubble.jsx";
+import { LeaveNoteCard } from "./components/leave-note-card.jsx";
 import { drawCharacterCaption } from "./character-caption.js";
 import {
   endCharacterEchoGate,
@@ -1034,6 +1037,7 @@ function App() {
   const [mediaLibrary, setMediaLibrary] = useState([]);
   const [libraryDemo, setLibraryDemo] = useState(false);
   const [demoRecords, setDemoRecords] = useState(DEMO_RECORDS);
+  const [libraryFriendPreview, setLibraryFriendPreview] = useState(null);
   const [friends, setFriends] = useState([]);
   const [collectionFlight, setCollectionFlight] = useState(null);
   const [collectionQueueTick, setCollectionQueueTick] = useState(0);
@@ -4611,8 +4615,7 @@ function App() {
             </nav>
             {libraryTab === "friends" ? <div className="media-library-timeline" ref={mediaLibraryGridRef}><Suspense fallback={<p>收集正在打开…</p>}><FriendCollection friends={visibleFriends} onSeen={onCollectionsSeen} onRetry={retryCollection} /></Suspense></div> : (visibleTimeline.length || libraryTab === "all") ? (
               <div className="media-library-timeline" ref={mediaLibraryGridRef}>
-                {libraryTab === "all" && <Suspense fallback={<p>收集正在打开…</p>}><FriendCollection friends={visibleFriends} onSeen={onCollectionsSeen} onRetry={retryCollection} /></Suspense>}
-                {visibleTimeline.map(({ dayKey, items }, dayIndex) => {
+                {visibleTimeline.map(({ dayKey, items, friends: dayFriends = [] }, dayIndex) => {
                   const entries = libraryDemo ? [] : (conversationEntriesByDay.get(dayKey) || []);
                   const summaryRecord = libraryDemo ? demoRecords[dayKey] : conversationSummaries[dayKey];
                   const summaryState = libraryDemo ? "ready" : (conversationSummaryStates[dayKey] || "idle");
@@ -4675,7 +4678,31 @@ function App() {
                             </span>
                           </button>
                         ))}
+                        {dayFriends.length > 0 && (
+                          <div className="media-day-friends">
+                            {dayFriends.map((friend) => (
+                              <button
+                                type="button"
+                                key={friend.id}
+                                className="media-library-card is-friend"
+                                onClick={() => setLibraryFriendPreview(friend)}
+                                aria-label={`打开${friend.name}的收集`}
+                              >
+                                <span className="media-library-visual">
+                                  {friend.stickerUrl && <img src={friend.stickerUrl} alt="" />}
+                                  <span className="media-friend-badge" aria-hidden="true">✦ 贴纸</span>
+                                </span>
+                                <span className="media-friend-name">{friend.name}<small>{friend.english ? `· ${friend.english}` : ""}</small></span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
+                      {libraryDemo && (() => {
+                        const note = DEMO_LEAVE_NOTES.find((item) => item.dayKey === dayKey);
+                        if (!note) return null;
+                        return <LeaveNoteCard key={`note-${note.dayKey}`} note={note} />;
+                      })()}
                       <JournalDay record={summaryRecord || { dayKey }} state={summaryState}
                         onChange={libraryDemo ? updateDemoMoment : journal.updateMoment} onForget={libraryDemo ? forgetDemoMoment : journal.forgetMoment} onRetry={libraryDemo ? undefined : () => journal.retry(dayKey)} />
                     </section>
@@ -4690,6 +4717,17 @@ function App() {
               </div>
             )}
           </div>
+        )}
+
+        {libraryFriendPreview && createPortal(
+          <div className="friend-detail-backdrop" role="dialog" aria-modal="true" aria-label={`${libraryFriendPreview.name}的收集`} onClick={() => setLibraryFriendPreview(null)}>
+            <article className="friend-detail-sheet" onClick={(event) => event.stopPropagation()}>
+              <button className="friend-icon-button" type="button" aria-label="关闭收集" onClick={() => setLibraryFriendPreview(null)}><X size={20} weight="bold" /></button>
+              <FriendCard friend={libraryFriendPreview} />
+              <p className="friend-dialogue-note">想给它换个名字，直接对叫叫说“它叫……”就好。</p>
+            </article>
+          </div>,
+          document.body,
         )}
 
         {mediaPreview && (

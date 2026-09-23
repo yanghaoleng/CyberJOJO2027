@@ -10,11 +10,26 @@ export function usePortraitUrl(source) {
 }
 function speakWord(english) {
   if (!english || typeof window === "undefined" || !("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
+  const synthesis = window.speechSynthesis;
+  synthesis.cancel();
   const u = new SpeechSynthesisUtterance(english);
   u.lang = "en-US";
   u.rate = 0.8;
-  window.speechSynthesis.speak(u);
+  const pickEnglishVoice = () => {
+    const voices = synthesis.getVoices();
+    const preferred = voices.find((voice) => /en-US/i.test(voice.lang) && /Samantha|Google US|Zira|Aria|Jenny|Daniel/i.test(voice.name))
+      || voices.find((voice) => /^en(-|_)/i.test(voice.lang));
+    if (preferred) u.voice = preferred;
+    else u.lang = "en-US";
+  };
+  pickEnglishVoice();
+  // macOS 上语音列表可能尚未加载，监听 voiceschanged 后再发声。
+  if (!synthesis.getVoices().length) {
+    synthesis.addEventListener("voiceschanged", pickEnglishVoice, { once: true });
+  }
+  synthesis.speak(u);
+  // 部分浏览器 speak 后处于 paused 状态，主动 resume 确保出声。
+  if (synthesis.paused) synthesis.resume();
 }
 function DetailWords({ friend, word }) {
   return (
