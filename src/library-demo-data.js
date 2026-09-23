@@ -152,19 +152,39 @@ export const DEMO_CAPTURES = [
 export const DEMO_COUNT = DEMO_CAPTURES.length;
 
 // —— 相册时间线（按天分组，与 useDailyJournal 输出结构一致）——
-export const DEMO_TIMELINE = Object.values(
-  DEMO_CAPTURES.reduce((groups, item) => {
-    (groups[item.day] ||= []).push(item);
-    return groups;
-  }, {}),
-).map((items) => ({ dayKey: items[0].day, items }));
+// 有照片的日子按照片分组；2026-09-10 只有对话小记没有照片（体现「不拍照也能留下小记」）
+export const DEMO_TIMELINE = [
+  { dayKey: "2026-08-20", items: DEMO_CAPTURES.filter((item) => item.day === "2026-08-20") },
+  { dayKey: "2026-08-24", items: DEMO_CAPTURES.filter((item) => item.day === "2026-08-24") },
+  { dayKey: "2026-08-28", items: DEMO_CAPTURES.filter((item) => item.day === "2026-08-28") },
+  { dayKey: "2026-09-02", items: DEMO_CAPTURES.filter((item) => item.day === "2026-09-02") },
+  { dayKey: "2026-09-08", items: DEMO_CAPTURES.filter((item) => item.day === "2026-09-08") },
+  { dayKey: "2026-09-10", items: [] },
+  { dayKey: "2026-09-12", items: DEMO_CAPTURES.filter((item) => item.day === "2026-09-12") },
+  { dayKey: "2026-09-15", items: DEMO_CAPTURES.filter((item) => item.day === "2026-09-15") },
+  { dayKey: "2026-09-20", items: DEMO_CAPTURES.filter((item) => item.day === "2026-09-20") },
+];
 
-// —— 小雨的当天小记（模拟）——
+// —— 小雨的当天小记（模拟；每一天都有 AI 总结风格的生动小记）——
 export const DEMO_RECORDS = {
+  "2026-08-20": {
+    dayKey: "2026-08-20",
+    source: "dialogue",
+    summary: "小雨在奶奶家门口遇见了大橘。她说大橘是「凶凶的，但其实很温柔」的猫，想摸又不敢，最后决定下次带小鱼干来和它交朋友。",
+    moments: [
+      {
+        id: "demo-moment-cat",
+        event: "在奶奶家门口看见大橘了，它趴在石阶上晒太阳。",
+        feeling: "开心，又有一点怕",
+        thought: "下次带小鱼干给它吃，它就不凶了。",
+        evidenceQuote: "大橘凶凶的，但其实很温柔。",
+      },
+    ],
+  },
   "2026-08-24": {
     dayKey: "2026-08-24",
     source: "dialogue",
-    summary: "小雨搭了一座最高的积木塔，却被误会是碰倒塔的人。她说不清自己的委屈，但把这件事认真记了下来。",
+    summary: "小雨搭了一座比她还高的积木塔，却被误会是碰倒塔的人。她说不清自己的委屈，但把这件事认真记了下来。",
     moments: [
       {
         id: "demo-moment-tower",
@@ -175,37 +195,94 @@ export const DEMO_RECORDS = {
       },
     ],
   },
+  "2026-08-28": {
+    dayKey: "2026-08-28",
+    source: "dialogue",
+    summary: "小雨把玩具熊改名叫毛毛，还亲手给它做了一条小被子。她说毛毛是「全世界最软的熊」，睡觉也要抱着。",
+    moments: [
+      {
+        id: "demo-moment-bear",
+        event: "我给小熊改名叫毛毛了，还给它做了一条小被子。",
+        feeling: "骄傲",
+        thought: "毛毛是全世界最软的熊，谁都比不上。",
+        evidenceQuote: "以后它就叫毛毛啦。",
+      },
+    ],
+  },
+  "2026-09-02": {
+    dayKey: "2026-09-02",
+    source: "dialogue",
+    summary: "小雨掉了第一颗牙。她一边盼着牙仙子来，一边又舍不得，想把牙先自己留几天。",
+    moments: [
+      {
+        id: "demo-moment-tooth",
+        event: "我的第一颗牙掉了，好小好小一颗。",
+        feeling: "又紧张又开心",
+        thought: "牙仙子真的会来吗？我想先自己留几天。",
+        evidenceQuote: "妈妈说要等牙仙子，可是我也想留着它。",
+      },
+    ],
+  },
+  "2026-09-08": {
+    dayKey: "2026-09-08",
+    source: "dialogue",
+    summary: "小雨捡到几片银杏叶，说它们「像一把把小扇子」。她还发现，把叶子举起来对着天空看，叶子会变得透明。",
+    moments: [
+      {
+        id: "demo-moment-ginkgo",
+        event: "捡到几片银杏叶，像小扇子。",
+        feeling: "惊喜",
+        thought: "叶子对着天空看会变透明，是它自己在发光吗？",
+        evidenceQuote: "快看，叶子变成透明的了！",
+      },
+    ],
+  },
   "2026-09-10": {
     dayKey: "2026-09-10",
     source: "dialogue",
-    summary: "小雨想妈妈了。叫叫陪她给妈妈画了一幅画，她说画着画着，心里好了一点。",
+    summary: "小雨想妈妈了，说着说着眼睛有点红。叫叫陪她给妈妈画了一幅画，她说画着画着，心里好了一点。",
     moments: [
       {
         id: "demo-moment-miss",
         event: "想妈妈了。",
         feeling: "有点难过",
         thought: "给妈妈画一幅画，等她回来送给她。",
-        evidenceQuote: "想妈妈了。",
+        evidenceQuote: "妈妈什么时候回来呀……",
+      },
+    ],
+  },
+  "2026-09-12": {
+    dayKey: "2026-09-12",
+    source: "dialogue",
+    summary: "小雨把喝完的恐龙牛奶盒收集起来。她说恐龙是「最大最大的动物」，这么厉害的家伙，要放进自己的百宝箱。",
+    moments: [
+      {
+        id: "demo-moment-milk",
+        event: "喝完牛奶，把恐龙牛奶盒留下来。",
+        feeling: "得意",
+        thought: "恐龙是最大最大的动物，我要好好保存它。",
+        evidenceQuote: "这个恐龙好厉害，比房子还大！",
       },
     ],
   },
   "2026-09-15": {
     dayKey: "2026-09-15",
     source: "dialogue",
-    summary: "给妈妈的画画好了。小雨说，妈妈看到一定会很开心。",
+    summary: "给妈妈的画画好了，是一朵花和一个小人。小雨说，等妈妈回来看到画，一定会很开心。",
     moments: [
       {
         id: "demo-moment-drawing",
         event: "给妈妈的画画好了，是一朵花和一个小人。",
         feeling: "开心",
         thought: "妈妈看到一定会喜欢。",
+        evidenceQuote: "妈妈，你看，这是我画的花！",
       },
     ],
   },
   "2026-09-20": {
     dayKey: "2026-09-20",
     source: "dialogue",
-    summary: "小雨连着两天观察傍晚的天空，发现它变成粉色了。这是她自己看到的答案。",
+    summary: "小雨连着两天观察傍晚的天空，发现它是粉色的。这是她自己看到的答案，叫叫说这个发现真了不起。",
     moments: [
       {
         id: "demo-moment-sky",
