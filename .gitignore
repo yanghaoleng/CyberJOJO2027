@@ -11,3 +11,6 @@ __pycache__/
 
 # 本地语音服务凭据（含 TTS / Seeduplex / ARK Key），禁止提交
 server/voice.env
+
+# 永不提交的营销素材
+cyberjojo-marketing-assets.zip
