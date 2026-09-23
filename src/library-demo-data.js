@@ -1,111 +1,163 @@
 // 相册「模拟数据体验」演示数据
 // 说明：这是产品演示用的虚构数据（孩子：小雨，6 岁），与真实本地数据完全隔离。
 // 打开相册面板里的「模拟数据」开关后，展示的是下面这套内容；关闭后回到本机真实数据。
-// 照片为 SVG 占位图（不引入外部资源、不依赖本地存储），贴纸为同款 SVG Blob。
+// 照片为 AI 生成的真实照片风格模拟图（public/demo-photos/），仅用于演示。
 
 const DAY = "2026";
 // 相对固定日期构造时间戳（本地时区，均为傍晚拍摄时间）
 const at = (month, date, hour = 17, minute = 40) => new Date(DAY, month - 1, date, hour, minute).getTime();
 
-function svgPhoto({ gradient = ["#FFD9A0", "#FF9FB2"], emoji, label, sub }) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360" viewBox="0 0 480 360">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0" stop-color="${gradient[0]}"/><stop offset="1" stop-color="${gradient[1]}"/>
-  </linearGradient></defs>
-  <rect width="480" height="360" rx="24" fill="url(#g)"/>
-  <circle cx="240" cy="148" r="74" fill="rgba(255,255,255,0.38)"/>
-  <text x="240" y="192" font-size="92" text-anchor="middle">${emoji}</text>
-  <text x="240" y="288" font-size="34" font-family="PingFang SC, Hiragino Sans GB, sans-serif" font-weight="bold" fill="rgba(255,255,255,0.98)" text-anchor="middle">${label}</text>
-  ${sub ? `<text x="240" y="326" font-size="20" font-family="PingFang SC, Hiragino Sans GB, sans-serif" fill="rgba(255,255,255,0.85)" text-anchor="middle">${sub}</text>` : ""}
-</svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-}
+const photo = (file) => `/demo-photos/${file}`;
 
-function svgSticker({ gradient = ["#C9B8FF", "#8FD8FF"], emoji, label }) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360" viewBox="0 0 360 360">
-  <defs><radialGradient id="r" cx="0.5" cy="0.42" r="0.62">
-    <stop offset="0" stop-color="${gradient[0]}"/><stop offset="1" stop-color="${gradient[1]}"/>
-  </radialGradient></defs>
-  <circle cx="180" cy="180" r="168" fill="url(#r)"/>
-  <circle cx="180" cy="150" r="72" fill="rgba(255,255,255,0.4)"/>
-  <text x="180" y="192" font-size="88" text-anchor="middle">${emoji}</text>
-  <text x="180" y="300" font-size="32" font-family="PingFang SC, Hiragino Sans GB, sans-serif" font-weight="bold" fill="rgba(255,255,255,0.98)" text-anchor="middle">${label}</text>
-</svg>`;
-  return new Blob([svg], { type: "image/svg+xml" });
-}
-
-// —— 小雨的模拟照片流（由旧到新，含故事）——
+// —— 小雨的模拟照片流（由旧到新，含故事；每天多张，部分照片里有叫叫）——
 export const DEMO_CAPTURES = [
+  // 2026-08-20 · 奶奶家的橘猫「大橘」
   {
-    id: "demo-photo-cat",
+    id: "demo-photo-cat-porch",
     type: "photo",
-    url: svgPhoto({ gradient: ["#FFC98B", "#E8A87C"], emoji: "🐈", label: "大橘", sub: "奶奶家的橘猫" }),
+    url: photo("demo-2026-08-20-cat-porch.jpg"),
     createdAt: at(8, 20, 17, 52),
     day: "2026-08-20",
-    captionText: "奶奶家的橘猫，它叫大橘，它不让我摸。",
+    captionText: "奶奶家门口的大橘，它每天都趴在石阶上等我。",
   },
+  {
+    id: "demo-photo-cat-fish",
+    type: "photo",
+    url: photo("demo-2026-08-20-cat-fish.jpg"),
+    createdAt: at(8, 20, 18, 6),
+    day: "2026-08-20",
+    captionText: "大橘在吃小鱼干，我想摸它，但它不让。",
+  },
+  // 2026-08-24 · 最高的积木塔
   {
     id: "demo-photo-tower",
     type: "photo",
-    url: svgPhoto({ gradient: ["#FFE0A3", "#FFB37A"], emoji: "🧱", label: "最高的积木塔", sub: "今天搭的" }),
-    createdAt: at(8, 24, 18, 5),
+    url: photo("demo-2026-08-24-tower.jpg"),
+    createdAt: at(8, 24, 15, 10),
     day: "2026-08-24",
-    captionText: "今天搭了一座最高的积木塔。",
+    captionText: "今天搭了一座最高的积木塔，比我还高。",
   },
   {
-    id: "demo-photo-bear",
+    id: "demo-photo-tower-jiaojiao",
     type: "photo",
-    url: svgPhoto({ gradient: ["#F3D9B1", "#D9A87E"], emoji: "🧸", label: "小熊", sub: "后来我给它改名毛毛" }),
-    createdAt: at(8, 28, 17, 48),
-    day: "2026-08-28",
-    captionText: "它是小熊，后来我给它改名毛毛。",
+    url: photo("demo-2026-08-24-tower-jiaojiao.jpg"),
+    createdAt: at(8, 24, 15, 24),
+    day: "2026-08-24",
+    captionText: "叫叫飞到塔顶，说它是塔顶的小小守卫。",
   },
+  // 2026-08-28 · 玩具熊「毛毛」
+  {
+    id: "demo-photo-bear-bed",
+    type: "photo",
+    url: photo("demo-2026-08-28-bear-bed.jpg"),
+    createdAt: at(8, 28, 20, 15),
+    day: "2026-08-28",
+    captionText: "小熊坐在我的床上，它原来叫小熊，我给它改名毛毛。",
+  },
+  {
+    id: "demo-photo-bear-blanket",
+    type: "photo",
+    url: photo("demo-2026-08-28-bear-blanket.jpg"),
+    createdAt: at(8, 28, 20, 40),
+    day: "2026-08-28",
+    captionText: "今天给毛毛做了小被子，它睡得很香。",
+  },
+  // 2026-09-02 · 第一颗掉的牙
   {
     id: "demo-photo-tooth",
     type: "photo",
-    url: svgPhoto({ gradient: ["#E8F6FF", "#B9D9FF"], emoji: "🦷", label: "第一颗掉的牙", sub: "妈妈说牙仙子会来" }),
-    createdAt: at(9, 2, 17, 30),
+    url: photo("demo-2026-09-02-tooth.jpg"),
+    createdAt: at(9, 2, 19, 5),
     day: "2026-09-02",
     captionText: "我的第一颗牙掉了，妈妈说牙仙子会来。",
   },
   {
-    id: "demo-photo-leaf",
+    id: "demo-photo-tooth-jiaojiao",
     type: "photo",
-    url: svgPhoto({ gradient: ["#FCE1A8", "#F4B66B"], emoji: "🍂", label: "秋天的银杏叶", sub: "像一把小扇子" }),
+    url: photo("demo-2026-09-02-tooth-jiaojiao.jpg"),
+    createdAt: at(9, 2, 19, 12),
+    day: "2026-09-02",
+    captionText: "叫叫说它也想看看我的牙，说它像一颗小珍珠。",
+  },
+  // 2026-09-08 · 秋天的银杏叶
+  {
+    id: "demo-photo-ginkgo-desk",
+    type: "photo",
+    url: photo("demo-2026-09-08-ginkgo-desk.jpg"),
     createdAt: at(9, 8, 17, 22),
     day: "2026-09-08",
-    captionText: "捡到一片像扇子的银杏叶。",
+    captionText: "捡到几片银杏叶，像一把把小扇子。",
   },
+  {
+    id: "demo-photo-ginkgo-sky",
+    type: "photo",
+    url: photo("demo-2026-09-08-ginkgo-sky.jpg"),
+    createdAt: at(9, 8, 17, 48),
+    day: "2026-09-08",
+    captionText: "举着叶子看天空，叶子变透明了。",
+  },
+  // 2026-09-12 · 恐龙牛奶盒
   {
     id: "demo-photo-milk",
     type: "photo",
-    url: svgPhoto({ gradient: ["#D9E8FF", "#A8C0FF"], emoji: "🥛", label: "恐龙牛奶盒", sub: "喝完牛奶把它收集起来" }),
-    createdAt: at(9, 12, 18, 12),
+    url: photo("demo-2026-09-12-milk.jpg"),
+    createdAt: at(9, 12, 12, 30),
     day: "2026-09-12",
-    captionText: "牛奶盒上的恐龙，我收集起来了。",
+    captionText: "牛奶盒上的恐龙，我喝完牛奶把它收集起来。",
   },
+  // 2026-09-15 · 给妈妈的画
   {
-    id: "demo-photo-drawing",
+    id: "demo-photo-drawing-fridge",
     type: "photo",
-    url: svgPhoto({ gradient: ["#FFD3E0", "#FF9FB2"], emoji: "🎨", label: "给妈妈的画", sub: "想妈妈的时候画的" }),
-    createdAt: at(9, 15, 17, 40),
+    url: photo("demo-2026-09-15-drawing-fridge.jpg"),
+    createdAt: at(9, 15, 18, 40),
     day: "2026-09-15",
-    captionText: "想妈妈的时候，给妈妈画了一幅画。",
+    captionText: "给妈妈画的画，是一朵花和一个小人，贴在冰箱上等她回来看。",
   },
   {
-    id: "demo-photo-sky",
+    id: "demo-photo-drawing-jiaojiao",
     type: "photo",
-    url: svgPhoto({ gradient: ["#C9B8FF", "#FF9FB2"], emoji: "🌇", label: "傍晚的天空", sub: "是粉色的！" }),
+    url: photo("demo-2026-09-15-drawing-jiaojiao.jpg"),
+    createdAt: at(9, 15, 18, 48),
+    day: "2026-09-15",
+    captionText: "叫叫说它最喜欢画上的那朵花。",
+  },
+  // 2026-09-20 · 傍晚的粉色天空
+  {
+    id: "demo-photo-sky-window",
+    type: "photo",
+    url: photo("demo-2026-09-20-sky-window.jpg"),
     createdAt: at(9, 20, 18, 30),
     day: "2026-09-20",
-    captionText: "我发现傍晚的天空是粉色的，因为太阳要睡觉了！",
+    captionText: "我发现傍晚的天空是粉色的！",
+  },
+  {
+    id: "demo-photo-sky-jiaojiao",
+    type: "photo",
+    url: photo("demo-2026-09-20-sky-jiaojiao.jpg"),
+    createdAt: at(9, 20, 18, 36),
+    day: "2026-09-20",
+    captionText: "叫叫和我一起看晚霞，它说这是太阳在和我们说晚安。",
+  },
+  {
+    id: "demo-photo-jiaojiao-hands",
+    type: "photo",
+    url: photo("demo-2026-09-20-jiaojiao-hands.jpg"),
+    createdAt: at(9, 20, 18, 42),
+    day: "2026-09-20",
+    captionText: "叫叫站在我的手心里，暖暖的。",
   },
 ];
 
 export const DEMO_COUNT = DEMO_CAPTURES.length;
 
 // —— 相册时间线（按天分组，与 useDailyJournal 输出结构一致）——
-export const DEMO_TIMELINE = DEMO_CAPTURES.map((item) => ({ dayKey: item.day, items: [item] }));
+export const DEMO_TIMELINE = Object.values(
+  DEMO_CAPTURES.reduce((groups, item) => {
+    (groups[item.day] ||= []).push(item);
+    return groups;
+  }, {}),
+).map((items) => ({ dayKey: items[0].day, items }));
 
 // —— 小雨的当天小记（模拟）——
 export const DEMO_RECORDS = {
@@ -166,10 +218,7 @@ export const DEMO_RECORDS = {
   },
 };
 
-// —— 小雨的玩具朋友（模拟）——
-const maomaoSticker = svgSticker({ gradient: ["#F3D9B1", "#E0A87E"], emoji: "🧸", label: "毛毛" });
-const dajuSticker = svgSticker({ gradient: ["#FFC98B", "#F29E6B"], emoji: "🐈", label: "大橘" });
-
+// —— 小雨的玩具朋友（模拟；贴纸为 AI 生成的真实照片风圆形贴纸）——
 export const DEMO_FRIENDS = [
   {
     id: "demo-friend-maomao",
@@ -179,11 +228,12 @@ export const DEMO_FRIENDS = [
     childDescription: "今天我给它做了小被子。它原来叫小熊，是我改名叫毛毛的。",
     english: "bear",
     learning: "bear 就是熊的意思。",
-    stickerBlob: maomaoSticker,
+    stickerUrl: "/demo-photos/sticker-maomao.jpg",
+    stickerBlob: null,
     originalBlob: null,
     status: "ready",
     seenAt: 1,
-    createdAt: at(8, 28, 18, 0),
+    createdAt: at(8, 28, 20, 50),
     updatedAt: at(9, 5, 19, 0),
     version: 2,
   },
@@ -195,11 +245,12 @@ export const DEMO_FRIENDS = [
     childDescription: "它不让我摸，但会蹲在门口等我。",
     english: "cat",
     learning: "cat 就是猫的意思。",
-    stickerBlob: dajuSticker,
+    stickerUrl: "/demo-photos/sticker-daju.jpg",
+    stickerBlob: null,
     originalBlob: null,
     status: "ready",
     seenAt: 1,
-    createdAt: at(8, 20, 18, 2),
+    createdAt: at(8, 20, 18, 15),
     updatedAt: at(9, 3, 19, 10),
     version: 2,
   },

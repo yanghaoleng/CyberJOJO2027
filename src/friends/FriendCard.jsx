@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
-export function usePortraitUrl(blob) {
+export function usePortraitUrl(source) {
   const [url, setUrl] = useState("");
-  useEffect(() => { if (!blob) { setUrl(""); return undefined; } const next = URL.createObjectURL(blob); setUrl(next); return () => URL.revokeObjectURL(next); }, [blob]);
+  useEffect(() => {
+    if (!source) { setUrl(""); return undefined; }
+    if (typeof source === "string") { setUrl(source); return undefined; }
+    const next = URL.createObjectURL(source); setUrl(next); return () => URL.revokeObjectURL(next);
+  }, [source]);
   return url;
 }
 export default function FriendCard({ friend, compact = false }) {
-  const url = usePortraitUrl(friend?.stickerBlob || friend?.originalBlob || friend?.portraitBlob);
+  const url = usePortraitUrl(friend?.stickerUrl || friend?.stickerBlob || friend?.originalBlob || friend?.portraitBlob);
   const pending = friend.status && friend.status !== "ready";
   return <article className={`friend-card ${compact ? "is-compact" : ""}`}>
     <div className={`friend-card-photo ${pending ? "is-original" : ""}`}>{url && <img src={url} alt={`${friend.name || "收集"}的${pending ? "原图" : "贴纸"}`} />}<span className="friend-card-stamp">{pending ? friend.status === "failed" ? "原图已保存" : "正在制作贴纸" : "已收集"}</span></div>

@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-23T01:37:52.688Z",
-  "publicFileCount": 56,
-  "totalBytes": 58918109,
+  "generatedAt": "2026-09-23T04:38:04.881Z",
+  "publicFileCount": 74,
+  "totalBytes": 68995305,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -160,6 +160,168 @@
       "format": "MP3",
       "bytes": 33017,
       "sha256": "b45e5230040c3c1cde3137900bb502eb9bd033f2d72adea122bd3b74758db91b"
+    },
+    {
+      "id": "demo-photos/demo-2026-08-20-cat-fish.jpg",
+      "path": "demo-photos/demo-2026-08-20-cat-fish.jpg",
+      "name": "demo-2026-08-20-cat-fish.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 536380,
+      "sha256": "a38b3eb85886a49a36570e0734300ac06ba53f811d61bc7200a8fecfc91f270e"
+    },
+    {
+      "id": "demo-photos/demo-2026-08-20-cat-porch.jpg",
+      "path": "demo-photos/demo-2026-08-20-cat-porch.jpg",
+      "name": "demo-2026-08-20-cat-porch.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 743074,
+      "sha256": "32fafcef5e526e820764028598e65d4bb7d1c272445a4e7f974a2c6212d2811f"
+    },
+    {
+      "id": "demo-photos/demo-2026-08-24-tower-jiaojiao.jpg",
+      "path": "demo-photos/demo-2026-08-24-tower-jiaojiao.jpg",
+      "name": "demo-2026-08-24-tower-jiaojiao.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 516362,
+      "sha256": "41167c386c71465b666e4cc205374e353d387f3b9cdba6e895b736fc67ca9422"
+    },
+    {
+      "id": "demo-photos/demo-2026-08-24-tower.jpg",
+      "path": "demo-photos/demo-2026-08-24-tower.jpg",
+      "name": "demo-2026-08-24-tower.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 591735,
+      "sha256": "4c7c833ee1682cab70a93f0b5636e4028976fb4b03b4e4928546450d202043c2"
+    },
+    {
+      "id": "demo-photos/demo-2026-08-28-bear-bed.jpg",
+      "path": "demo-photos/demo-2026-08-28-bear-bed.jpg",
+      "name": "demo-2026-08-28-bear-bed.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 538515,
+      "sha256": "94621ee25e05e4e4a758970a69c093233d820f0a9af5c83d74b35fbe07ce97a0"
+    },
+    {
+      "id": "demo-photos/demo-2026-08-28-bear-blanket.jpg",
+      "path": "demo-photos/demo-2026-08-28-bear-blanket.jpg",
+      "name": "demo-2026-08-28-bear-blanket.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 651421,
+      "sha256": "ced9ef4f904a0a9433cad986a7b7318ce01f6bdd1c06771f7addf89c7f1f6a82"
+    },
+    {
+      "id": "demo-photos/demo-2026-09-02-tooth-jiaojiao.jpg",
+      "path": "demo-photos/demo-2026-09-02-tooth-jiaojiao.jpg",
+      "name": "demo-2026-09-02-tooth-jiaojiao.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 341547,
+      "sha256": "b3aa28d6eac36db8555673cea43c2fcc1d901013a9c6c0aa70a207bbb79f0f9a"
+    },
+    {
+      "id": "demo-photos/demo-2026-09-02-tooth.jpg",
+      "path": "demo-photos/demo-2026-09-02-tooth.jpg",
+      "name": "demo-2026-09-02-tooth.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 355900,
+      "sha256": "327af920947573267004f1c472b5e6a98516a6adda90a8b4dffbed1c3edcdf17"
+    },
+    {
+      "id": "demo-photos/demo-2026-09-08-ginkgo-desk.jpg",
+      "path": "demo-photos/demo-2026-09-08-ginkgo-desk.jpg",
+      "name": "demo-2026-09-08-ginkgo-desk.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 452521,
+      "sha256": "588513c3a056ced5d956c53a25208e6c7cb4e74871b8dda1a0ed31fce5809841"
+    },
+    {
+      "id": "demo-photos/demo-2026-09-08-ginkgo-sky.jpg",
+      "path": "demo-photos/demo-2026-09-08-ginkgo-sky.jpg",
+      "name": "demo-2026-09-08-ginkgo-sky.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 437140,
+      "sha256": "09ea9fa9e839995f6ef0288fad2429d380f2c2dd023983331793737931d8ec9f"
+    },
+    {
+      "id": "demo-photos/demo-2026-09-12-milk.jpg",
+      "path": "demo-photos/demo-2026-09-12-milk.jpg",
+      "name": "demo-2026-09-12-milk.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 533885,
+      "sha256": "aca83d9579d27fa7a2380f07cf8c1f32cd23b818594a4e9eabead73419ffd0c6"
+    },
+    {
+      "id": "demo-photos/demo-2026-09-15-drawing-fridge.jpg",
+      "path": "demo-photos/demo-2026-09-15-drawing-fridge.jpg",
+      "name": "demo-2026-09-15-drawing-fridge.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 483736,
+      "sha256": "987c81401ec430c68bb321ca17a1fd6aded065edc26be8a7fb55ff2024305845"
+    },
+    {
+      "id": "demo-photos/demo-2026-09-15-drawing-jiaojiao.jpg",
+      "path": "demo-photos/demo-2026-09-15-drawing-jiaojiao.jpg",
+      "name": "demo-2026-09-15-drawing-jiaojiao.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 469439,
+      "sha256": "cb2dc22b848c1e2c2ad0c6a2c98d4e960d4fa204a9859734553b2c9ef248b1ca"
+    },
+    {
+      "id": "demo-photos/demo-2026-09-20-jiaojiao-hands.jpg",
+      "path": "demo-photos/demo-2026-09-20-jiaojiao-hands.jpg",
+      "name": "demo-2026-09-20-jiaojiao-hands.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 403229,
+      "sha256": "69d560564ab3ae898bbf00f210995fd2a812612caa18cb85e3be0069426f9351"
+    },
+    {
+      "id": "demo-photos/demo-2026-09-20-sky-jiaojiao.jpg",
+      "path": "demo-photos/demo-2026-09-20-sky-jiaojiao.jpg",
+      "name": "demo-2026-09-20-sky-jiaojiao.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 339862,
+      "sha256": "0a9a7db3f08cc629054d12f3dc808d3ea3c4078463ea71e10f06fc05e05658b4"
+    },
+    {
+      "id": "demo-photos/demo-2026-09-20-sky-window.jpg",
+      "path": "demo-photos/demo-2026-09-20-sky-window.jpg",
+      "name": "demo-2026-09-20-sky-window.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 367042,
+      "sha256": "2dac1b182ca8ac26c2bf24c89bf6a1b2421564775f00a4d8ea41a17165d8c3f2"
+    },
+    {
+      "id": "demo-photos/sticker-daju.jpg",
+      "path": "demo-photos/sticker-daju.jpg",
+      "name": "sticker-daju.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 1211545,
+      "sha256": "30dd968498c0000b9deb59baa3f0019acb400c8d4953cc5bd7de9cce1a1def13"
+    },
+    {
+      "id": "demo-photos/sticker-maomao.jpg",
+      "path": "demo-photos/sticker-maomao.jpg",
+      "name": "sticker-maomao.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 1103863,
+      "sha256": "940993962fa41767c0aaf01ddfbccd58fb88aa2ede3152db93b9a6768148fc64"
     },
     {
       "id": "favicon-1024.png",
@@ -329,7 +491,7 @@
       "category": "other",
       "format": "HTML",
       "bytes": 39301,
-      "sha256": "d98b6bf1a4f29ed888cc3d243d1ad58527edaf2cebcf1e286dd4fb2fb939df98"
+      "sha256": "6e10249bf734063d6f86a81f2ef9cc8a8be0ba3e310061a328fa1399583cbdc5"
     },
     {
       "id": "media/heart-balloon.riv",
