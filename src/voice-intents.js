@@ -4,7 +4,8 @@ const WREATH_INTENT = /(?:比(?:个)?花圈|花圈|爱心花圈|心形花圈)/;
 const FOOD_WORDS = ["吃东西", "饿了", "好饿", "想吃", "美食", "好吃的", "好吃吗", "吃饭", "吃面", "吃菜", "吃", "喝", "饭", "面条", "米饭", "菜", "肉", "鱼", "蛋", "水果", "苹果", "香蕉", "橘子", "橙子", "西瓜", "葡萄", "草莓", "桃", "梨", "蔬菜", "胡萝卜", "玉米", "土豆", "面包", "蛋糕", "饼干", "糖果", "糖", "巧克力", "牛奶", "酸奶", "果汁", "汤", "饺子", "包子", "馒头", "粥", "汉堡", "披萨", "薯条", "冰淇淋", "零食", "早餐", "午餐", "晚餐", "早饭", "中饭", "晚饭", "夜宵"];
 const FEED_INTENT = new RegExp(`(?:${FOOD_WORDS.join("|")})`);
 const COLLECTION_INTENT = /(?:收集|收藏|收录|做成(?:一张|一个)?(?:单词)?贴纸|放进(?:朋友|图鉴|收藏))|\b(?:collect|make a word card|save as a word card|make a sticker)\b/i;
-const INSPECTION_READY = /(?:找到了|拿来了|拿过来了|放好了|摆好了|准备好了|给你看|你看(?:看)?|看(?:看|一下)?(?:这(?:个|本|棵|盆|只)|东西|这里)|帮我看|这(?:个)?是什么|再看(?:一下)?|看一下|就在(?:中间|镜头前)|放在(?:中间|框里)|认一下|识别一下|看得见吗)/;
+const INSPECTION_READY = /(?:找到了|拿来了|拿过来了|放好了|摆好了|准备好了|给(?:你|Domi|多米|绿豆|叫叫)看|你看(?:看)?|看(?:看|一下)?(?:这(?:个|本|棵|盆|只)|东西|这里)|帮我看|这(?:个)?是什么|再看(?:一下)?|看一下|就在(?:中间|镜头前)|放在(?:中间|框里)|认一下|识别一下|看得见吗)/i;
+const ENGLISH_INSPECTION_READY = /\b(?:look at (?:this|my|the)|show (?:you|domi)|can you see|what is this|i found|here is)\b/i;
 
 function cleanSubject(value) {
   return String(value || "")
@@ -29,18 +30,18 @@ export function parseVoiceIntent(value) {
     return { type: "collect", subject: cleanSubject(text) || (/\b(?:collect|word card|sticker)\b/i.test(text) ? "this object" : "镜头里的这个东西") };
   }
   // Looking at an apple must not launch feeding and disable the camera inspector.
-  if (INSPECTION_READY.test(text)) return null;
+  if (INSPECTION_READY.test(text) || ENGLISH_INSPECTION_READY.test(text)) return null;
   if (FEED_INTENT.test(text)) return { type: "feed" };
   return null;
 }
 
 export function shouldInspectAfterSpeech(value, phase) {
   if (!["waiting", "framing"].includes(phase)) return false;
-  return INSPECTION_READY.test(String(value || ""));
+  return INSPECTION_READY.test(String(value || "")) || ENGLISH_INSPECTION_READY.test(String(value || ""));
 }
 
 export function shouldTriggerSceneAnalysis(value) {
-  return INSPECTION_READY.test(String(value || ""));
+  return INSPECTION_READY.test(String(value || "")) || ENGLISH_INSPECTION_READY.test(String(value || ""));
 }
 
 export function getCollectionFollowUp(category, name) {

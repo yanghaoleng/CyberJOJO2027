@@ -442,7 +442,9 @@ websocketServer.on("connection", (client) => {
       const label = String(observation.label || "").replace(/\s+/g, " ").trim().slice(0, 48);
       const category = ["book", "food", "plant", "animal", "object"].includes(observation.category) ? observation.category : "object";
       if (!label) return;
-      runClassicTurn(`孩子拿到镜头前的物品看起来是${label}（${category}）。请自然接着聊，别声称看见了没提供的细节。`);
+      runClassicTurn(activeCharacter === "lvdou"
+        ? `The child showed something that visually appears to be ${label} (${category}). Reply only in English, help name it in English, and do not invent unseen details.`
+        : `孩子拿到镜头前的物品看起来是${label}（${category}）。请自然接着聊，别声称看见了没提供的细节。`);
       return;
     }
     if (message.type === "resume_conversation") {

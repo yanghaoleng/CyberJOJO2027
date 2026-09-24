@@ -26,6 +26,8 @@ test("food and toy observations do not fabricate supported objects from low conf
 });
 
 test("conversation-led observation only returns a clear, bounded object category", () => {
+  assert.equal(validateGameplayRequest({ ...request("observe"), subject: "我拿一个笔给Domi看" }).subject, "我拿一个笔给Domi看");
+  assert.equal(parseGameplayAssessment("observe", { evaluable: true, confidence: .78, label: "笔", category: "object", text: "这是一支笔" }).evaluable, true);
   const clearBook = parseGameplayAssessment("observe", {
     evaluable: true, confidence: 0.92, bbox: [0.3, 0.2, 0.3, 0.5], label: "绘本", category: "book", text: "看到了绘本",
   });
@@ -38,6 +40,19 @@ test("conversation-led observation only returns a clear, bounded object category
   assert.equal(unclear.evaluable, false);
   assert.equal(unclear.label, "");
   assert.equal(unclear.category, "");
+});
+
+test("observation uses the child's named object as a hint without treating it as visual proof", async () => {
+  let sent;
+  await assessGameplay({ ...request("observe"), subject: "我拿一个笔给Domi看" },
+    { endpoint: "https://example.test/responses", apiKey: "test", model: "configured" }, {
+      fetchImpl: async (_url, options) => {
+        sent = JSON.parse(options.body);
+        return sse({ evaluable: false, confidence: .2, bbox: [0, 0, 0, 0], label: "", category: "object", text: "" });
+      },
+    });
+  assert.match(sent.input[0].content[0].text, /我拿一个笔给Domi看/);
+  assert.match(sent.input[0].content[0].text, /不能当作已看到/);
 });
 
 test("a collection observation requires a precise object and child-safe learning copy", () => {
