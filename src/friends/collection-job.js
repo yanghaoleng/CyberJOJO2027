@@ -1,3 +1,9 @@
+const GENERIC_VISION_LABEL = /^(?:a|an|the|unknown|object|item|thing|n\/a|none|未识别|未知|物品|东西|对象|这个东西|这个物品)$/iu;
+export const isUsableVisionLabel = (value) => {
+  const label = String(value || "").trim();
+  return Boolean(label) && !GENERIC_VISION_LABEL.test(label);
+};
+
 // Keep the original and intermediate recognition in durable storage before
 // doing expensive work. Retries never take a fresh camera frame.
 export async function runCollectionJob(record, { observe, matte, save, onUpdate, signal }) {
@@ -6,8 +12,17 @@ export async function runCollectionJob(record, { observe, matte, save, onUpdate,
   try {
     if (!record.bbox) {
       const observation = await observe(record, signal);
-      if (!observation.evaluable || !observation.label || !observation.bbox) throw new Error("这张原图还没看清主体");
-      await publish({ name: observation.label, kind: observation.category, english: observation.english, learning: observation.learning, bbox: observation.bbox });
+      const visualLabelIsUsable = isUsableVisionLabel(observation.label);
+      const savedNameIsUsable = isUsableVisionLabel(record.name);
+      if (!observation.evaluable || !observation.bbox || (!visualLabelIsUsable && !savedNameIsUsable)) throw new Error("这张原图还没看清主体");
+      const contextName = ["context-name", "user-idiom", "assistant-idiom"].includes(record.nameSource);
+      await publish({
+        ...(contextName ? {} : visualLabelIsUsable ? { name: observation.label, nameSource: "vision" } : {}),
+        kind: observation.category,
+        english: observation.english,
+        learning: observation.learning,
+        bbox: observation.bbox,
+      });
     }
     const stickerBlob = await matte(record.originalBlob, record.bbox, { signal });
     if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");

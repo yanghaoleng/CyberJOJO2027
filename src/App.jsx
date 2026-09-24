@@ -122,6 +122,31 @@ import { getCollectionFollowUp, parseVoiceIntent, shouldTriggerSceneAnalysis } f
 
 const BASE_URL = import.meta.env.BASE_URL;
 
+function buildDialogueContext(entries, extraText = "", character = "jiaojiao") {
+  const normalized = (Array.isArray(entries) ? entries : [])
+    .filter((entry) => entry?.text && entry.source !== "gameplay")
+    .slice(-8)
+    .map((entry) => ({
+      role: entry.role === "user" ? "user" : "assistant",
+      character: entry.character === "lvdou" ? "lvdou" : entry.character === "jiaojiao" ? "jiaojiao" : "",
+      text: String(entry.text).replace(/\s+/g, " ").trim().slice(0, 240),
+      createdAt: Number(entry.createdAt) || Date.now(),
+    }))
+    .filter((entry) => entry.text);
+  const text = String(extraText || "").replace(/\s+/g, " ").trim().slice(0, 240);
+  if (text && !normalized.some((entry) => entry.role === "user" && entry.text === text)) {
+    normalized.push({ role: "user", character, text, createdAt: Date.now() });
+  }
+  return normalized.slice(-10);
+}
+
+function appendDialogueContext(record, text, character, role = "user") {
+  const next = buildDialogueContext(record?.dialogueContext, "", character);
+  const clean = String(text || "").replace(/\s+/g, " ").trim().slice(0, 240);
+  if (!clean || next.some((entry) => entry.role === role && entry.text === clean)) return next;
+  return [...next, { role, character, text: clean, createdAt: Date.now() }].slice(-10);
+}
+
 const WELCOME_HEADLINES = [
   ["今天有没有一件", "想跟我说说的事？"],
   ["一件开心的事", "也值得慢慢说完"],
@@ -1980,6 +2005,7 @@ function App() {
                 subject: voiceIntent.subject,
                 category: "object",
                 repeatKey: `voice-collect:${voiceIntent.subject}`,
+                dialogueText: text,
               });
             }
             if (shouldTriggerSceneAnalysis(text)) {
@@ -4192,6 +4218,8 @@ function App() {
       addMediaCapture(capture, { persisted: true, quiet: true });
       const record = await saveFriend({
         id, name: reaction.subject, subject: reaction.subject, character: activeCharacter,
+        nameSource: "subject",
+        dialogueContext: buildDialogueContext(conversationEntries, reaction.dialogueText, activeCharacter),
         originalBlob: frame.blob, captureId: capture.id,
         status: "pending", attempts: 0,
       });
@@ -4208,7 +4236,7 @@ function App() {
     } finally {
       collectionInFlightRef.current = false;
     }
-  }, [addMediaCapture, captureGameplayFrame, dismissCollection, saveCollectedFriend, showToast]);
+  }, [activeCharacter, addMediaCapture, captureGameplayFrame, conversationEntries, dismissCollection, saveCollectedFriend, showToast]);
   startObjectCollectionRef.current = startObjectCollection;
 
   useEffect(() => {
@@ -4277,23 +4305,55 @@ function App() {
       && recentPrompt && Date.now() - recentPrompt.createdAt < 2 * 60_000
       && /(?:编|创造|想).{0,12}成语|成语.{0,12}(?:编|创造|想)/.test(recentPrompt.text);
     const command = parseCollectionDialogue(text, { expectCreativeIdiom });
-    if (!command || !previous || (command.type === "name" && Date.now() - previous.createdAt > 20 * 60_000)) return;
+    const recentJiaojiaoCard = previous?.character === "jiaojiao" && Date.now() - previous.createdAt <= 20 * 60_000;
+    if (!previous || (command?.type === "name" && Date.now() - previous.createdAt > 20 * 60_000)) return;
+    if (!command) {
+      if (!recentJiaojiaoCard || activeCharacter !== "jiaojiao" || !String(text || "").trim()) return;
+      try {
+        saveCollectedFriend(await saveFriend({
+          id: previous.id,
+          dialogueContext: appendDialogueContext(previous, text, "jiaojiao"),
+        }, { expectedVersion: previous.version }));
+      } catch { /* The card may have been updated by the assistant at the same time. */ }
+      return;
+    }
     if (command.type !== "name" && previous.character !== "jiaojiao") return;
     try {
-      const next = await saveFriend({ ...previous, ...command }, { expectedVersion: previous.version });
+      const { type, ...values } = command;
+      const namePatch = type === "name"
+        ? { name: values.name, nameSource: "context-name" }
+        : type === "idiom" && previous.nameSource !== "context-name"
+          ? { name: values.idiom, nameSource: "user-idiom" }
+          : {};
+      const next = await saveFriend({
+        ...previous,
+        ...values,
+        ...namePatch,
+        dialogueContext: appendDialogueContext(previous, text, activeCharacter),
+      }, { expectedVersion: previous.version });
       saveCollectedFriend(next);
-      if (command.type === "name") setCollectionFlight((current) => current?.name === previous.name ? { ...current, name: next.name } : current);
-      showToast(command.type === "name" ? `图鉴里记作「${next.name}」` : "创意成语已记在贴纸上");
+      if (next.name !== previous.name) setCollectionFlight((current) => current?.name === previous.name ? { ...current, name: next.name } : current);
+      showToast(type === "name" ? `图鉴里记作「${next.name}」` : "创意成语已记在贴纸上");
     } catch {
       showToast("这个名字暂时没记上，再说一次吧");
     }
-  }, [conversationEntries, saveCollectedFriend, showToast]);
+  }, [activeCharacter, conversationEntries, saveCollectedFriend, showToast]);
   collectionDialogueRef.current = updateCollectedFriendFromDialogue;
   idiomReplyRef.current = async (text) => {
     const suggestion = parseRealIdiomSuggestion(text);
     const previous = latestCollectionRef.current;
-    if (!suggestion || previous?.character !== "jiaojiao") return;
-    try { saveCollectedFriend(await saveFriend({ id: previous.id, ...suggestion }, { expectedVersion: previous.version })); }
+    if (!text || previous?.character !== "jiaojiao" || Date.now() - previous.createdAt > 20 * 60_000) return;
+    const hasUserName = ["context-name", "user-idiom"].includes(previous.nameSource);
+    try {
+      saveCollectedFriend(await saveFriend({
+        id: previous.id,
+        ...(suggestion ? {
+          ...suggestion,
+          ...(hasUserName ? {} : { name: suggestion.sourceIdiom, nameSource: "assistant-idiom" }),
+        } : {}),
+        dialogueContext: appendDialogueContext(previous, text, "jiaojiao", "assistant"),
+      }, { expectedVersion: previous.version }));
+    }
     catch { /* Keep the conversation natural if the card changed concurrently. */ }
   };
 

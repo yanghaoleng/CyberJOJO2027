@@ -23,3 +23,26 @@ test("friend collections own their sticker bytes and update without losing their
   assert.throws(() => normalizeFriend({ name: "", portraitBlob }), /名字/);
   assert.throws(() => normalizeFriend({ name: "球球", portraitBlob: new Blob(["not a photo"]) }), /照片/);
 });
+
+test("idiom cards keep a context-derived name and the latest dialogue turns", () => {
+  const portraitBlob = new Blob(["photo"], { type: "image/png" });
+  const dialogueContext = Array.from({ length: 12 }, (_, index) => ({
+    role: index % 2 ? "assistant" : "user",
+    character: "jiaojiao",
+    text: `第${index}句`,
+    createdAt: index,
+  }));
+  const card = normalizeFriend({
+    id: "idiom-1",
+    name: "刻桌求见",
+    nameSource: "user-idiom",
+    character: "jiaojiao",
+    portraitBlob,
+    dialogueContext,
+  });
+  assert.equal(card.name, "刻桌求见");
+  assert.equal(card.nameSource, "user-idiom");
+  assert.equal(card.dialogueContext.length, 10);
+  assert.equal(card.dialogueContext[0].text, "第2句");
+  assert.equal(card.dialogueContext.at(-1).text, "第11句");
+});

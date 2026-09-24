@@ -1,6 +1,7 @@
 const DATABASE_NAME = "cyberjojo-friends";
 const STORE_NAME = "friends";
 export const FRIEND_LIMIT = 200;
+export const DIALOGUE_CONTEXT_LIMIT = 10;
 export const createFriendId = () => `friend-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
 
 function openDatabase() {
@@ -18,6 +19,15 @@ function done(transaction) { return new Promise((resolve, reject) => { transacti
 export function normalizeFriend(value, previous = null) {
   value = { ...previous, ...value };
   const clean = (text, max) => String(text || "").replace(/\s+/g, " ").trim().slice(0, max);
+  const dialogueContext = (Array.isArray(value.dialogueContext) ? value.dialogueContext : value.dialogueContext ? [{ role: "assistant", text: value.dialogueContext }] : [])
+    .map((entry) => ({
+      role: entry?.role === "user" ? "user" : "assistant",
+      character: entry?.character === "lvdou" ? "lvdou" : entry?.character === "jiaojiao" ? "jiaojiao" : "",
+      text: clean(entry?.text, 240),
+      createdAt: Number(entry?.createdAt) || Date.now(),
+    }))
+    .filter((entry) => entry.text)
+    .slice(-DIALOGUE_CONTEXT_LIMIT);
   const name = clean(value.name, 24);
   if (!name) throw new Error("先给收集的物品取个名字吧");
   const status = ["pending", "processing", "failed", "ready"].includes(value.status) ? value.status : "ready";
@@ -26,8 +36,11 @@ export function normalizeFriend(value, previous = null) {
   const availableImage = stickerBlob || originalBlob;
   if (!(availableImage instanceof Blob) || !availableImage.type.startsWith("image/") || availableImage.size > 4_000_000) throw new Error("请使用一张清楚的贴纸照片");
   const portraitBlob = value.portraitBlob || previous?.portraitBlob || null;
+  const nameSource = ["subject", "vision", "context-name", "user-idiom", "assistant-idiom"].includes(value.nameSource)
+    ? value.nameSource
+    : previous?.nameSource || "subject";
   return {
-    id: previous?.id || value.id || createFriendId(), name,
+    id: previous?.id || value.id || createFriendId(), name, nameSource,
     kind: clean(value.kind, 32), appearance: clean(value.appearance, 160), childDescription: clean(value.childDescription, 240),
     english: clean(value.english, 48), learning: clean(value.learning, 180),
     character: value.character === "jiaojiao" ? "jiaojiao" : value.character === "lvdou" ? "lvdou" : previous?.character || "legacy",
@@ -35,6 +48,7 @@ export function normalizeFriend(value, previous = null) {
     idiom: clean(value.idiom, 24), idiomMeaning: clean(value.idiomMeaning, 180), stickerBlob,
     originalBlob, status, captureId: value.captureId || null,
     bbox: value.bbox || null, subject: clean(value.subject, 48),
+    dialogueContext,
     attempts: Math.max(0, Number(value.attempts) || 0), retryAt: Number(value.retryAt) || 0,
     seenAt: value.status ? Number(value.seenAt) || 0 : Date.now(),
     ...(portraitBlob ? { portraitBlob } : {}),

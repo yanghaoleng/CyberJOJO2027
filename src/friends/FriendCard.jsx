@@ -52,6 +52,19 @@ function DetailWords({ friend, word }) {
     </>
   );
 }
+
+function DialogueContext({ friend }) {
+  const entries = Array.isArray(friend?.dialogueContext) ? friend.dialogueContext : [];
+  if (!entries.length) return null;
+  return <div className="friend-card-context">
+    <span>当时聊到</span>
+    <p>{entries.map((entry) => {
+      const speaker = entry.role === "user" ? "你" : entry.character === "lvdou" ? "Domi" : "叫叫";
+      return `${speaker}：${entry.text}`;
+    }).join(" · ")}</p>
+  </div>;
+}
+
 export default function FriendCard({ friend, compact = false }) {
   const url = usePortraitUrl(friend?.stickerUrl || friend?.stickerBlob || friend?.originalBlob || friend?.portraitBlob);
   const pending = friend.status && friend.status !== "ready";
@@ -59,7 +72,7 @@ export default function FriendCard({ friend, compact = false }) {
   return <article className={`friend-card ${compact ? "is-compact" : ""}`}>
     <div className={`friend-card-photo ${pending ? "is-original" : ""}`}>{url && <img src={url} alt={`${friend.name || "收集"}的${pending ? "原图" : "贴纸"}`} />}<span className="friend-card-stamp">{pending ? friend.status === "failed" ? "原图已保存" : "正在制作贴纸" : "已收集"}</span></div>
     <div className="friend-card-info"><div className="friend-card-kicker">{friend.character === "jiaojiao" ? "叫叫 · 绘本角色" : friend.character === "lvdou" ? "Domi · Word card" : "以前的收集"}</div><h3>{friend.name || "新发现"}</h3>
-      {compact ? (friend.character === "jiaojiao" ? <p className="friend-card-word">{friend.idiom || "我的创意成语"}</p> : word ? <p className="friend-card-word">{word}</p> : null) : <DetailWords friend={friend} word={word} />}
+      {compact ? (friend.character === "jiaojiao" ? <p className="friend-card-word">{friend.idiom || "我的创意成语"}</p> : word ? <p className="friend-card-word">{word}</p> : null) : <><DetailWords friend={friend} word={word} /><DialogueContext friend={friend} /></>}
     </div>
   </article>;
 }

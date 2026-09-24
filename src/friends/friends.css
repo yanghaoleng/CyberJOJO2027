@@ -24,3 +24,7 @@
 .friend-card-idiom { display: flex; align-items: baseline; flex-wrap: wrap; gap: .4em; margin: .5rem 0; }
 .friend-card-idiom strong { font-size: 1.35rem; letter-spacing: .1em; }
 .friend-card-idiom span { font-size: .7rem; opacity: .7; }
+.friend-card-context { display:none; }
+.friend-detail-sheet .friend-card-context { display:grid; gap:5px; width:100%; margin-top:2px; padding-top:12px; border-top:1px solid rgba(255,255,255,.1); }
+.friend-detail-sheet .friend-card-context span { color:#ffdc55; font-size:11px; letter-spacing:.04em; }
+.friend-detail-sheet .friend-card-context p { margin:0; color:rgba(247,248,241,.62); font-size:12px; line-height:1.75; overflow-wrap:anywhere; }
