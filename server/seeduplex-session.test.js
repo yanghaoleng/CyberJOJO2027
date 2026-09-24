@@ -65,7 +65,7 @@ test("streaming emits chunks before completion and drops audio after cancellatio
   session._dispatch({ type: "response.output_audio.done" });
   session.interrupt();
   session._dispatch({ type: "response.output_audio.delta", audio: "stale" });
-  assert.deepEqual(emitted, ["start", "AAAAAA==", "done:", "cancel"]);
+  assert.deepEqual(emitted, ["start", "AAAAAA==", "done:"], "a completed stream no longer emits a duplicate cancellation");
   session._dispatch({ type: "response.output_audio.started" });
   session._dispatch({ type: "response.output_audio.delta", audio: "new" });
   assert.equal(emitted.at(-1), "new");

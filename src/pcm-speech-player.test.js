@@ -49,3 +49,52 @@ test("split samples are reassembled and cancellation stops queued audio and reje
   player.append("b", pcm(NaN, 5, -5).toString("base64"));
   assert.deepEqual([...scheduled[1].buffer.samples], [0, 1, -1]);
 });
+
+function createAudioContext() {
+  return {
+    currentTime: 0,
+    destination: {},
+    resume: async () => {},
+    createBuffer: (_channels, frames, sampleRate) => ({
+      duration: frames / sampleRate,
+      getChannelData: () => new Float32Array(frames),
+    }),
+    createBufferSource: () => {
+      const source = {
+        onended: null,
+        connect() {},
+        disconnect() {},
+        start() {},
+        stop() { source.onended?.(); },
+      };
+      return source;
+    },
+  };
+}
+
+test("a stream that never delivers its first chunk is released", async () => {
+  const stalled = [];
+  const player = new PcmSpeechPlayer(createAudioContext(), {
+    startTimeoutMs: 10,
+    chunkTimeoutMs: 10,
+    onStall: (event) => stalled.push(event),
+  });
+  player.start("stream-1");
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  assert.deepEqual(stalled, [{ streamId: "stream-1", phase: "first_chunk" }]);
+  assert.equal(player.streamId, "");
+});
+
+test("a stream with a gap after audio is released instead of blocking the queue", async () => {
+  const stalled = [];
+  const player = new PcmSpeechPlayer(createAudioContext(), {
+    startTimeoutMs: 50,
+    chunkTimeoutMs: 10,
+    onStall: (event) => stalled.push(event),
+  });
+  player.start("stream-2");
+  player.append("stream-2", "AAAAAA==");
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  assert.deepEqual(stalled, [{ streamId: "stream-2", phase: "chunk" }]);
+  assert.equal(player.streamId, "");
+});

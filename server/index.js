@@ -173,7 +173,10 @@ websocketServer.on("connection", (client) => {
   };
   let closed = false;
   let activeCharacter = "jiaojiao";
-  let pendingSwitchGreeting = "";
+  let pendingSwitchGreeting = null;
+  let seeduplexGeneration = 0;
+  let voiceStream = null;
+  let voiceReadySent = false;
   let interactionMode = "none";
   let context = { entries: [], moments: [] };
   let epoch = 0;
@@ -300,8 +303,117 @@ websocketServer.on("connection", (client) => {
     void runInference(text, character).finally(() => seeduplex?.setMuted(false));
   };
 
+  const createSeeduplexSession = () => {
+    const generation = ++seeduplexGeneration;
+    let session;
+    session = new SeeduplexSession({
+      config: seeduplexConfig,
+      instructions: buildCharacterInstructions(activeCharacter, storyInstructions(false)),
+      voice: seeduplexConfig.voices[activeCharacter] || ttsConfig.voices[activeCharacter],
+      context: context.entries,
+      onTranscript: (transcript) => {
+        if (seeduplex !== session || !activated) return;
+        const corrected = correctBrandTranscript(transcript.text);
+        const normalizedTranscript = { ...transcript, text: corrected.text.slice(0, 1000),
+          id: transcript.final ? `dialogue-${randomUUID()}` : undefined,
+          sessionId, source: interactionMode === "none" ? "child_speech" : "gameplay" };
+        sendJson(client, { type: "transcript", ...normalizedTranscript });
+        if (transcript.final && interactionMode === "none") {
+          const requestedCharacter = detectCharacterSwitchCommand(normalizedTranscript.text);
+          if (requestedCharacter && requestedCharacter !== activeCharacter) {
+            switchToCharacter(requestedCharacter, true);
+            return;
+          }
+        }
+        if (transcript.final && corrected.corrections.length) {
+          const applied = corrected.corrections.reduce((sum, item) => sum + item.occurrences, 0);
+          correctionMetrics.applied += applied;
+          correctionMetrics.lastAppliedAt = new Date().toISOString();
+          console.info("ASR brand correction", {
+            rules: corrected.corrections.map(({ heard, brandTerm, occurrences }) => ({ heard, brandTerm, occurrences })),
+          });
+        }
+        if (transcript.final) {
+          disarmLeaveNote();
+          if (interactionMode !== "none") {
+            recentGameplayTranscripts.set(normalizedTranscript.id, { text: normalizedTranscript.text, createdAt: Date.now() });
+            if (recentGameplayTranscripts.size > 8) recentGameplayTranscripts.delete(recentGameplayTranscripts.keys().next().value);
+            return;
+          }
+          context.entries = [...context.entries, { role: "user", text: String(corrected.text).replace(/\s+/g, " ").trim().slice(0, 1000) }].slice(-16);
+        }
+      },
+      onAudioStart: () => {
+        if (seeduplex !== session || !activated) return;
+        voiceStream = { id: randomUUID(), character: activeCharacter, generation };
+        sendJson(client, { type: "speech_start", streamId: voiceStream.id, character: voiceStream.character, sampleRate: 24_000 });
+      },
+      onText: ({ text }) => {
+        if (seeduplex === session && activated) sendJson(client, { type: "speech_text", text, character: voiceStream?.character || activeCharacter });
+      },
+      onAudioDelta: ({ audio }) => {
+        if (seeduplex === session && activated && !closed && voiceStream?.generation === generation) {
+          sendJson(client, { type: "speech_chunk", streamId: voiceStream.id, audio });
+        }
+      },
+      onCancel: () => {
+        if (seeduplex !== session) return;
+        const stream = voiceStream;
+        voiceStream = null;
+        if (stream) sendJson(client, { type: "speech_cancel", streamId: stream.id });
+      },
+      onCancelAcknowledged: () => {},
+      onAudioDone: ({ text }) => {
+        if (seeduplex !== session || !activated || closed) return;
+        const stream = voiceStream;
+        voiceStream = null;
+        if (!stream || stream.generation !== generation) return;
+        const cleanText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 1000);
+        sendJson(client, { type: "speech_end", streamId: stream.id, text: cleanText, character: stream.character, sessionId });
+        if (cleanText) context.entries = [...context.entries, { role: "assistant", text: cleanText, character: stream.character }].slice(-16);
+        armLeaveNote();
+      },
+      onFunctionCall: ({ name, arguments: raw }) => {
+        if (seeduplex !== session || !activated || name !== "respond_as_character") return false;
+        const signal = parseCharacterSignal(raw);
+        if (signal.action) sendJson(client, { type: "action", action: signal.action });
+        if (signal.thread !== "none") sendJson(client, { type: "story", thread: signal.thread });
+        return true;
+      },
+      onError: (error) => {
+        if (seeduplex !== session || closed) return;
+        console.error("Seeduplex session failed", { name: error.name, message: error.message, generation });
+        sendJson(client, { type: "error", code: "ASR_UNAVAILABLE", message: "语音连接中断，正在重连，请再说一次。" });
+        // Close the bridge as well: an open browser socket must not hide a
+        // dead upstream. The client reconnects with its saved conversation.
+        client.close(1011, "voice upstream unavailable");
+      },
+      onReady: () => {
+        if (seeduplex !== session || closed) return;
+        upstreamReady = true;
+        // Cover connections may have been created before local journal data
+        // and today's visit arrived. Apply the latest context before greeting.
+        session.update({ instructions: buildCharacterInstructions(activeCharacter, storyInstructions(false)) });
+        if (!voiceReadySent) {
+          voiceReadySent = true;
+          sendJson(client, { type: "ready", transport: "seeduplex" });
+        }
+        session.setMuted(!activated || interactionMode !== "none");
+        if (pendingSwitchGreeting?.generation === generation) {
+          const greeting = pendingSwitchGreeting.text;
+          pendingSwitchGreeting = null;
+          session.greet(greeting);
+        } else {
+          greetWhenActive();
+        }
+      },
+    });
+    return session;
+  };
+
   const switchToCharacter = (requestedCharacter, notifyClient = false) => {
     if (requestedCharacter === activeCharacter) return;
+    const previousCharacter = activeCharacter;
     activeCharacter = requestedCharacter;
     disarmLeaveNote();
     cancelPending();
@@ -310,9 +422,20 @@ websocketServer.on("connection", (client) => {
       ? "Hi, I'm Domi! Show me something you found, and we'll make a word card."
       : "我来啦！最近读了哪本绘本？想不想一起看看里面的角色？";
     if (seeduplex) {
-      pendingSwitchGreeting = greeting;
-      seeduplex.update({ instructions: buildCharacterInstructions(activeCharacter, storyInstructions(false)),
-        voice: seeduplexConfig.voices[activeCharacter] || ttsConfig.voices[activeCharacter] });
+      pendingSwitchGreeting = { text: greeting, character: requestedCharacter, generation: seeduplexGeneration + 1 };
+      console.info("Seeduplex character handover", { from: previousCharacter, to: requestedCharacter, generation: seeduplexGeneration + 1 });
+      const previousSession = seeduplex;
+      upstreamReady = false;
+      voiceStream = null;
+      seeduplex = null;
+      previousSession.close();
+      const nextSession = createSeeduplexSession();
+      seeduplex = nextSession;
+      void nextSession.connect().catch((error) => {
+        if (seeduplex !== nextSession || closed) return;
+        console.error("Seeduplex character handover failed", { name: error.name, message: error.message });
+        client.close(1011, "voice persona handover failed");
+      });
     } else {
       void sendSpeech(greeting, { character: requestedCharacter }).catch((error) => console.error("Switch greeting failed", { name: error.name }));
     }
@@ -385,7 +508,6 @@ websocketServer.on("connection", (client) => {
     if (message.type === "character") {
       if (Number.isInteger(message.storyDay)) storyDay = Math.min(STORY_ARC_DAYS + 1, Math.max(1, message.storyDay));
       switchToCharacter(normalizeCharacter(message.character));
-      if (seeduplex) seeduplex.update({ instructions: buildCharacterInstructions(activeCharacter, storyInstructions(false)) });
       return;
     }
     if (message.type === "context") {
@@ -513,98 +635,12 @@ websocketServer.on("connection", (client) => {
       return;
     }
     if (seeduplexConfig?.enabled) {
-      let speechStreamId = "";
-      seeduplex = new SeeduplexSession({
-        config: seeduplexConfig,
-        instructions: buildCharacterInstructions(activeCharacter, storyInstructions(false)),
-        voice: seeduplexConfig.voices[activeCharacter] || ttsConfig.voices[activeCharacter],
-        context: context.entries,
-        onTranscript: (transcript) => {
-          if (!activated) return;
-          const corrected = correctBrandTranscript(transcript.text);
-          const normalizedTranscript = { ...transcript, text: corrected.text.slice(0, 1000),
-            id: transcript.final ? `dialogue-${randomUUID()}` : undefined,
-            sessionId, source: interactionMode === "none" ? "child_speech" : "gameplay" };
-          sendJson(client, { type: "transcript", ...normalizedTranscript });
-          if (transcript.final && interactionMode === "none") {
-            const requestedCharacter = detectCharacterSwitchCommand(normalizedTranscript.text);
-            if (requestedCharacter && requestedCharacter !== activeCharacter) {
-              switchToCharacter(requestedCharacter, true);
-              return;
-            }
-          }
-          if (transcript.final && corrected.corrections.length) {
-            const applied = corrected.corrections.reduce((sum, item) => sum + item.occurrences, 0);
-            correctionMetrics.applied += applied;
-            correctionMetrics.lastAppliedAt = new Date().toISOString();
-            console.info("ASR brand correction", {
-              rules: corrected.corrections.map(({ heard, brandTerm, occurrences }) => ({ heard, brandTerm, occurrences })),
-            });
-          }
-          if (transcript.final) {
-            disarmLeaveNote();
-            if (interactionMode !== "none") {
-              recentGameplayTranscripts.set(normalizedTranscript.id, { text: normalizedTranscript.text, createdAt: Date.now() });
-              if (recentGameplayTranscripts.size > 8) recentGameplayTranscripts.delete(recentGameplayTranscripts.keys().next().value);
-              return;
-            }
-            context.entries = [...context.entries, { role: "user", text: String(corrected.text).replace(/\s+/g, " ").trim().slice(0, 1000) }].slice(-16);
-          }
-        },
-        onAudioStart: () => {
-          if (!activated) return;
-          speechStreamId = randomUUID();
-          sendJson(client, { type: "speech_start", streamId: speechStreamId, character: activeCharacter, sampleRate: 24_000 });
-        },
-        onText: ({ text }) => { if (activated) sendJson(client, { type: "speech_text", text, character: activeCharacter }); },
-        onAudioDelta: ({ audio }) => {
-          if (activated && !closed && speechStreamId) sendJson(client, { type: "speech_chunk", streamId: speechStreamId, audio });
-        },
-        onCancel: () => {
-          sendJson(client, { type: "speech_cancel", streamId: speechStreamId });
-          speechStreamId = "";
-        },
-        onCancelAcknowledged: () => {
-          if (!pendingSwitchGreeting || closed) return;
-          const greeting = pendingSwitchGreeting;
-          pendingSwitchGreeting = "";
-          seeduplex.greet(greeting);
-        },
-        onAudioDone: ({ text }) => {
-          if (!activated || closed) return;
-          const cleanText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 1000);
-          sendJson(client, { type: "speech_end", streamId: speechStreamId, text: cleanText, character: activeCharacter, sessionId });
-          if (cleanText) context.entries = [...context.entries, { role: "assistant", text: cleanText }].slice(-16);
-          armLeaveNote();
-        },
-        onFunctionCall: ({ name, arguments: raw }) => {
-          if (!activated || name !== "respond_as_character") return false;
-          const signal = parseCharacterSignal(raw);
-          if (signal.action) sendJson(client, { type: "action", action: signal.action });
-          if (signal.thread !== "none") sendJson(client, { type: "story", thread: signal.thread });
-          return true;
-        },
-        onError: (error) => {
-          console.error("Seeduplex session failed", { name: error.name, message: error.message });
-          sendJson(client, { type: "error", code: "ASR_UNAVAILABLE", message: "语音连接中断，正在重连，请再说一次。" });
-          // Close the bridge as well: an open browser socket must not hide a
-          // dead upstream. The client reconnects with its saved conversation.
-          client.close(1011, "voice upstream unavailable");
-        },
-        onReady: () => {
-          upstreamReady = true;
-          // Cover connections may have been created before local journal data
-          // and today's visit arrived. Apply the latest context before greeting.
-          seeduplex?.update({ instructions: buildCharacterInstructions(activeCharacter, storyInstructions(false)) });
-          sendJson(client, { type: "ready", transport: "seeduplex" });
-          seeduplex?.setMuted(!activated || interactionMode !== "none");
-          greetWhenActive();
-        },
-      });
+      const initialSession = createSeeduplexSession();
+      seeduplex = initialSession;
       try {
-        await seeduplex.connect();
+        await initialSession.connect();
       } catch {
-        client.close(1011);
+        if (seeduplex === initialSession && !closed) client.close(1011);
       }
       return;
     }

@@ -272,7 +272,7 @@ export class SeeduplexSession {
     this.audioStartedAt = 0;
     this.textBuffer = "";
     this.replyText = "";
-    this.acceptAudio = true;
+    this.acceptAudio = false;
     this.outputActive = false;
     this.awaitingCancelAck = false;
   }
@@ -392,11 +392,12 @@ export class SeeduplexSession {
         this.replyText = "";
         this.audioChunks = [];
         this.outputActive = false;
+        this.acceptAudio = false;
         break;
       case "response.canceled":
         clearTimeout(this.cancelTimer);
         this.awaitingCancelAck = false;
-        this.cancelOutput();
+        this.cancelOutput({ notify: false });
         this.onCancelAcknowledged?.();
         break;
       case "response.function_call_arguments.done":
@@ -456,7 +457,7 @@ export class SeeduplexSession {
 
   interrupt() {
     clearTimeout(this.responseTimer);
-    this.cancelOutput();
+    this.cancelOutput({ notify: true });
     if (this.awaitingCancelAck || !this.ready || this.socket?.readyState !== WebSocket.OPEN) return;
     this.awaitingCancelAck = true;
     this.cancelTimer = setTimeout(() => this.failStalled("cancel acknowledgement timeout"), this.config?.cancelTimeoutMs || 2000);
@@ -464,12 +465,13 @@ export class SeeduplexSession {
     this.socket.send(JSON.stringify(buildCancel()));
   }
 
-  cancelOutput() {
+  cancelOutput({ notify = true } = {}) {
+    const hadOutput = this.outputActive || this.acceptAudio || this.replyText || this.audioChunks.length;
     this.acceptAudio = false;
     this.outputActive = false;
     this.audioChunks = [];
     this.replyText = "";
-    this.onCancel?.();
+    if (notify && hadOutput) this.onCancel?.();
   }
 
   update({ instructions, voice }) {
