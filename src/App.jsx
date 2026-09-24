@@ -4343,14 +4343,10 @@ function App() {
     const suggestion = parseRealIdiomSuggestion(text);
     const previous = latestCollectionRef.current;
     if (!text || previous?.character !== "jiaojiao" || Date.now() - previous.createdAt > 20 * 60_000) return;
-    const hasUserName = ["context-name", "user-idiom"].includes(previous.nameSource);
     try {
       saveCollectedFriend(await saveFriend({
         id: previous.id,
-        ...(suggestion ? {
-          ...suggestion,
-          ...(hasUserName ? {} : { name: suggestion.sourceIdiom, nameSource: "assistant-idiom" }),
-        } : {}),
+        ...(suggestion || {}),
         dialogueContext: appendDialogueContext(previous, text, "jiaojiao", "assistant"),
       }, { expectedVersion: previous.version }));
     }
