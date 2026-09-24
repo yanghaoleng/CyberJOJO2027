@@ -91,6 +91,44 @@ test("seeduplex config is null without a speech key and enabled with one", () =>
   assert.equal(getSeeduplexConfig({ SEEDUPLEX_API_KEY: "dup-key" }).model, "1.2.6.1");
 });
 
+test("all parallel function calls retain their ids and are returned in one result", () => {
+  const sent = [], called = [];
+  const session = new SeeduplexSession({ onFunctionCall: call => { called.push(call); if (call.callId === "b") throw new Error("unsupported"); } });
+  session.ready = true; session.socket = { readyState: 1, send: data => sent.push(JSON.parse(data)), close() {} };
+  session._dispatch(parseDownstreamEvent({ type: "response.function_call_arguments.done", items: [
+    { call_id: "a", name: "respond_as_character", arguments: '{"action":"heart"}' },
+    { call_id: "b", name: "unsupported", arguments: {} },
+  ] }));
+  assert.deepEqual(called.map(c => c.callId), ["a", "b"]);
+  assert.equal(sent.length, 1);
+  assert.deepEqual(sent[0].items.map(c => c.call_id), ["a", "b"]);
+  assert.equal(JSON.parse(sent[0].items[1].content[0].text).ok, false);
+});
+
+test("missing cancellation ack fails closed instead of permanently swallowing future replies", async () => {
+  const errors = [], sent = [];
+  const session = new SeeduplexSession({ config: { cancelTimeoutMs: 15 }, onError: error => errors.push(error.message) });
+  session.ready = true; session.socket = { readyState: 1, send: data => sent.push(JSON.parse(data)), close() {} };
+  session.interrupt(); session.interrupt();
+  assert.equal(sent.filter(e => e.type === "response.cancel").length, 1);
+  await new Promise(resolve => setTimeout(resolve, 35));
+  assert.equal(session.closed, true); assert.equal(errors.length, 1);
+  assert.match(errors[0], /cancel acknowledgement timeout/);
+});
+
+test("a silent reply timeout is bounded while muted gameplay never starts that watchdog", async () => {
+  const errors = [];
+  const session = new SeeduplexSession({ config: { responseTimeoutMs: 15 }, onError: error => errors.push(error.message) });
+  session.ready = true; session.socket = { readyState: 1, send() {}, close() {} };
+  session.setMuted(true);
+  session._dispatch({ type: "conversation.item.input_audio_transcription.completed", text: "问题" });
+  await new Promise(resolve => setTimeout(resolve, 30)); assert.equal(errors.length, 0);
+  session.setMuted(false);
+  session._dispatch({ type: "conversation.item.input_audio_transcription.completed", text: "再问一次" });
+  await new Promise(resolve => setTimeout(resolve, 30)); assert.equal(errors.length, 1);
+  assert.equal(session.closed, true);
+});
+
 test("session.create carries persona instructions, pcm input and voice output", () => {
   const config = { model: "1.2.6.1" };
   const event = buildSessionCreate(config, {
@@ -162,8 +200,8 @@ test("downstream transcription, text, audio and function-call events are parsed"
   assert.deepEqual(parseDownstreamEvent('{"type":"response.output_audio.done","status_code":"0"}'), { type: "response.output_audio.done", statusCode: "0" });
   const fc = parseDownstreamEvent('{"type":"response.function_call_arguments.done","call_id":"c1","name":"respond_as_character","arguments":"{\\"action\\":\\"heart\\",\\"story\\":{\\"thread\\":\\"feelings\\"}}"}');
   assert.equal(fc.type, "response.function_call_arguments.done");
-  assert.equal(fc.callId, "c1");
-  assert.equal(fc.arguments.includes("heart"), true);
+  assert.equal(fc.calls[0].callId, "c1");
+  assert.equal(fc.calls[0].arguments.includes("heart"), true);
   const error = parseDownstreamEvent('{"type":"error","code":40000010,"message":"boom"}');
   assert.equal(error.type, "error");
   assert.equal(error.message, "boom");

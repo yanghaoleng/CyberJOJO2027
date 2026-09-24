@@ -181,7 +181,11 @@ export function parseDownstreamEvent(payload) {
     case "response.output_audio.done":
       return { type, statusCode: String(event.status_code || "") };
     case "response.function_call_arguments.done":
-      return { type, callId: event.call_id || "", name: event.name || "", arguments: event.arguments || "" };
+      return { type, calls: (Array.isArray(event.items) ? event.items : [event]).map(item => ({
+        callId: typeof item?.call_id === "string" ? item.call_id : "",
+        name: typeof item?.name === "string" ? item.name : "",
+        arguments: typeof item?.arguments === "string" ? item.arguments : JSON.stringify(item?.arguments || {}),
+      })).filter(item => item.callId) };
     case "response.done":
       return { type };
     case "response.canceled":
@@ -231,14 +235,14 @@ export function buildSessionClose() {
   return { type: "session.close" };
 }
 
-export function buildToolResult({ callId, ok = true }) {
+export function buildToolResult({ callId, ok = true, calls }) {
   return {
     type: "conversation.item.create",
-    items: [{
-      call_id: callId,
+    items: (calls || [{ callId, ok }]).filter(call => call.callId).map(call => ({
+      call_id: call.callId,
       role: "tool",
-      content: [{ type: "input_text", text: JSON.stringify({ ok }) }],
-    }],
+      content: [{ type: "input_text", text: JSON.stringify({ ok: call.ok !== false }) }],
+    })),
   };
 }
 
@@ -320,7 +324,7 @@ export class SeeduplexSession {
         clearTimeout(this.readyTimer);
         if (!this.ready) reject(new Error(`Seeduplex closed before ready (${code})`));
         this.ready = false;
-        if (!this.closed && code !== 1000) fail(new Error(`Seeduplex connection closed (${code})`));
+        if (!this.closed) fail(new Error(`Seeduplex connection closed (${code})`));
       });
     });
   }
@@ -331,7 +335,11 @@ export class SeeduplexSession {
         this.sessionId = event.sessionId;
         if (!this.ready && !this.closed) this.resolveReady?.();
         break;
+      case "session.closed":
+        this.failStalled("upstream session closed");
+        break;
       case "conversation.item.input_audio_transcription.started":
+        clearTimeout(this.responseTimer);
         this.textBuffer = "";
         break;
       case "conversation.item.input_audio_transcription.delta":
@@ -339,6 +347,7 @@ export class SeeduplexSession {
         this.onTranscript?.({ text: this.textBuffer, final: false });
         break;
       case "conversation.item.input_audio_transcription.completed":
+        this.armResponseTimeout();
         this.onTranscript?.({ text: event.text || this.textBuffer, final: true });
         this.textBuffer = "";
         break;
@@ -365,12 +374,14 @@ export class SeeduplexSession {
         break;
       case "response.output_audio.delta":
         if (!this.acceptAudio || !event.audio) break;
+        this.armResponseTimeout();
         // Streaming consumers do not need a second, full-turn audio copy.
         if (!this.onAudioDelta) this.audioChunks.push(event.audio);
         this.onAudioDelta?.({ audio: event.audio, pending: this.audioChunks.length });
         break;
       case "response.output_audio.done":
         if (!this.acceptAudio) break;
+        clearTimeout(this.responseTimer);
         this.onAudioDone?.({
           audio: this.onAudioDelta ? "" : assembleWavBase64(this.audioChunks),
           text: this.replyText,
@@ -382,11 +393,16 @@ export class SeeduplexSession {
         this.outputActive = false;
         break;
       case "response.canceled":
+        clearTimeout(this.cancelTimer);
         this.awaitingCancelAck = false;
         this.cancelOutput();
         break;
       case "response.function_call_arguments.done":
-        this.onFunctionCall?.({ callId: event.callId, name: event.name, arguments: event.arguments });
+        if (!event.calls?.length) { this.failStalled("missing function call identifiers"); break; }
+        this.sendToolResults(event.calls.map(call => {
+          try { return { callId: call.callId, ok: this.onFunctionCall?.(call) !== false }; }
+          catch { return { callId: call.callId, ok: false }; }
+        }));
         break;
       case "response.done":
         this.onDone?.();
@@ -397,6 +413,20 @@ export class SeeduplexSession {
       default:
         break;
     }
+  }
+
+  armResponseTimeout() {
+    clearTimeout(this.responseTimer);
+    if (this.closed || this.muted) return;
+    this.responseTimer = setTimeout(() => this.failStalled("response timeout"), this.config?.responseTimeoutMs || 15_000);
+    this.responseTimer.unref?.();
+  }
+
+  failStalled(reason) {
+    if (this.closed) return;
+    this.close();
+    this.cancelOutput();
+    this.onError?.(new Error(`Seeduplex ${reason}`));
   }
 
   sendAudio(pcm) {
@@ -410,19 +440,25 @@ export class SeeduplexSession {
   }
 
   setMuted(muted) {
+    this.muted = muted;
+    if (muted) clearTimeout(this.responseTimer);
     if (!this.ready || this.socket?.readyState !== WebSocket.OPEN) return;
     this.socket.send(JSON.stringify(buildMute(muted)));
   }
 
   greet(text) {
     if (!this.ready || this.socket?.readyState !== WebSocket.OPEN) return;
+    this.armResponseTimeout();
     this.socket.send(JSON.stringify(buildGreet(text)));
   }
 
   interrupt() {
+    clearTimeout(this.responseTimer);
     this.cancelOutput();
-    if (!this.ready || this.socket?.readyState !== WebSocket.OPEN) return;
+    if (this.awaitingCancelAck || !this.ready || this.socket?.readyState !== WebSocket.OPEN) return;
     this.awaitingCancelAck = true;
+    this.cancelTimer = setTimeout(() => this.failStalled("cancel acknowledgement timeout"), this.config?.cancelTimeoutMs || 2000);
+    this.cancelTimer.unref?.();
     this.socket.send(JSON.stringify(buildCancel()));
   }
 
@@ -440,14 +476,21 @@ export class SeeduplexSession {
   }
 
   sendToolResult(callId) {
+    this.sendToolResults([{ callId }]);
+  }
+
+  sendToolResults(calls) {
     if (!this.ready || this.socket?.readyState !== WebSocket.OPEN) return;
-    this.socket.send(JSON.stringify(buildToolResult({ callId })));
+    const result = buildToolResult({ calls });
+    if (result.items.length) this.socket.send(JSON.stringify(result));
   }
 
   close() {
     if (this.closed) return;
     this.closed = true;
     clearTimeout(this.readyTimer);
+    clearTimeout(this.cancelTimer);
+    clearTimeout(this.responseTimer);
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(buildSessionClose()));
       const socket = this.socket;

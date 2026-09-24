@@ -38,6 +38,7 @@ import { Calligraph } from "calligraph";
 import QRCode from "qrcode";
 import { PcmSpeechPlayer } from "./pcm-speech-player.js";
 import { createVoicePrewarm } from "./voice-prewarm.js";
+import { getStoryVisit } from "./story-progress.js";
 import { createUISFX } from "uisfx";
 import {
   CAMERA_GESTURES,
@@ -811,6 +812,7 @@ function drawHeartCelebrationBackdrop(context, width, height) {
 }
 
 function App() {
+  useEffect(() => { document.getElementById("startup-cover")?.remove(); }, []);
   const [isMobileDevice] = useState(getIsMobileDevice);
   const [isTabletDevice, setIsTabletDevice] = useState(getIsTabletDevice);
   const [shareUrl] = useState(getShareUrl);
@@ -853,6 +855,8 @@ function App() {
   const pipRequestIdRef = useRef(0);
   const voiceSocketRef = useRef(null);
   const voicePrewarmRef = useRef(null);
+  const voiceHasReplyRef = useRef(false);
+  const [voiceWarmState, setVoiceWarmState] = useState("idle");
   const voiceAudioGraphRef = useRef(null);
   const voiceIntentionalCloseRef = useRef(false);
   const voiceReadyRef = useRef(false);
@@ -1873,16 +1877,19 @@ function App() {
 
       const beginSession = () => {
         if (voiceSocketRef.current !== socket) return;
+        const storyDay = getStoryVisit({ activate: true });
+        socket.send(JSON.stringify({ type: "context", ...journalContextRef.current() }));
         if (!warm?.startSent) socket.send(JSON.stringify({
           type: "start",
+          storyDay,
+          resume: voiceHasReplyRef.current,
           inputMode: audioTrack ? "voice" : "text",
           sampleRate: 16_000,
           language: "zh-CN",
           character: activeCharacter,
         }));
-        socket.send(JSON.stringify({ type: "context", ...journalContextRef.current() }));
         socket.send(JSON.stringify({ type: "interaction_mode", mode: gameplayModeRef.current || "none" }));
-        if (warm?.startSent) socket.send(JSON.stringify({ type: "activate" }));
+        if (warm?.startSent) socket.send(JSON.stringify({ type: "activate", storyDay }));
       };
       socket.addEventListener("open", beginSession);
       const handleMessage = (event) => {
@@ -1998,6 +2005,7 @@ function App() {
           return;
         }
         if (message.type === "speech_start") {
+          voiceHasReplyRef.current = true;
           if (gameplayModeRef.current) return;
           synthesizedSpeechQueueRef.current = [];
           guideAudioRef.current?.pause();
@@ -2084,7 +2092,7 @@ function App() {
       voicePrewarmRef.current?.dispose();
       voicePrewarmRef.current = null;
       if (document.visibilityState !== "hidden") {
-        try { voicePrewarmRef.current = createVoicePrewarm(getVoiceSocketUrl(), activeCharacter); }
+        try { voicePrewarmRef.current = createVoicePrewarm(getVoiceSocketUrl(), activeCharacter, { onStatus: setVoiceWarmState }); }
         catch { /* Click-to-start retains the normal connection fallback. */ }
       }
     };
@@ -4672,6 +4680,9 @@ function App() {
             <div className={`engine-status is-${engineState}`} role="status">
               {engineState === "ready" ? <Check width={15} height={15} /> : <span className="status-pulse" />}
               <span>{engineMessage}</span>
+            </div>
+            <div className="engine-status" role="status" aria-label="云语音连接状态">
+              <span>{voiceWarmState === "ready" ? "语音已连好，点击开始后才开麦说话" : voiceWarmState === "connecting" ? "正在提前连接语音，暂不开麦" : "点击开始时连接语音"}</span>
             </div>
             {engineState === "loading" && (
               <div className="load-progress" role="progressbar" aria-label="页面资源加载进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow={loadProgress}>

@@ -46,7 +46,8 @@ test("cover warmup waits for activation, reuses upstream, and greets once even w
       await waitFor(() => sessions.length === count + 1 && sessions.at(-1).messages.length > 0);
       const upstream = sessions.at(-1);
       const greetings = () => upstream.messages.filter(m => m.type === "speech_text_buffer.commit");
-      if (mode === "click-first") { send({ type: "activate" }); send({ type: "activate" }); }
+      if (mode !== "legacy-start") send({ type: "context", entries: [{ role: "user", text: "在桥下面放块积木" }] });
+      if (mode === "click-first") { send({ type: "activate", storyDay: 2 }); send({ type: "activate", storyDay: 2 }); }
       if (mode === "ready-first") {
         // Audio input received before consent/activation must not reach upstream.
         socket.send(Buffer.alloc(640));
@@ -57,11 +58,31 @@ test("cover warmup waits for activation, reuses upstream, and greets once even w
         assert.equal(greetings().length, 0);
         assert.equal(messages.some(m => m.type.startsWith("speech_")), false);
         assert.equal(upstream.messages.some(m => m.type === "input_audio_buffer.append"), false);
-        send({ type: "activate" }); send({ type: "activate" });
+        send({ type: "activate", storyDay: 2 }); send({ type: "activate", storyDay: 2 });
       }
       await waitFor(() => messages.some(m => m.type === "speech_end"));
       assert.equal(greetings().length, 1);
+      if (mode !== "legacy-start") {
+        assert.ok(greetings()[0].text.includes("又试着搭纸桥"));
+        assert.ok(upstream.messages.some(m => m.type === "session.update" && m.session.instructions.includes("第2天") && m.session.instructions.includes("在桥下面放块积木")));
+      }
       assert.equal(sessions.length, count + 1, "activation must not reconnect the model");
+      if (mode === "ready-first") {
+        for (let turn = 0; turn < 4; turn++) {
+          upstream.socket.send(JSON.stringify({ type: "conversation.item.input_audio_transcription.completed", text: `测试问题${turn}` }));
+          const ids = [`turn-${turn}-a`, `turn-${turn}-b`];
+          upstream.socket.send(JSON.stringify({ type: "response.function_call_arguments.done", items: ids.map(call_id => ({
+            call_id, name: "respond_as_character", arguments: JSON.stringify({ action: "none", story: { thread: "none" } }),
+          })) }));
+          await waitFor(() => upstream.messages.some(m => m.type === "conversation.item.create" && m.items?.[0]?.call_id === ids[0]));
+          const result = upstream.messages.find(m => m.type === "conversation.item.create" && m.items?.[0]?.call_id === ids[0]);
+          assert.deepEqual(result.items.map(item => item.call_id), ids);
+          upstream.socket.send(JSON.stringify({ type: "response.output_audio.started" }));
+          upstream.socket.send(JSON.stringify({ type: "response.output_audio.delta", delta: "AAAAAA==" }));
+          upstream.socket.send(JSON.stringify({ type: "response.output_audio.done" }));
+          await waitFor(() => messages.filter(m => m.type === "speech_end").length === turn + 2);
+        }
+      }
       socket.send(Buffer.alloc(640));
       await waitFor(() => upstream.messages.some(m => m.type === "input_audio_buffer.append"));
       const closed = once(socket, "close"); socket.close(); await closed;

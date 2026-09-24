@@ -2,7 +2,7 @@ import http from "node:http";
 import { randomUUID } from "node:crypto";
 import { WebSocketServer } from "ws";
 import { buildCharacterInstructions, getArkConfig, inferCharacterResponse, inferLeaveNote, parseCharacterSignal, sanitizeConversationContext } from "./ark-command.js";
-import { buildStoryInstructions, getStoryArc } from "./story-arc.js";
+import { buildStoryInstructions, getStoryArc, STORY_ARC_DAYS } from "./story-arc.js";
 import { correctBrandTranscript } from "./brand-lexicon.js";
 import { detectCharacterSwitchCommand } from "./character-switch-command.js";
 import { getVolcAsrConfig, VolcAsrSession } from "./volc-asr.js";
@@ -18,11 +18,6 @@ const MAX_SESSION_MS = Number(process.env.JOCAM_MAX_SESSION_MS || 0);
 const MAX_CONNECTIONS_PER_IP = Number(process.env.JOCAM_MAX_CONNECTIONS_PER_IP || 2);
 const STORY_CLOSING_MS = 3 * 60_000;
 const LEAVE_NOTE_IDLE_MS = Number(process.env.JOCAM_LEAVE_NOTE_IDLE_MS || 75_000);
-const STORY_EPOCH = Date.UTC(2026, 8, 23);
-const storyDayFromDate = (date = new Date()) => {
-  const diff = Math.floor((date.getTime() - STORY_EPOCH) / 86_400_000);
-  return ((diff % 7) + 7) % 7 + 1;
-};
 const allowedOrigins = new Set((process.env.JOCAM_ALLOWED_ORIGINS || [
   "https://mikeywa.site",
   "https://www.mikeywa.site",
@@ -114,6 +109,7 @@ function sendJson(socket, payload) {
 
 const OPENING_TEXT = "嗨，我来啦！";
 const buildOpeningText = (storyDayValue, storyAgeGroupValue) => {
+  if (storyDayValue > STORY_ARC_DAYS) return `${OPENING_TEXT} 今天有什么新鲜事想跟我聊聊？`;
   const arc = getStoryArc(storyDayValue, storyAgeGroupValue);
   return `${OPENING_TEXT} 对了，${arc.opening}`;
 };
@@ -159,12 +155,12 @@ websocketServer.on("connection", (client) => {
   let upstreamReady = false;
   let openingSent = false;
   let warmupTimer = null;
-  let storyDay = storyDayFromDate();
+  let storyDay = 1;
   let storyAgeGroup = "mid";
   let sessionStartedAt = 0;
   let storyClosingSent = false;
   let leaveNoteTimer = null;
-  const storyInstructions = (closing = false) => buildStoryInstructions(storyDay, storyAgeGroup, { closing });
+  const storyInstructions = (closing = false) => buildStoryInstructions(storyDay, storyAgeGroup, { closing, context });
   const armLeaveNote = () => {
     if (closed || leaveNoteTimer) return;
     leaveNoteTimer = setTimeout(() => { leaveNoteTimer = null; void generateLeaveNote(); }, LEAVE_NOTE_IDLE_MS);
@@ -324,6 +320,7 @@ websocketServer.on("connection", (client) => {
   const greetWhenActive = () => {
     if (!activated || !upstreamReady || openingSent || closed) return;
     openingSent = true;
+    sessionStartedAt = Date.now();
     clearTimeout(warmupTimer);
     if (seeduplex) {
       seeduplex.setMuted(interactionMode !== "none");
@@ -356,6 +353,11 @@ websocketServer.on("connection", (client) => {
     if (message.type === "activate") {
       if (!started || closed || activated) return;
       activated = true;
+      if (Number.isInteger(message.storyDay)) storyDay = Math.min(STORY_ARC_DAYS + 1, Math.max(1, message.storyDay));
+      if (seeduplex) {
+        seeduplex.instructions = buildCharacterInstructions(activeCharacter, storyInstructions(false));
+        seeduplex.update({ instructions: seeduplex.instructions });
+      }
       clearTimeout(warmupTimer);
       greetWhenActive();
       return;
@@ -372,6 +374,10 @@ websocketServer.on("connection", (client) => {
     }
     if (message.type === "context") {
       context = sanitizeConversationContext(message);
+      if (seeduplex) {
+        seeduplex.instructions = buildCharacterInstructions(activeCharacter, storyInstructions(false));
+        seeduplex.update({ instructions: seeduplex.instructions });
+      }
       return;
     }
     if (message.type === "text") {
@@ -475,11 +481,13 @@ websocketServer.on("connection", (client) => {
     if (!activated) warmupTimer = setTimeout(() => client.close(1000, "cover warmup expired"), 30_000);
     activeCharacter = normalizeCharacter(message.character);
     if (Number.isInteger(Number(message.storyDay))) {
-      storyDay = Math.min(7, Math.max(1, Number(message.storyDay)));
+      storyDay = Math.min(STORY_ARC_DAYS + 1, Math.max(1, Number(message.storyDay)));
     }
     if (["low", "mid", "high"].includes(message.ageGroup)) {
       storyAgeGroup = message.ageGroup;
     }
+    openingSent = message.resume === true;
+    if (activated) sessionStartedAt = Date.now();
     if (message.inputMode === "text" || message.textOnly === true) {
       sendJson(client, { type: "ready", inputMode: "text", sessionId });
       return;
@@ -536,19 +544,25 @@ websocketServer.on("connection", (client) => {
           if (cleanText) context.entries = [...context.entries, { role: "assistant", text: cleanText }].slice(-16);
           armLeaveNote();
         },
-        onFunctionCall: ({ callId, arguments: raw }) => {
-          if (!activated) { seeduplex?.sendToolResult(callId); return; }
+        onFunctionCall: ({ name, arguments: raw }) => {
+          if (!activated || name !== "respond_as_character") return false;
           const signal = parseCharacterSignal(raw);
           if (signal.action) sendJson(client, { type: "action", action: signal.action });
           if (signal.thread !== "none") sendJson(client, { type: "story", thread: signal.thread });
-          seeduplex?.sendToolResult(callId);
+          return true;
         },
         onError: (error) => {
           console.error("Seeduplex session failed", { name: error.name, message: error.message });
-          sendJson(client, { type: "error", code: "ASR_UNAVAILABLE", message: "语音识别暂时不可用" });
+          sendJson(client, { type: "error", code: "ASR_UNAVAILABLE", message: "语音连接中断，正在重连，请再说一次。" });
+          // Close the bridge as well: an open browser socket must not hide a
+          // dead upstream. The client reconnects with its saved conversation.
+          client.close(1011, "voice upstream unavailable");
         },
         onReady: () => {
           upstreamReady = true;
+          // Cover connections may have been created before local journal data
+          // and today's visit arrived. Apply the latest context before greeting.
+          seeduplex?.update({ instructions: buildCharacterInstructions(activeCharacter, storyInstructions(false)) });
           sendJson(client, { type: "ready", transport: "seeduplex" });
           seeduplex?.setMuted(!activated || interactionMode !== "none");
           greetWhenActive();

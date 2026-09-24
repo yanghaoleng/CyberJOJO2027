@@ -116,6 +116,7 @@ export function sanitizeConversationContext(value = {}) {
   return {
     entries: (Array.isArray(input.entries) ? input.entries : []).filter(isRecord).slice(-16).map((entry) => ({
       id: clean(entry.id, 100), role: entry.role === "assistant" ? "assistant" : "user", text: clean(entry.text),
+      ...(Number.isFinite(entry.createdAt) && entry.createdAt > 0 ? { createdAt: entry.createdAt } : {}),
     })).filter((entry) => entry.text),
     moments: (Array.isArray(input.moments) ? input.moments : []).filter(isRecord).slice(0, 20).filter((moment) => typeof moment.dayKey === "string" && /^\d{4}-\d{2}-\d{2}$/.test(moment.dayKey)).map((moment) => ({
       dayKey: moment.dayKey, event: clean(moment.event, 240), feeling: clean(moment.feeling, 240), thought: clean(moment.thought, 240),

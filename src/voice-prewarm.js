@@ -2,11 +2,13 @@
 export function createVoicePrewarm(url, character, {
   Socket = globalThis.WebSocket,
   ttlMs = 25_000,
+  onStatus = () => {},
 } = {}) {
   const socket = new Socket(url);
   let readyMessage = null;
   let startSent = false;
   let released = false;
+  onStatus("connecting");
   const onOpen = () => {
     startSent = true;
     socket.send(JSON.stringify({ type: "start", inputMode: "voice", character, deferGreeting: true }));
@@ -14,7 +16,7 @@ export function createVoicePrewarm(url, character, {
   const onMessage = ({ data }) => {
     try {
       const message = JSON.parse(data);
-      if (message.type === "ready") readyMessage = message;
+      if (message.type === "ready") { readyMessage = message; onStatus("ready"); }
       if (message.type === "error") dispose();
     } catch { /* Ignore non-protocol frames during warmup. */ }
   };
@@ -28,6 +30,7 @@ export function createVoicePrewarm(url, character, {
   function dispose() {
     if (released) return;
     released = true;
+    onStatus("idle");
     detach();
     if (socket.readyState < 2) socket.close(1000, "cover warmup ended");
   }
