@@ -107,6 +107,9 @@ export function createVisionRequestHandler({
           outputTokens: Number(result.usage.output_tokens || 0),
         } : null,
       };
+      if (body.character === "lvdou" && /[\u3400-\u9fff]/.test(payload.text || "")) {
+        payload.text = "I see something interesting! What do you notice?";
+      }
       if (payload.evaluable && enrichResponse && body.includeAudio !== false) {
         payload = { ...payload, ...(await enrichResponse(payload, body)) };
       }

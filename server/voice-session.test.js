@@ -36,17 +36,17 @@ test("cover warmup waits for activation, reuses upstream, and greets once even w
   const clients = [];
   try {
     await waitFor(() => output.includes("bridge listening"));
-    for (const mode of ["ready-first", "click-first", "legacy-start"]) {
+    for (const mode of ["ready-first", "click-first", "legacy-start", "domi-start"]) {
       const socket = new WebSocket(`ws://127.0.0.1:${port}/voice`, { origin: "http://127.0.0.1:5173" }); clients.push(socket);
       await once(socket, "open");
       const messages = []; socket.on("message", data => messages.push(JSON.parse(data)));
       const send = value => socket.send(JSON.stringify(value));
       const count = sessions.length;
-      send({ type: "start", inputMode: "voice", deferGreeting: mode !== "legacy-start" });
+      send({ type: "start", inputMode: "voice", character: mode === "domi-start" ? "lvdou" : "jiaojiao", deferGreeting: mode !== "legacy-start" && mode !== "domi-start" });
       await waitFor(() => sessions.length === count + 1 && sessions.at(-1).messages.length > 0);
       const upstream = sessions.at(-1);
       const greetings = () => upstream.messages.filter(m => m.type === "speech_text_buffer.commit");
-      if (mode !== "legacy-start") send({ type: "context", entries: [{ role: "user", text: "在桥下面放块积木" }] });
+      if (mode !== "legacy-start") send({ type: "context", entries: [{ role: "user", text: "我读了小兔子的绘本" }] });
       if (mode === "click-first") { send({ type: "activate", storyDay: 2 }); send({ type: "activate", storyDay: 2 }); }
       if (mode === "ready-first") {
         // Audio input received before consent/activation must not reach upstream.
@@ -62,9 +62,13 @@ test("cover warmup waits for activation, reuses upstream, and greets once even w
       }
       await waitFor(() => messages.some(m => m.type === "speech_end"));
       assert.equal(greetings().length, 1);
-      if (mode !== "legacy-start") {
-        assert.ok(greetings()[0].text.includes("又试着搭纸桥"));
-        assert.ok(upstream.messages.some(m => m.type === "session.update" && m.session.instructions.includes("第2天") && m.session.instructions.includes("在桥下面放块积木")));
+      if (mode === "domi-start") {
+        assert.match(greetings()[0].text, /I'm Domi/);
+        assert.ok(upstream.messages.some(m => m.type === "session.create" && m.session.instructions.includes("Speak only English")));
+      }
+      if (mode === "ready-first" || mode === "click-first") {
+        assert.ok(greetings()[0].text.includes("绘本"));
+        assert.ok(upstream.messages.some(m => m.type === "session.update" && m.session.instructions.includes("第2次") && m.session.instructions.includes("我读了小兔子的绘本")));
       }
       assert.equal(sessions.length, count + 1, "activation must not reconnect the model");
       if (mode === "ready-first") {
@@ -82,6 +86,15 @@ test("cover warmup waits for activation, reuses upstream, and greets once even w
           upstream.socket.send(JSON.stringify({ type: "response.output_audio.done" }));
           await waitFor(() => messages.filter(m => m.type === "speech_end").length === turn + 2);
         }
+        upstream.socket.send(JSON.stringify({ type: "conversation.item.input_audio_transcription.completed", text: "我想Domi了" }));
+        await waitFor(() => messages.some(m => m.type === "character_switch" && m.character === "lvdou"));
+        assert.ok(upstream.messages.some(m => m.type === "session.update" && m.session.instructions.includes("Speak only English")));
+        upstream.socket.send(JSON.stringify({ type: "response.canceled" }));
+        await waitFor(() => greetings().some(m => m.text.includes("I'm Domi")));
+        upstream.socket.send(JSON.stringify({ type: "conversation.item.input_audio_transcription.completed", text: "我想叫叫了" }));
+        await waitFor(() => messages.some(m => m.type === "character_switch" && m.character === "jiaojiao"));
+        upstream.socket.send(JSON.stringify({ type: "response.canceled" }));
+        await waitFor(() => greetings().some(m => m.text.includes("绘本")));
       }
       socket.send(Buffer.alloc(640));
       await waitFor(() => upstream.messages.some(m => m.type === "input_audio_buffer.append"));

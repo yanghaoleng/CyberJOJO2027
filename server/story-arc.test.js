@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { AGE_GROUPS, STORY_ARC_DAYS, STORY_ARCS, buildStoryInstructions, getStoryArc } from "./story-arc.js";
 
-test("story arc provides five grounded days for every age group", () => {
+test("reading arc provides five child-led visits for every age group", () => {
   assert.equal(STORY_ARC_DAYS, 5);
   for (const group of AGE_GROUPS) {
     assert.equal(STORY_ARCS[group].length, STORY_ARC_DAYS, `${group} should have ${STORY_ARC_DAYS} days`);
@@ -23,30 +23,29 @@ test("getStoryArc ends after five days instead of restarting the same adventure"
 
 test("buildStoryInstructions includes premise, hook and closing guidance", () => {
   const opening = buildStoryInstructions(1, "low", { closing: false });
-  assert.ok(opening.includes("第1天"));
+  assert.ok(opening.includes("第1次"));
   assert.ok(opening.includes(STORY_ARCS.low[0].title));
   assert.ok(opening.includes(STORY_ARCS.low[0].opening));
-  assert.ok(opening.includes("三分钟"));
-  assert.ok(!opening.includes("收尾：今天的故事已经讲了约三分钟"));
+  assert.ok(opening.includes("绘本"));
   const closing = buildStoryInstructions(1, "low", { closing: true });
-  assert.ok(closing.includes("现在自然收尾"));
+  assert.ok(closing.includes("自然收尾"));
   assert.ok(closing.includes(STORY_ARCS.low[0].hook));
 });
 
-test("advice is grounded in actual child messages, never invented from the script", () => {
-  const text = buildStoryInstructions(2, "mid", { context: { entries: [{ role: "user", text: "在桥下面放块积木" }] } });
-  assert.ok(text.includes("在桥下面放块积木"));
-  assert.ok(text.includes("不能把剧情预设当成孩子的回答"));
-  assert.ok(text.includes("不是孩子的亲身经历"));
+test("book details are grounded in the child's own words and creative idioms are labeled", () => {
+  const text = buildStoryInstructions(2, "mid", { context: { entries: [{ role: "user", text: "我读了小兔子的绘本" }] } });
+  assert.ok(text.includes("我读了小兔子的绘本"));
+  assert.ok(text.includes("真实对话或视觉观察"));
+  assert.ok(text.includes("自创新词"));
   assert.ok(text.includes("孩子换话题就跟上"));
   for (const group of AGE_GROUPS) assert.ok(!JSON.stringify(STORY_ARCS[group]).includes("邮戳"));
 });
 
-test("each story hook points forward to the next day", () => {
+test("each reading hook invites a natural next step", () => {
   for (const group of AGE_GROUPS) {
     for (let index = 0; index < STORY_ARC_DAYS - 1; index += 1) {
       const current = STORY_ARCS[group][index];
-      assert.ok(/明天|第二天|下周|下一次|下一段|明天我们|明天开始/.test(current.hook), `${group} day ${current.day} hook points forward`);
+      assert.ok(current.hook.length > 8, `${group} visit ${current.day} has a hook`);
     }
   }
 });

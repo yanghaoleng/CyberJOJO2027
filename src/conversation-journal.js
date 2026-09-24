@@ -77,7 +77,7 @@ function readStaleEntryIds(store, limit) {
   });
 }
 
-export function createConversationEntry({ id, role, text, character, source, sessionId = "", createdAt = Date.now() }) {
+export function createConversationEntry({ id, role, text, character, source, audioBlob, sessionId = "", createdAt = Date.now() }) {
   const normalizedRole = role === "assistant" ? "assistant" : "user";
   const normalizedText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 1000);
   if (!normalizedText) return null;
@@ -88,8 +88,9 @@ export function createConversationEntry({ id, role, text, character, source, ses
     role: normalizedRole,
     text: normalizedText,
     character: character === "lvdou" ? "lvdou" : "jiaojiao",
-    source: ["child_speech", "character_reply", "scene_comment", "gameplay"].includes(source)
+    source: ["child_speech", "character_reply", "scene_comment", "gameplay", "leave_note"].includes(source)
       ? source : normalizedRole === "user" ? "child_speech" : "character_reply",
+    ...(source === "leave_note" && audioBlob instanceof Blob && audioBlob.size <= 2_000_000 && audioBlob.type.startsWith("audio/") ? { audioBlob } : {}),
     sessionId: String(sessionId).slice(0, 100),
     createdAt: Number(createdAt) || Date.now(),
   };
@@ -227,7 +228,7 @@ export function buildJournalContext(records = {}, entries = []) {
   return {
     entries: entries.filter((entry) => !suppressed.has(entry.id) && entry.source !== "scene_comment" && entry.source !== "gameplay"
       && !(entry.role === "assistant" && records[getLocalDayKey(entry.createdAt)]?.revision > 0))
-      .slice(-16).map(({ id, role, text, createdAt }) => ({ id, role, text, createdAt })),
+      .slice(-16).map(({ id, role, text, character, createdAt }) => ({ id, role, text, character, createdAt })),
     moments: days.slice(0, 7).flatMap((day) => (day.moments || []).map((moment) => ({
       id: moment.id, dayKey: day.dayKey, event: moment.event, feeling: moment.feeling || "", thought: moment.thought || "",
     }))).slice(0, 20),

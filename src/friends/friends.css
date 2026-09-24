@@ -21,3 +21,6 @@
 .friend-speak-button:active{transform:scale(.9);background:rgba(255,216,77,.25)}
 .friend-detail-sheet .friend-card-word-big{font-size:32px}
 .friend-detail-sheet .friend-card-kind{color:rgba(247,248,241,.5);font-size:11px;margin-top:2px;letter-spacing:.04em}
+.friend-card-idiom { display: flex; align-items: baseline; flex-wrap: wrap; gap: .4em; margin: .5rem 0; }
+.friend-card-idiom strong { font-size: 1.35rem; letter-spacing: .1em; }
+.friend-card-idiom span { font-size: .7rem; opacity: .7; }

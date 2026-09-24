@@ -47,7 +47,7 @@ export function mergeDailyTimeline(captures = [], entries = [], summaries = {}, 
     if (dayKey && !days.has(dayKey)) days.set(dayKey, { dayKey, items: [], friends: [] });
     return days.get(dayKey);
   };
-  for (const entry of entries) if (entry.role === "user" && entry.source !== "gameplay") ensure(getLocalDayKey(entry.createdAt));
+  for (const entry of entries) if ((entry.role === "user" && entry.source !== "gameplay") || entry.source === "leave_note") ensure(getLocalDayKey(entry.createdAt));
   for (const record of Object.values(summaries)) if (record.summary || record.moments?.length) ensure(record.dayKey);
   for (const friend of friends) ensure(getLocalDayKey(friend.createdAt))?.friends.push(friend);
   return [...days.values()].sort((a, b) => b.dayKey.localeCompare(a.dayKey));

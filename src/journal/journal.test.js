@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildJournalContext, createConversationEntry, mergeJournalSummary } from "../conversation-journal.js";
+
+test("recorded notes keep both companions and their original audio in one timeline", () => {
+  const audioBlob = new Blob(["voice"], { type: "audio/mpeg" });
+  const domi = createConversationEntry({ id: "domi-note", role: "assistant", source: "leave_note", character: "lvdou", text: "I found a leaf.", audioBlob, createdAt: 1780000000000 });
+  const jiaojiao = createConversationEntry({ id: "jj-note", role: "assistant", source: "leave_note", character: "jiaojiao", text: "我读到一只小兔子。", audioBlob, createdAt: 1780000001000 });
+  assert.equal(domi.audioBlob, audioBlob);
+  assert.equal(jiaojiao.audioBlob, audioBlob);
+  assert.equal(domi.source, "leave_note");
+  assert.equal(mergeDailyTimeline([], [domi, jiaojiao]).length, 1);
+});
 import { mergeDailyTimeline } from "../daily-timeline.js";
 
 const at = new Date(2026, 8, 9, 12).getTime();

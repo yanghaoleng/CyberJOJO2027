@@ -73,7 +73,7 @@ import { isUnreadCollection, loadFriends, markCollectionsSeen, saveFriend } from
 import FriendCard from "./friends/FriendCard.jsx";
 import "./friends/friends.css";
 import { runCollectionJob } from "./friends/collection-job.js";
-import { parseCollectionDialogue } from "./friends/collection-dialogue.js";
+import { parseCollectionDialogue, parseRealIdiomSuggestion } from "./friends/collection-dialogue.js";
 import { createStickerFromCapture } from "./sticker-matting.js";
 import CollectionFlight from "./friends/CollectionFlight.jsx";
 import { requestGameplay } from "./gameplay/gameplay-api.js";
@@ -122,7 +122,7 @@ const BASE_URL = import.meta.env.BASE_URL;
 const WELCOME_HEADLINES = [
   ["今天有没有一件", "想跟我说说的事？"],
   ["一件开心的事", "也值得慢慢说完"],
-  ["把你发现的", "带给叫叫看看"],
+  ["和叫叫读绘本", "和 Domi 找单词"],
   ["看不清的时候", "我们一起靠近一点"],
   ["一个小小手势", "也会有回应"],
 ];
@@ -936,6 +936,7 @@ function App() {
   const collectionHistoryRef = useRef(new Map());
   const latestCollectionRef = useRef(null);
   const collectionDialogueRef = useRef(() => {});
+  const idiomReplyRef = useRef(() => {});
   const startObjectCollectionRef = useRef(() => {});
   const triggerHeartVoiceRef = useRef(() => {});
   const triggerWreathVoiceRef = useRef(() => {});
@@ -1038,6 +1039,8 @@ function App() {
   const [riveAnimationName, setRiveAnimationName] = useState(DEFAULT_RIVE_ANIMATION);
   const [riveRendererMode, setRiveRendererMode] = useState(getRiveRendererMode);
   const [activeCharacter, setActiveCharacter] = useState("jiaojiao");
+  const activeCharacterRef = useRef(activeCharacter);
+  activeCharacterRef.current = activeCharacter;
   const [characterSwitching, setCharacterSwitching] = useState(false);
   const [personLayer, setPersonLayer] = useState("behind");
   const [recording, setRecording] = useState(false);
@@ -1135,7 +1138,8 @@ function App() {
   useEffect(() => {
     const socket = voiceSocketRef.current;
     if (socket?.readyState !== WebSocket.OPEN) return;
-    socket.send(JSON.stringify({ type: "character", character: activeCharacter }));
+    socket.send(JSON.stringify({ type: "character", character: activeCharacter,
+      ...(activeCharacter === "jiaojiao" ? { storyDay: getStoryVisit({ activate: true }) } : {}) }));
   }, [activeCharacter]);
 
   useEffect(() => {
@@ -1183,7 +1187,7 @@ function App() {
       return undefined;
     }
     const timer = window.setTimeout(() => {
-      const lines = WAITING_VOICE_LINES.thinking;
+      const lines = activeCharacter === "lvdou" ? ["Let me think.", "I'm listening.", "One moment."] : WAITING_VOICE_LINES.thinking;
       const text = lines[Math.floor(Math.random() * lines.length)];
       replaceCharacterBubble(text, activeCharacter, "thinking");
       const socket = voiceSocketRef.current;
@@ -1196,7 +1200,7 @@ function App() {
     window.speechSynthesis.cancel();
     characterEchoGateUntilRef.current = startCharacterEchoGate();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "zh-CN";
+    utterance.lang = /[\u3400-\u9fff]/.test(text) ? "zh-CN" : "en-US";
     utterance.rate = 1;
     const releaseGate = () => {
       characterEchoGateUntilRef.current = endCharacterEchoGate(performance.now());
@@ -1219,7 +1223,7 @@ function App() {
   const visibleTimeline = libraryDemo ? DEMO_TIMELINE : mediaTimeline;
   const visibleFriends = libraryDemo ? DEMO_FRIENDS : friends;
   journalContextRef.current = journal.getContext;
-  useEffect(() => { let alive = true; loadFriends().then((records) => { if (alive) setFriends(records); }).catch(() => {}); return () => { alive = false; }; }, []);
+  useEffect(() => { let alive = true; loadFriends().then((records) => { if (alive) { setFriends(records); latestCollectionRef.current = records[0] || null; } }).catch(() => {}); return () => { alive = false; }; }, []);
 
   useEffect(() => {
     const orientationQuery = window.matchMedia("(orientation: landscape)");
@@ -1877,7 +1881,7 @@ function App() {
 
       const beginSession = () => {
         if (voiceSocketRef.current !== socket) return;
-        const storyDay = getStoryVisit({ activate: true });
+        const storyDay = getStoryVisit({ activate: activeCharacter === "jiaojiao" });
         socket.send(JSON.stringify({ type: "context", ...journalContextRef.current() }));
         if (!warm?.startSent) socket.send(JSON.stringify({
           type: "start",
@@ -2000,6 +2004,7 @@ function App() {
               text: message.text,
               character: message.character || activeCharacter,
             });
+            if (message.character === "jiaojiao") idiomReplyRef.current?.(message.text);
           }
           enqueueSynthesizedSpeech(message);
           return;
@@ -2030,16 +2035,26 @@ function App() {
         if (message.type === "speech_end") {
           if (pcmSpeechRef.current?.streamId !== message.streamId) return;
           if (message.text) recordConversationMessage({ role: "assistant", text: message.text, character: message.character || activeCharacter });
+          if (message.text && message.character === "jiaojiao") idiomReplyRef.current?.(message.text);
           pcmSpeechRef.current?.end(message.streamId);
           return;
         }
         if (message.type === "leave_note") {
           if (gameplayModeRef.current) return;
+          let audioBlob;
+          try {
+            if (message.audio && message.audio.length < 2_700_000) {
+              const binary = atob(message.audio);
+              const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+              audioBlob = new Blob([bytes], { type: message.mime || "audio/mpeg" });
+            }
+          } catch { /* The text note remains available without its audio. */ }
           recordConversationMessage({
             role: "assistant",
             text: message.text,
             character: message.character || activeCharacter,
             source: "leave_note",
+            audioBlob,
           });
           enqueueSynthesizedSpeech({
             ...message,
@@ -4077,7 +4092,7 @@ function App() {
   }, [facingMode]);
 
   const saveCollectedFriend = useCallback((record) => {
-    latestCollectionRef.current = record;
+    if (!latestCollectionRef.current || record.createdAt >= latestCollectionRef.current.createdAt) latestCollectionRef.current = record;
     setFriends((current) => [record, ...current.filter((item) => item.id !== record.id)]);
   }, []);
 
@@ -4105,7 +4120,7 @@ function App() {
       if (!await storeMediaCapture(capture)) throw new Error("本机存储暂时不可用");
       addMediaCapture(capture, { persisted: true, quiet: true });
       const record = await saveFriend({
-        id, name: reaction.subject, subject: reaction.subject,
+        id, name: reaction.subject, subject: reaction.subject, character: activeCharacter,
         originalBlob: frame.blob, captureId: capture.id,
         status: "pending", attempts: 0,
       });
@@ -4150,7 +4165,7 @@ function App() {
           canvas.getContext("2d").drawImage(photo, 0, 0, canvas.width, canvas.height);
           let quality = .78, image = canvas.toDataURL("image/jpeg", quality);
           while (image.length > 230000 && quality > .3) { quality -= .1; image = canvas.toDataURL("image/jpeg", quality); }
-          return await requestGameplay({ source: "collect", image, subject: item.subject, roundId: item.id, frameId: item.captureId || item.id, character: activeCharacter }, { signal });
+          return await requestGameplay({ source: "collect", image, subject: item.subject, roundId: item.id, frameId: item.captureId || item.id, character: item.character || "lvdou" }, { signal });
         } finally { URL.revokeObjectURL(url); }
       },
       matte: createStickerFromCapture,
@@ -4161,7 +4176,9 @@ function App() {
       setCollectionFlight({ ...ready, phase: "ready", target });
       if (collectionFlightTimerRef.current) window.clearTimeout(collectionFlightTimerRef.current);
       collectionFlightTimerRef.current = window.setTimeout(dismissCollection, 2500);
-      shareCollectionLearning([ready.learning, ready.english ? `英文是 ${ready.english}` : "", getCollectionFollowUp(ready.kind, ready.name)].filter(Boolean).join("。"));
+      if (ready.character === activeCharacterRef.current) shareCollectionLearning(ready.character === "lvdou"
+        ? [`This is ${ready.english || "a new word"}.`, ready.learning].filter(Boolean).join(" ")
+        : [`这位${ready.name}变成贴纸啦。`, ready.learning, "它在绘本里做过什么？我们可以给它编一句新成语。"].filter(Boolean).join(""));
     }).catch(() => {
       // Original and pending/failed status have already been committed. Never
       // resurrect foreground UI after a user interruption.
@@ -4171,7 +4188,7 @@ function App() {
       if (collectionMountedRef.current) setCollectionQueueTick((value) => value + 1);
     });
     return undefined;
-  }, [friends, collectionQueueTick, activeCharacter, dismissCollection, saveCollectedFriend, shareCollectionLearning]);
+  }, [friends, collectionQueueTick, dismissCollection, saveCollectedFriend, shareCollectionLearning]);
 
   const retryCollection = useCallback(async (record) => {
     saveCollectedFriend(await saveFriend({ id: record.id, status: "pending", attempts: 0, retryAt: 0 }));
@@ -4183,19 +4200,31 @@ function App() {
   const unreadCollectionCount = friends.filter(isUnreadCollection).length;
 
   const updateCollectedFriendFromDialogue = useCallback(async (text) => {
-    const command = parseCollectionDialogue(text);
     const previous = latestCollectionRef.current;
-    if (command?.type !== "name" || !previous || Date.now() - previous.createdAt > 20 * 60_000) return;
+    const recentPrompt = [...conversationEntries].reverse().find((entry) => entry.role === "assistant" && entry.character === "jiaojiao");
+    const expectCreativeIdiom = previous?.character === "jiaojiao"
+      && recentPrompt && Date.now() - recentPrompt.createdAt < 2 * 60_000
+      && /(?:编|创造|想).{0,12}成语|成语.{0,12}(?:编|创造|想)/.test(recentPrompt.text);
+    const command = parseCollectionDialogue(text, { expectCreativeIdiom });
+    if (!command || !previous || (command.type === "name" && Date.now() - previous.createdAt > 20 * 60_000)) return;
+    if (command.type !== "name" && previous.character !== "jiaojiao") return;
     try {
-      const next = await saveFriend({ ...previous, name: command.name }, { expectedVersion: previous.version });
+      const next = await saveFriend({ ...previous, ...command }, { expectedVersion: previous.version });
       saveCollectedFriend(next);
-      setCollectionFlight((current) => current?.name === previous.name ? { ...current, name: next.name } : current);
-      showToast(`图鉴里记作「${next.name}」`);
+      if (command.type === "name") setCollectionFlight((current) => current?.name === previous.name ? { ...current, name: next.name } : current);
+      showToast(command.type === "name" ? `图鉴里记作「${next.name}」` : "创意成语已记在贴纸上");
     } catch {
       showToast("这个名字暂时没记上，再说一次吧");
     }
-  }, [saveCollectedFriend, showToast]);
+  }, [conversationEntries, saveCollectedFriend, showToast]);
   collectionDialogueRef.current = updateCollectedFriendFromDialogue;
+  idiomReplyRef.current = async (text) => {
+    const suggestion = parseRealIdiomSuggestion(text);
+    const previous = latestCollectionRef.current;
+    if (!suggestion || previous?.character !== "jiaojiao") return;
+    try { saveCollectedFriend(await saveFriend({ id: previous.id, ...suggestion }, { expectedVersion: previous.version })); }
+    catch { /* Keep the conversation natural if the card changed concurrently. */ }
+  };
 
   const inspectStoryObject = useCallback(async () => {
     const activeFocus = storyFocusRef.current;
@@ -4209,7 +4238,7 @@ function App() {
     }
     setHiddenStoryFocus({ phase: "checking" });
     const askToFrame = () => {
-      const text = "我还没看清，把它放进白色虚线框里好吗？";
+      const text = activeCharacter === "lvdou" ? "I can't see it yet. Please move it into the white frame." : "我还没看清，把它放进白色虚线框里好吗？";
       setGameplayReaction({ action: "curious", text, id: crypto.randomUUID(), character: activeCharacter });
       replaceCharacterBubble(text);
       const socket = voiceSocketRef.current;
@@ -4311,6 +4340,7 @@ function App() {
   const handleGameplayReaction = useCallback((value, actionName) => {
     const reaction = typeof value === "string" ? { text: value, action: actionName || "happy" } : value;
     if (!reaction?.text) return;
+    if (activeCharacter === "lvdou" && /[\u3400-\u9fff]/.test(reaction.text)) reaction.text = "Let's look closely. What do you notice?";
     const action = VOICE_ACTIONS[reaction.action];
     if (action && !gameplayTargetRef.current?.chewing) rivePlayAnimationRef.current?.(action.animation);
     setGameplayReaction({ ...reaction, id: crypto.randomUUID(), character: activeCharacter });
@@ -4664,16 +4694,21 @@ function App() {
 
             {cameraState === "error" && <p className="camera-error" role="alert">{cameraError}</p>}
 
+            <div className="welcome-character-choices" role="group" aria-label="选择陪伴伙伴">
+              <button type="button" disabled={engineState !== "ready" || characterSwitching} className={activeCharacter === "jiaojiao" ? "is-selected" : ""} aria-pressed={activeCharacter === "jiaojiao"} onClick={() => void switchCharacterTo("jiaojiao")}>叫叫 <small>绘本与角色贴纸</small></button>
+              <button type="button" disabled={engineState !== "ready" || characterSwitching} className={activeCharacter === "lvdou" ? "is-selected" : ""} aria-pressed={activeCharacter === "lvdou"} onClick={() => void switchCharacterTo("lvdou")}>Domi · 绿豆 <small>英文发现与单词卡</small></button>
+            </div>
+
             <button
               className="open-camera-button"
               type="button"
-              disabled={!readyForCamera || cameraState === "opening"}
+              disabled={!readyForCamera || cameraState === "opening" || characterSwitching}
               onClick={enterCamera}
             >
               {cameraState === "opening" ? (
                 <><span className="button-loader" />正在打开相机</>
               ) : (
-                <><Search width={21} height={21} />开始和叫叫聊聊</>
+                <><Search width={21} height={21} />{activeCharacter === "lvdou" ? "Start with Domi" : "开始和叫叫聊聊"}</>
               )}
             </button>
 
@@ -4687,7 +4722,7 @@ function App() {
             {engineState === "loading" && (
               <div className="load-progress" role="progressbar" aria-label="页面资源加载进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow={loadProgress}>
                 <div className="load-progress-copy">
-                  <span>准备和叫叫聊聊</span>
+                  <span>正在准备两位伙伴</span>
                   <strong>{loadProgress}%</strong>
                 </div>
                 <span className="load-progress-track"><i style={{ transform: `scaleX(${loadProgress / 100})` }} /></span>
@@ -4827,17 +4862,14 @@ function App() {
                                 <span className="media-library-visual">
                                   {friend.stickerUrl && <img src={friend.stickerUrl} alt="" />}
                                 </span>
-                                <span className="media-friend-name">{friend.name}<small>{friend.english ? `· ${friend.english}` : ""}</small></span>
+                                <span className="media-friend-name">{friend.name}<small>{friend.character === "jiaojiao" ? `· ${friend.idiom || "绘本角色"}` : friend.english ? `· ${friend.english}` : ""}</small></span>
                               </button>
                             ))}
                           </div>
                         )}
                       </div>
-                      {libraryDemo && (() => {
-                        const note = DEMO_LEAVE_NOTES.find((item) => item.dayKey === dayKey);
-                        if (!note) return null;
-                        return <LeaveNoteCard key={`note-${note.dayKey}`} note={note} />;
-                      })()}
+                      {(libraryDemo ? DEMO_LEAVE_NOTES.filter((note) => note.dayKey === dayKey) : entries.filter((entry) => entry.source === "leave_note"))
+                        .map((note) => <LeaveNoteCard key={note.id || `${note.dayKey}-${note.character}`} note={note} />)}
                       <JournalDay record={summaryRecord || { dayKey }} state={summaryState}
                         onChange={libraryDemo ? updateDemoMoment : journal.updateMoment} onForget={libraryDemo ? forgetDemoMoment : journal.forgetMoment} onRetry={libraryDemo ? undefined : () => journal.retry(dayKey)} />
                     </section>
@@ -4859,7 +4891,7 @@ function App() {
             <article className="friend-detail-sheet" onClick={(event) => event.stopPropagation()}>
               <button className="friend-icon-button" type="button" aria-label="关闭收集" onClick={() => setLibraryFriendPreview(null)}><Xmark width={20} height={20} /></button>
               <FriendCard friend={libraryFriendPreview} />
-              <p className="friend-dialogue-note">想给它换个名字，直接对叫叫说“它叫……”就好。</p>
+              <p className="friend-dialogue-note">{libraryFriendPreview.character === "jiaojiao" ? "和叫叫聊出这位角色的创意成语。" : libraryFriendPreview.character === "lvdou" ? "和 Domi 一起读读这个单词。" : "这是以前收集的贴纸。"}</p>
             </article>
           </div>,
           document.body,

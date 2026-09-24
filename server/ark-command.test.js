@@ -39,7 +39,7 @@ test("conversation context remains bounded and preserves dates and the current u
 test("malformed context members are ignored without throwing", () => {
   assert.deepEqual(sanitizeConversationContext(null), { entries: [], moments: [] });
   assert.deepEqual(sanitizeConversationContext({ entries: [null, [], 4, { text: { toString: null } }, { role: "user", text: "保留有效原话" }], moments: [null, [], { dayKey: { toString: null } }] }), {
-    entries: [{ id: "", role: "user", text: "保留有效原话" }], moments: [],
+    entries: [{ id: "", role: "user", text: "保留有效原话", character: "jiaojiao" }], moments: [],
   });
 });
 

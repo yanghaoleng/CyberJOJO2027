@@ -108,7 +108,8 @@ function sendJson(socket, payload) {
 }
 
 const OPENING_TEXT = "嗨，我来啦！";
-const buildOpeningText = (storyDayValue, storyAgeGroupValue) => {
+const buildOpeningText = (storyDayValue, storyAgeGroupValue, character = "jiaojiao") => {
+  if (character === "lvdou") return "Hi, I'm Domi! What interesting thing can you spot around you today?";
   if (storyDayValue > STORY_ARC_DAYS) return `${OPENING_TEXT} 今天有什么新鲜事想跟我聊聊？`;
   const arc = getStoryArc(storyDayValue, storyAgeGroupValue);
   return `${OPENING_TEXT} 对了，${arc.opening}`;
@@ -160,7 +161,9 @@ websocketServer.on("connection", (client) => {
   let sessionStartedAt = 0;
   let storyClosingSent = false;
   let leaveNoteTimer = null;
-  const storyInstructions = (closing = false) => buildStoryInstructions(storyDay, storyAgeGroup, { closing, context });
+  const storyInstructions = (closing = false) => activeCharacter === "lvdou"
+    ? "Help the child discover one visible, safe everyday object. Invite them to show it, say its English name, and collect a cutout word card. Never claim to see an object without a camera observation. Speak only English."
+    : buildStoryInstructions(storyDay, storyAgeGroup, { closing, context });
   const armLeaveNote = () => {
     if (closed || leaveNoteTimer) return;
     leaveNoteTimer = setTimeout(() => { leaveNoteTimer = null; void generateLeaveNote(); }, LEAVE_NOTE_IDLE_MS);
@@ -170,6 +173,7 @@ websocketServer.on("connection", (client) => {
   };
   let closed = false;
   let activeCharacter = "jiaojiao";
+  let pendingSwitchGreeting = "";
   let interactionMode = "none";
   let context = { entries: [], moments: [] };
   let epoch = 0;
@@ -209,8 +213,7 @@ websocketServer.on("connection", (client) => {
       if (!merged || closed || interactionMode !== "none") return;
       const requestedCharacter = detectCharacterSwitchCommand(merged);
       if (requestedCharacter) {
-        activeCharacter = requestedCharacter;
-        sendJson(client, { type: "character_switch", character: requestedCharacter });
+        switchToCharacter(requestedCharacter, true);
         return;
       }
       void runInference(merged);
@@ -222,8 +225,7 @@ websocketServer.on("connection", (client) => {
     if (closed || !started || interactionMode !== "none" || !context.entries.length) return;
     const noteCharacter = activeCharacter;
     try {
-      const arc = getStoryArc(storyDay, storyAgeGroup);
-      const text = await inferLeaveNote(noteCharacter, arkConfig, context, arc.hook);
+      const text = await inferLeaveNote(noteCharacter, arkConfig, context, noteCharacter === "lvdou" ? "" : getStoryArc(storyDay, storyAgeGroup).hook);
       if (closed || !text) return;
       const audio = await synthesizeSpeech(text, noteCharacter, ttsConfig, fetch);
       if (closed) return;
@@ -298,6 +300,24 @@ websocketServer.on("connection", (client) => {
     void runInference(text, character).finally(() => seeduplex?.setMuted(false));
   };
 
+  const switchToCharacter = (requestedCharacter, notifyClient = false) => {
+    if (requestedCharacter === activeCharacter) return;
+    activeCharacter = requestedCharacter;
+    disarmLeaveNote();
+    cancelPending();
+    if (notifyClient) sendJson(client, { type: "character_switch", character: requestedCharacter });
+    const greeting = requestedCharacter === "lvdou"
+      ? "Hi, I'm Domi! Show me something you found, and we'll make a word card."
+      : "我来啦！最近读了哪本绘本？想不想一起看看里面的角色？";
+    if (seeduplex) {
+      pendingSwitchGreeting = greeting;
+      seeduplex.update({ instructions: buildCharacterInstructions(activeCharacter, storyInstructions(false)),
+        voice: seeduplexConfig.voices[activeCharacter] || ttsConfig.voices[activeCharacter] });
+    } else {
+      void sendSpeech(greeting, { character: requestedCharacter }).catch((error) => console.error("Switch greeting failed", { name: error.name }));
+    }
+  };
+
   const endSession = () => {
     if (closed) return;
     closed = true;
@@ -324,9 +344,9 @@ websocketServer.on("connection", (client) => {
     clearTimeout(warmupTimer);
     if (seeduplex) {
       seeduplex.setMuted(interactionMode !== "none");
-      seeduplex.greet(buildOpeningText(storyDay, storyAgeGroup));
+      seeduplex.greet(buildOpeningText(storyDay, storyAgeGroup, activeCharacter));
     } else {
-      sendSpeech(buildOpeningText(storyDay, storyAgeGroup), { opening: true, character: activeCharacter }).catch((error) => {
+      sendSpeech(buildOpeningText(storyDay, storyAgeGroup, activeCharacter), { opening: true, character: activeCharacter }).catch((error) => {
         console.error("Opening speech failed", { name: error.name });
       });
     }
@@ -363,13 +383,9 @@ websocketServer.on("connection", (client) => {
       return;
     }
     if (message.type === "character") {
-      activeCharacter = normalizeCharacter(message.character);
-      if (seeduplex) {
-        seeduplex.update({
-          instructions: buildCharacterInstructions(activeCharacter, storyInstructions(false)),
-          voice: seeduplexConfig.voices[activeCharacter] || ttsConfig.voices[activeCharacter],
-        });
-      }
+      if (Number.isInteger(message.storyDay)) storyDay = Math.min(STORY_ARC_DAYS + 1, Math.max(1, message.storyDay));
+      switchToCharacter(normalizeCharacter(message.character));
+      if (seeduplex) seeduplex.update({ instructions: buildCharacterInstructions(activeCharacter, storyInstructions(false)) });
       return;
     }
     if (message.type === "context") {
@@ -408,7 +424,7 @@ websocketServer.on("connection", (client) => {
         return;
       }
       const requestedCharacter = detectCharacterSwitchCommand(text);
-      if (requestedCharacter) { activeCharacter = requestedCharacter; sendJson(client, { type: "character_switch", character: requestedCharacter }); return; }
+      if (requestedCharacter) { switchToCharacter(requestedCharacter, true); return; }
       void runInference(text);
       return;
     }
@@ -454,7 +470,9 @@ websocketServer.on("connection", (client) => {
     }
     if (message.type === "local_speech" || message.type === "scene_speech") {
       if (!started || Date.now() - lastLocalSpeechAt < 700) return;
-      const text = String(message.text || "").replace(/\s+/g, " ").trim().slice(0, 80);
+      const originalText = String(message.text || "").replace(/\s+/g, " ").trim().slice(0, 80);
+      const text = activeCharacter === "lvdou" && /[\u3400-\u9fff]/.test(originalText)
+        ? "Let's look closely. What do you notice?" : originalText;
       if (!text) return;
       lastLocalSpeechAt = Date.now();
       localSpeechSequence += 1;
@@ -506,6 +524,13 @@ websocketServer.on("connection", (client) => {
             id: transcript.final ? `dialogue-${randomUUID()}` : undefined,
             sessionId, source: interactionMode === "none" ? "child_speech" : "gameplay" };
           sendJson(client, { type: "transcript", ...normalizedTranscript });
+          if (transcript.final && interactionMode === "none") {
+            const requestedCharacter = detectCharacterSwitchCommand(normalizedTranscript.text);
+            if (requestedCharacter && requestedCharacter !== activeCharacter) {
+              switchToCharacter(requestedCharacter, true);
+              return;
+            }
+          }
           if (transcript.final && corrected.corrections.length) {
             const applied = corrected.corrections.reduce((sum, item) => sum + item.occurrences, 0);
             correctionMetrics.applied += applied;
@@ -536,6 +561,12 @@ websocketServer.on("connection", (client) => {
         onCancel: () => {
           sendJson(client, { type: "speech_cancel", streamId: speechStreamId });
           speechStreamId = "";
+        },
+        onCancelAcknowledged: () => {
+          if (!pendingSwitchGreeting || closed) return;
+          const greeting = pendingSwitchGreeting;
+          pendingSwitchGreeting = "";
+          seeduplex.greet(greeting);
         },
         onAudioDone: ({ text }) => {
           if (!activated || closed) return;

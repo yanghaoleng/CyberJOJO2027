@@ -38,9 +38,9 @@ export function getSeeduplexConfig(env = process.env) {
 }
 
 export function buildSessionCreate(config, { instructions, voice, context = [], tools = [] }) {
-  const history = Array.isArray(context) ? context.slice(0, 40).map((entry) => ({
+  const history = Array.isArray(context) ? context.slice(0, 40).filter((entry) => String(entry?.text || "").trim()).map((entry) => ({
     role: entry.role === "assistant" ? "assistant" : "user",
-    text: String(entry.text || "").slice(0, 1000),
+    text: `${entry.role === "assistant" ? `[${entry.character === "lvdou" ? "Domi" : "叫叫"}] ` : ""}${String(entry.text || "").slice(0, 1000)}`,
   })).filter((entry) => entry.text) : [];
   return {
     type: "session.create",
@@ -247,7 +247,7 @@ export function buildToolResult({ callId, ok = true, calls }) {
 }
 
 export class SeeduplexSession {
-  constructor({ config, instructions, voice, context = [], onTranscript, onText, onAudioStart, onAudioDelta, onAudioDone, onCancel, onFunctionCall, onDone, onError, onReady }) {
+  constructor({ config, instructions, voice, context = [], onTranscript, onText, onAudioStart, onAudioDelta, onAudioDone, onCancel, onCancelAcknowledged, onFunctionCall, onDone, onError, onReady }) {
     this.config = config;
     this.instructions = instructions;
     this.voice = voice;
@@ -256,6 +256,7 @@ export class SeeduplexSession {
     this.onText = onText;
     this.onAudioStart = onAudioStart;
     this.onCancel = onCancel;
+    this.onCancelAcknowledged = onCancelAcknowledged;
     this.onAudioDelta = onAudioDelta;
     this.onAudioDone = onAudioDone;
     this.onFunctionCall = onFunctionCall;
@@ -396,6 +397,7 @@ export class SeeduplexSession {
         clearTimeout(this.cancelTimer);
         this.awaitingCancelAck = false;
         this.cancelOutput();
+        this.onCancelAcknowledged?.();
         break;
       case "response.function_call_arguments.done":
         if (!event.calls?.length) { this.failStalled("missing function call identifiers"); break; }

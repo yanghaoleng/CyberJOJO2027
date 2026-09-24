@@ -115,7 +115,7 @@ export function useCameraSceneAnalysis({
         if (pendingRequestRef.current) return;
 
         if (!result.evaluable || !result.text) {
-          result.text = "我还没看清，把它靠近镜头一点，再让我看看吧。";
+          result.text = activeCharacterRef.current === "lvdou" ? "I can't see it clearly yet. Can you bring it closer?" : "我还没看清，把它靠近镜头一点，再让我看看吧。";
           result.action = "curious";
         }
         const now = Date.now();

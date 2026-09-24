@@ -30,3 +30,9 @@ test("character names in ordinary conversation do not switch characters", () => 
   assert.equal(detectCharacterSwitchCommand("绿豆今天好可爱"), null);
   assert.equal(detectCharacterSwitchCommand("我想和叫叫聊天"), null);
 });
+
+test("missing either companion and saying Domi switches by voice", () => {
+  for (const phrase of ["我想叫叫了", "想要见叫叫", "I miss Jiaojiao"]) assert.equal(detectCharacterSwitchCommand(phrase), "jiaojiao", phrase);
+  for (const phrase of ["我想绿豆了", "想要见Domi", "I want to see Domi"]) assert.equal(detectCharacterSwitchCommand(phrase), "lvdou", phrase);
+  assert.equal(detectCharacterSwitchCommand("今天我和绿豆看了一本书"), null);
+});

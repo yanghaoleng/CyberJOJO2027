@@ -29,7 +29,10 @@ export function normalizeFriend(value, previous = null) {
   return {
     id: previous?.id || value.id || createFriendId(), name,
     kind: clean(value.kind, 32), appearance: clean(value.appearance, 160), childDescription: clean(value.childDescription, 240),
-    english: clean(value.english, 48), learning: clean(value.learning, 180), stickerBlob,
+    english: clean(value.english, 48), learning: clean(value.learning, 180),
+    character: value.character === "jiaojiao" ? "jiaojiao" : value.character === "lvdou" ? "lvdou" : previous?.character || "legacy",
+    sourceIdiom: clean(value.sourceIdiom, 16), sourceMeaning: clean(value.sourceMeaning, 180),
+    idiom: clean(value.idiom, 24), idiomMeaning: clean(value.idiomMeaning, 180), stickerBlob,
     originalBlob, status, captureId: value.captureId || null,
     bbox: value.bbox || null, subject: clean(value.subject, 48),
     attempts: Math.max(0, Number(value.attempts) || 0), retryAt: Number(value.retryAt) || 0,

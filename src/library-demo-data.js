@@ -316,8 +316,7 @@ export const DEMO_RECORDS = {
   },
 };
 
-// —— 叫叫的语音留言（模拟；偶尔出现，不是每天都有）——
-// 留言是叫叫在对话结束后留给孩子的语音，独立于当天小记展示。
+// —— 两位伙伴的语音留言（模拟；偶尔同一天都会出现）——
 export const DEMO_LEAVE_NOTES = [
   {
     dayKey: "2026-08-24",
@@ -350,6 +349,13 @@ export const DEMO_LEAVE_NOTES = [
     createdAt: 1756209600000,
     durationSec: 9,
     text: "粉色天空是你自己发现的，这个我特别服气。明天傍晚我们再一起看，如果它换颜色了，我们就给天空也记一笔小账。",
+  },
+  {
+    dayKey: "2026-09-20",
+    character: "lvdou",
+    createdAt: at(9, 20, 19, 20),
+    durationSec: 6,
+    text: "I noticed the sky with you today. Sky is a lovely word to remember!",
   },
   {
     dayKey: "2026-09-22",
@@ -533,7 +539,7 @@ export const DEMO_FRIENDS = [
     updatedAt: at(9, 20, 19, 0),
     version: 2,
   },
-];
+].map((friend) => ({ ...friend, character: "lvdou" }));
 
 // —— 相册时间线（按天分组，与 useDailyJournal 输出结构一致）——
 // 有照片的日子按照片分组；2026-09-10 只有对话小记没有照片（体现「不拍照也能留下小记」）
@@ -556,4 +562,3 @@ export const DEMO_TIMELINE = (() => {
     .map((day) => ({ ...day, items: [...day.items].sort((a, b) => Number(a.createdAt || 0) - Number(b.createdAt || 0)) }))
     .sort((a, b) => a.dayKey.localeCompare(b.dayKey));
 })();
-

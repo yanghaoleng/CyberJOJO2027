@@ -163,7 +163,7 @@ function createSummaryInput(days) {
           dialogue: day.entries.map((entry) => ({
             id: entry.id,
             source: entry.source,
-            speaker: entry.role === "user" ? "小朋友" : entry.character === "lvdou" ? "绿豆" : "叫叫",
+            speaker: entry.role === "user" ? "小朋友" : entry.character === "lvdou" ? "Domi（绿豆）" : "叫叫",
             text: entry.text,
           })),
         }),

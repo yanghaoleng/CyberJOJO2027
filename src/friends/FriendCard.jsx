@@ -32,6 +32,14 @@ function speakWord(english) {
   if (synthesis.paused) synthesis.resume();
 }
 function DetailWords({ friend, word }) {
+  if (friend.character === "jiaojiao") return <>
+    <p className="friend-card-kind">绘本角色贴纸</p>
+    {friend.sourceIdiom && <div className="friend-card-idiom"><strong>{friend.sourceIdiom}</strong><span>原成语</span></div>}
+    {friend.sourceMeaning && <p className="friend-card-story">原意：{friend.sourceMeaning}</p>}
+    {friend.idiom ? <div className="friend-card-idiom"><strong>{friend.idiom}</strong><span>孩子创作的新说法</span></div> : <p className="friend-card-story">聊聊它在绘本里做过什么，再一起编一句新成语。</p>}
+    {friend.idiomMeaning && <p className="friend-card-story">意思是：{friend.idiomMeaning}</p>}
+    <div className="friend-card-date">收录于 {new Date(friend.createdAt || Date.now()).toLocaleDateString("zh-CN")}<span>✦</span></div>
+  </>;
   return (
     <>
       <div className="friend-card-word-row">
@@ -50,8 +58,8 @@ export default function FriendCard({ friend, compact = false }) {
   const word = friend?.english || "";
   return <article className={`friend-card ${compact ? "is-compact" : ""}`}>
     <div className={`friend-card-photo ${pending ? "is-original" : ""}`}>{url && <img src={url} alt={`${friend.name || "收集"}的${pending ? "原图" : "贴纸"}`} />}<span className="friend-card-stamp">{pending ? friend.status === "failed" ? "原图已保存" : "正在制作贴纸" : "已收集"}</span></div>
-    <div className="friend-card-info"><div className="friend-card-kicker">我的收集</div><h3>{friend.name || "新发现"}</h3>
-      {compact ? (word ? <p className="friend-card-word">{word}</p> : null) : <DetailWords friend={friend} word={word} />}
+    <div className="friend-card-info"><div className="friend-card-kicker">{friend.character === "jiaojiao" ? "叫叫 · 绘本角色" : friend.character === "lvdou" ? "Domi · Word card" : "以前的收集"}</div><h3>{friend.name || "新发现"}</h3>
+      {compact ? (friend.character === "jiaojiao" ? <p className="friend-card-word">{friend.idiom || "我的创意成语"}</p> : word ? <p className="friend-card-word">{word}</p> : null) : <DetailWords friend={friend} word={word} />}
     </div>
   </article>;
 }

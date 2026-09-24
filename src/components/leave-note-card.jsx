@@ -17,11 +17,18 @@ export function LeaveNoteCard({ note, onFinished }) {
   const [playing, setPlaying] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [gone, setGone] = useState(false);
+  const [blobUrl, setBlobUrl] = useState("");
   const audioElementRef = useRef(null);
   const utteranceRef = useRef(null);
   const timerRef = useRef(null);
 
-  const audioUrl = note?.audioUrl || "";
+  useEffect(() => {
+    if (!(note?.audioBlob instanceof Blob)) { setBlobUrl(""); return undefined; }
+    const url = URL.createObjectURL(note.audioBlob);
+    setBlobUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [note?.audioBlob]);
+  const audioUrl = blobUrl || note?.audioUrl || "";
   const durationSec = Math.max(1, Number(note?.durationSec) || 8);
 
   const clearTimers = () => {
@@ -72,11 +79,6 @@ export function LeaveNoteCard({ note, onFinished }) {
           return;
         }
         const current = audio.currentTime || 0;
-        if (current >= durationSec) {
-          stop();
-          onFinished?.();
-          return;
-        }
         setElapsed(current);
       }, 200);
       audio.addEventListener("ended", () => {
@@ -102,7 +104,7 @@ export function LeaveNoteCard({ note, onFinished }) {
     }, 200);
     if (window.speechSynthesis) {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "zh-CN";
+      utterance.lang = note?.character === "lvdou" ? "en-US" : "zh-CN";
       utterance.rate = 1;
       utterance.onend = () => {
         stop();
@@ -137,7 +139,7 @@ export function LeaveNoteCard({ note, onFinished }) {
         )}
       </button>
       <div className="leave-note-body">
-        <div className="leave-note-meta"><span className="leave-note-badge">叫叫留言</span><span className="leave-note-time">{formatDuration(progress * durationSec)}</span></div>
+        <div className="leave-note-meta"><span className="leave-note-badge">{note?.character === "lvdou" ? "Domi 录音" : "叫叫录音"}</span><span className="leave-note-time">{formatDuration(elapsed)}</span></div>
         <div className="leave-note-wave" aria-hidden="true">
           {Array.from({ length: 24 }, (_, index) => {
             const height = 30 + ((index * 17) % 70);

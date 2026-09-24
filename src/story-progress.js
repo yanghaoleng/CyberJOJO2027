@@ -1,5 +1,5 @@
 import { getLocalDayKey } from "./daily-timeline.js";
-const KEY = "jocam-story-paper-bridge-v1";
+const KEY = "jocam-story-reading-v1";
 export function getStoryVisit({ storage, now = Date.now(), activate = false } = {}) {
   try { if (storage === undefined) storage = globalThis.localStorage; } catch { /* storage may be blocked */ }
   const today = getLocalDayKey(now);
