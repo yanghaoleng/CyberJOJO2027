@@ -62,6 +62,15 @@
     @media(prefers-reduced-motion:no-preference){.motion-ready [data-reveal]{opacity:0;transform:translateY(14px) scale(1.01);filter:blur(14px);transition:opacity 760ms cubic-bezier(.22,1,.36,1),transform 760ms cubic-bezier(.22,1,.36,1),filter 760ms cubic-bezier(.22,1,.36,1);transition-delay:var(--reveal-delay,0ms);will-change:transform,opacity,filter}.motion-ready [data-reveal].is-visible{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}.motion-ready .hero [data-reveal]{transform:translateY(20px) scale(1.012);filter:blur(18px);transition-duration:1280ms,1280ms,1280ms;transition-timing-function:cubic-bezier(.16,1,.3,1);transition-delay:var(--reveal-delay,0ms)}.motion-ready .hero [data-reveal].is-visible{transform:translateY(0) scale(1);filter:blur(0)}.motion-ready .hero-title .title-character{opacity:0;transform:translateY(18px) scale(1.045);transition:opacity 900ms cubic-bezier(.16,1,.3,1),transform 900ms cubic-bezier(.16,1,.3,1);transition-delay:calc(1480ms + var(--title-char-delay));will-change:transform,opacity}.motion-ready .hero-title.title-ready .title-character{opacity:1;transform:translateY(0) scale(1)}.motion-ready .hero-slogan .slogan-character{opacity:0;transform:translateY(11px) scale(1.04);filter:blur(9px);transition:opacity 700ms cubic-bezier(.16,1,.3,1),transform 700ms cubic-bezier(.16,1,.3,1),filter 700ms cubic-bezier(.16,1,.3,1);transition-delay:calc(1640ms + var(--char-delay));will-change:transform,opacity,filter}.motion-ready .hero-slogan.slogan-ready .slogan-character{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}}
     @media(max-width:850px){.hero{min-height:760px;background-position:64% 50%}.hero-video{object-position:64% 50%}.hero:before{background:linear-gradient(90deg,rgba(8,6,38,.82),rgba(12,9,46,.22))}.hero-copy{padding-top:180px}.need-case,.intro,.boundary-grid,.question-card.wide{grid-template-columns:1fr}.case-carousel{width:min(100%,280px);justify-self:start}.audience-head{display:block}.switch{width:max-content;margin-top:24px}.cards,.question-grid,.guardrails,.policy-regions,.feature-groups,.strategy-flow{grid-template-columns:1fr}.step-arrow{display:none}.card:nth-child(1),.card:nth-child(4){grid-column:auto}.feature-item{grid-template-columns:1fr;gap:7px}.question-card.wide{grid-column:auto}.principles{grid-template-columns:1fr}.principle:nth-child(odd){padding-right:0}.nav-note{display:none}.policy-modal{padding:12px}.policy-dialog{max-height:92dvh;border-radius:22px;padding:22px}.policy-line{margin-top:-10px}}
     @media(prefers-reduced-transparency:reduce){.policy-backdrop{backdrop-filter:none;background:rgba(8,6,30,.92)}}
+    .shot-row{display:flex;gap:10px;flex-wrap:wrap}
+    .shot{position:relative;display:inline-block;margin:16px 0 2px;width:min(150px,34vw);cursor:zoom-in;outline:none}
+    .shot-row .shot{margin-top:0;flex:1 1 0;min-width:0}
+    .shot img{width:100%;height:auto;display:block;border-radius:14px;box-shadow:0 10px 26px rgba(16,10,44,.25);transition:transform .25s ease,box-shadow .25s ease;background:#151230}
+    .shot:hover img,.shot:focus-visible img{transform:translateY(-3px) scale(1.03);box-shadow:0 14px 34px rgba(16,10,44,.34)}
+    .shot-pop{position:fixed;z-index:130;left:50%;top:50%;width:300px;max-width:88vw;transform:translate(-50%,-50%) scale(.94);opacity:0;visibility:hidden;pointer-events:none;background:#0d0b1a;border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:8px;box-shadow:0 26px 80px rgba(0,0,0,.55);transition:opacity .26s ease,transform .26s ease,visibility .26s}
+    .shot-pop img{width:100%;height:auto;display:block;border-radius:12px}
+    .shot-pop .shot-pop-cap{color:#b9b2d8;font-size:11.5px;letter-spacing:.02em;padding:9px 4px 3px;text-align:center}
+    .shot-pop.show{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
   </style>
 </head>
 <body>
@@ -96,10 +105,10 @@
     </section>
     <section class="section feature-details" id="features">
       <div class="feature-groups">
-        <article class="feature-group" data-reveal><h3>先聊聊今天</h3><div class="feature-item"><b>接住想念和烦恼</b><span>孩子提起想念家人、开心事或不顺心，叫叫先回应，再只问一个愿意回答的问题。</span></div><div class="feature-item"><b>当天小记</b><span>只整理孩子真实说过的经历、感受与想法，让普通的一天有可回看的线索。</span></div></article>
+        <article class="feature-group" data-reveal><h3>先聊聊今天</h3><div class="feature-item"><b>接住想念和烦恼</b><span>孩子提起想念家人、开心事或不顺心，叫叫先回应，再只问一个愿意回答的问题。</span></div><div class="feature-item"><b>当天小记</b><span>只整理孩子真实说过的经历、感受与想法，让普通的一天有可回看的线索。</span></div><figure class="shot" data-shot="assets/shots/02-together-blocks-full.jpg" role="button" tabindex="0" aria-label="孩子和叫叫一起玩积木和玩偶"><img src="assets/shots/02-together-blocks-thumb.jpg" alt="孩子和叫叫一起玩积木和玩偶" loading="lazy" /></figure></article>
         <article class="feature-group" data-reveal style="--reveal-delay:80ms"><h3>一起找找看</h3><div class="feature-item"><b>孩子自己决定找什么</b><span>从颜色或身边常见物开始；说没有或不想找时，立刻换个方向，不设任务入口。</span></div><div class="feature-item"><b>需要时才看镜头</b><span>孩子说“拿给你看”后才观察画面，不根据镜头猜测孩子的心情。</span></div></article>
-        <article class="feature-group" data-reveal><h3>看清一件具体的事</h3><div class="feature-item"><b>白色虚线框</b><span>第一次看不清时，才邀请把物品放进取景框再试。</span></div><div class="feature-item"><b>把发现继续聊下去</b><span>绘本、食物、植物或动物，会变成下一句关于内容、照料或观察的对话。</span></div></article>
-        <article class="feature-group" data-reveal style="--reveal-delay:80ms"><h3>动作也有回应</h3><div class="feature-item"><b>点赞和比心</b><span>角色会用表情、动作和语音自然回应。</span></div><div class="feature-item"><b>留下真实片刻</b><span>关键互动可以触发自动快门，影像和当天小记都留在孩子的生活脉络里。</span></div></article>
+        <article class="feature-group" data-reveal><h3>看清一件具体的事</h3><div class="feature-item"><b>白色虚线框</b><span>第一次看不清时，才邀请把物品放进取景框再试。</span></div><div class="feature-item"><b>把发现继续聊下去</b><span>绘本、食物、植物或动物，会变成下一句关于内容、照料或观察的对话。</span></div><figure class="shot" data-shot="assets/shots/04-checkin-yogurt-full.jpg" role="button" tabindex="0" aria-label="叫叫陪孩子打卡蓝莓味酸奶"><img src="assets/shots/04-checkin-yogurt-thumb.jpg" alt="叫叫陪孩子打卡蓝莓味酸奶" loading="lazy" /></figure></article>
+        <article class="feature-group" data-reveal style="--reveal-delay:80ms"><h3>动作也有回应</h3><div class="feature-item"><b>点赞和比心</b><span>角色会用表情、动作和语音自然回应。</span></div><div class="feature-item"><b>留下真实片刻</b><span>关键互动可以触发自动快门，影像和当天小记都留在孩子的生活脉络里。</span></div><figure class="shot" data-shot="assets/shots/03-feed-cake-full.jpg" role="button" tabindex="0" aria-label="“分你一口”：一句话变成可拖给叫叫的食物"><img src="assets/shots/03-feed-cake-thumb.jpg" alt="“分你一口”：一句话变成可拖给叫叫的食物" loading="lazy" /></figure></article>
       </div>
     </section>
     <section class="section strategy" id="strategy">
@@ -129,7 +138,7 @@
         <article class="arc-step" data-reveal style="--reveal-delay:210ms"><span class="num">第四幕 · 一起长大</span><b>回到真实生活</b><p>兴趣延伸成现实行动，叫叫把爸爸妈妈拉进来，一起完成小事、一起看周报。</p></article>
       </div>
       <div class="daily-note" data-reveal>
-        <div class="daily-note-copy"><div class="kicker">DAILY MESSAGE · 叫叫每天的留言</div><p>每天结束时，叫叫会留下一句基于当天相处的话：可能是一个提问、一句夸奖，或一个明天的约定。它不是推送轰炸，而是一个“明天见”的理由——孩子知道回来时，叫叫还记得昨天的事。</p></div>
+        <div class="daily-note-copy"><div class="kicker">DAILY MESSAGE · 叫叫每天的留言</div><p>每天结束时，叫叫会留下一句基于当天相处的话：可能是一个提问、一句夸奖，或一个明天的约定。它不是推送轰炸，而是一个“明天见”的理由——孩子知道回来时，叫叫还记得昨天的事。</p><figure class="shot" data-shot="assets/shots/07-timeline-message-full.jpg" role="button" tabindex="0" aria-label="相册里的叫叫留言与当天小记"><img src="assets/shots/07-timeline-message-thumb.jpg" alt="相册里的叫叫留言与当天小记" loading="lazy" /></figure></div>
         <div class="bubble"><p>“今天你搭的积木塔，比我还高呢。明天我们试试，能不能搭一座桥？”</p><small>—— 叫叫 · 晚安留言</small></div>
       </div>
     </section>
@@ -139,8 +148,8 @@
         <article class="talk-card" data-reveal><b>语音对话</b><p>主入口。孩子想说什么就说什么，“比个心”“我饿了”“看看这个”都行。</p></article>
         <article class="talk-card" data-reveal style="--reveal-delay:60ms"><b>点赞与比心</b><p>动作也有回应。孩子点赞、比心，叫叫立刻回赞、回心。</p></article>
         <article class="talk-card" data-reveal style="--reveal-delay:120ms"><b>镜头观察</b><p>孩子说“拿给你看”后，镜头才一起看；看不清时出现白色虚线框。</p></article>
-        <article class="talk-card" data-reveal style="--reveal-delay:180ms"><b>当天小记</b><p>叫叫把孩子真的说过的话整理成小记，孩子可以查看、修改、回忆。</p></article>
-        <article class="talk-card" data-reveal style="--reveal-delay:240ms"><b>收集与单词卡</b><p>身边的东西变成贴纸收集，点开还能当英语单词卡读一读。</p></article>
+        <article class="talk-card" data-reveal style="--reveal-delay:180ms"><b>当天小记</b><p>叫叫把孩子真的说过的话整理成小记，孩子可以查看、修改、回忆。</p><figure class="shot" data-shot="assets/shots/08-journal-list-full.jpg" role="button" tabindex="0" aria-label="当天小记：孩子真的说过的话"><img src="assets/shots/08-journal-list-thumb.jpg" alt="当天小记：孩子真的说过的话" loading="lazy" /></figure></article>
+        <article class="talk-card" data-reveal style="--reveal-delay:240ms"><b>收集与单词卡</b><p>身边的东西变成贴纸收集，点开还能当英语单词卡读一读。</p><div class="shot-row"><figure class="shot" data-shot="assets/shots/05-library-stickers-full.jpg" role="button" tabindex="0" aria-label="相册收集：身边的东西变成中英文贴纸"><img src="assets/shots/05-library-stickers-thumb.jpg" alt="相册收集：身边的东西变成中英文贴纸" loading="lazy" /></figure><figure class="shot" data-shot="assets/shots/06-sticker-milk-full.jpg" role="button" tabindex="0" aria-label="点开贴纸就是英语单词卡"><img src="assets/shots/06-sticker-milk-thumb.jpg" alt="点开贴纸就是英语单词卡" loading="lazy" /></figure></div></article>
         <article class="talk-card" data-reveal style="--reveal-delay:300ms"><b>每日留言</b><p>每天留下一句话，让第二天从“叫叫还记得我”开始。</p></article>
       </div>
       <div class="retention" data-reveal>
@@ -218,6 +227,44 @@
     function renderHeroTitle(){const lines=['赛博叫叫','2027'],element=document.querySelector('#heroTitle');if(!element)return;element.setAttribute('aria-label',lines.join(''));element.textContent='';let index=0;lines.forEach(line=>{const lineElement=document.createElement('span');lineElement.className='title-line';[...line].forEach(character=>{const span=document.createElement('span');span.className='title-character';span.setAttribute('aria-hidden','true');span.style.setProperty('--title-char-delay',`${index++*120}ms`);span.textContent=character;lineElement.append(span)});element.append(lineElement)});requestAnimationFrame(()=>element.classList.add('title-ready'))}
     function renderHeroSlogan(){const slogans=['先听见孩子，再陪他发现世界。','陪孩子说说今天，也一起看看世界。','接住每一句想说的话，点亮每一次发现。'];const slogan=slogans[Math.floor(Math.random()*slogans.length)],element=document.querySelector('#heroSlogan');if(!element)return;element.setAttribute('aria-label',slogan);element.textContent='';[...slogan].forEach((character,index)=>{const span=document.createElement('span');span.className='slogan-character';span.setAttribute('aria-hidden','true');span.style.setProperty('--char-delay',`${index*58}ms`);span.textContent=character;element.append(span)});requestAnimationFrame(()=>element.classList.add('slogan-ready'))}
     document.querySelectorAll('.switch button').forEach(b=>b.addEventListener('click',()=>render(b.dataset.mode)));render('user');renderHeroTitle();renderHeroSlogan();observeReveals();playHeroMotion();
+  </script>
+  <script>
+    (function () {
+      var pop = null;
+      function ensurePop() {
+        if (!pop) {
+          pop = document.createElement('div');
+          pop.className = 'shot-pop';
+          pop.setAttribute('role', 'dialog');
+          pop.innerHTML = '<img alt="" /><div class="shot-pop-cap"></div>';
+          document.body.appendChild(pop);
+        }
+        return pop;
+      }
+      function show(el) {
+        var p = ensurePop();
+        p.querySelector('img').src = el.dataset.shot;
+        p.querySelector('.shot-pop-cap').textContent = el.getAttribute('aria-label') || '';
+        p.classList.add('show');
+      }
+      function hide() { if (pop) pop.classList.remove('show'); }
+      function visible() { return pop && pop.classList.contains('show'); }
+      document.querySelectorAll('[data-shot]').forEach(function (el) {
+        el.addEventListener('mouseenter', function () { show(el); });
+        el.addEventListener('mouseleave', function () { hide(); });
+        el.addEventListener('click', function (e) {
+          e.preventDefault(); e.stopPropagation();
+          if (visible()) hide(); else show(el);
+        });
+        el.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (visible()) hide(); else show(el); }
+        });
+      });
+      document.addEventListener('click', function (e) {
+        if (visible() && !e.target.closest('[data-shot]') && !pop.contains(e.target)) hide();
+      });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && visible()) hide(); });
+    })();
   </script>
 </body>
 </html>

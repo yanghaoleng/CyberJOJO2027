@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-23T16:36:58.030Z",
-  "publicFileCount": 89,
-  "totalBytes": 100923933,
+  "generatedAt": "2026-09-24T02:34:08.715Z",
+  "publicFileCount": 103,
+  "totalBytes": 101281337,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -660,13 +660,139 @@
       ]
     },
     {
+      "id": "intro/assets/shots/02-together-blocks-full.jpg",
+      "path": "intro/assets/shots/02-together-blocks-full.jpg",
+      "name": "02-together-blocks-full.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 45171,
+      "sha256": "7e3fd7b2af21fa13d65b05cc203eb8690d45809a6386db0f6a0f326f6507ecf0"
+    },
+    {
+      "id": "intro/assets/shots/02-together-blocks-thumb.jpg",
+      "path": "intro/assets/shots/02-together-blocks-thumb.jpg",
+      "name": "02-together-blocks-thumb.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 10586,
+      "sha256": "67b3e0fd995e5d0f98c6d963cf2d2f22d23859e0fda1fc29117bd8f460b3d5fe"
+    },
+    {
+      "id": "intro/assets/shots/03-feed-cake-full.jpg",
+      "path": "intro/assets/shots/03-feed-cake-full.jpg",
+      "name": "03-feed-cake-full.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 43594,
+      "sha256": "c78b1fb6f05840bb274e3579908b8ed8b3be74edaf47f2b49499b43e3758730b"
+    },
+    {
+      "id": "intro/assets/shots/03-feed-cake-thumb.jpg",
+      "path": "intro/assets/shots/03-feed-cake-thumb.jpg",
+      "name": "03-feed-cake-thumb.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 10146,
+      "sha256": "6cc9ef43e9348996e4f81efb55d224bf38d3f04ff30e9e7c49f090336397c75c"
+    },
+    {
+      "id": "intro/assets/shots/04-checkin-yogurt-full.jpg",
+      "path": "intro/assets/shots/04-checkin-yogurt-full.jpg",
+      "name": "04-checkin-yogurt-full.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 45144,
+      "sha256": "22f44f92a735274923b8cd0896dac93fa5161bff7363aa312b6d2b716460e2c5"
+    },
+    {
+      "id": "intro/assets/shots/04-checkin-yogurt-thumb.jpg",
+      "path": "intro/assets/shots/04-checkin-yogurt-thumb.jpg",
+      "name": "04-checkin-yogurt-thumb.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 10479,
+      "sha256": "4aba20d3cbf2c698ef5fd5bc3d121a5f28c1e489ed6b104fd81a6458ebab30e2"
+    },
+    {
+      "id": "intro/assets/shots/05-library-stickers-full.jpg",
+      "path": "intro/assets/shots/05-library-stickers-full.jpg",
+      "name": "05-library-stickers-full.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 41570,
+      "sha256": "34669e20776984bec8e12e883a1df5715b82d568b632fd561ca116e9ee3a4e57"
+    },
+    {
+      "id": "intro/assets/shots/05-library-stickers-thumb.jpg",
+      "path": "intro/assets/shots/05-library-stickers-thumb.jpg",
+      "name": "05-library-stickers-thumb.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 8712,
+      "sha256": "6e9a86278d0c86a9edca167409250367bf3fdc9f747291f69bddf9bb42de9b50"
+    },
+    {
+      "id": "intro/assets/shots/06-sticker-milk-full.jpg",
+      "path": "intro/assets/shots/06-sticker-milk-full.jpg",
+      "name": "06-sticker-milk-full.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 30615,
+      "sha256": "118955970a9c698267488c4df768924119b9d306be02c9d3077dc272499603df"
+    },
+    {
+      "id": "intro/assets/shots/06-sticker-milk-thumb.jpg",
+      "path": "intro/assets/shots/06-sticker-milk-thumb.jpg",
+      "name": "06-sticker-milk-thumb.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 6371,
+      "sha256": "d97b68413bd7fe4524e9007b634ddef126557a614af25d2c7c8c2b01f55ead73"
+    },
+    {
+      "id": "intro/assets/shots/07-timeline-message-full.jpg",
+      "path": "intro/assets/shots/07-timeline-message-full.jpg",
+      "name": "07-timeline-message-full.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 44496,
+      "sha256": "4e744fe7175a2c8e58e43a1512827f6048810277844011c053cd95df2f4aba70"
+    },
+    {
+      "id": "intro/assets/shots/07-timeline-message-thumb.jpg",
+      "path": "intro/assets/shots/07-timeline-message-thumb.jpg",
+      "name": "07-timeline-message-thumb.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 8717,
+      "sha256": "373063c77c37904ddee9709aa2581ddbab1919ea97aa64b132b3627aa5e012eb"
+    },
+    {
+      "id": "intro/assets/shots/08-journal-list-full.jpg",
+      "path": "intro/assets/shots/08-journal-list-full.jpg",
+      "name": "08-journal-list-full.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 39250,
+      "sha256": "e6119a398ff0aeabfffb469c7baadefe1b18687665aa7dc99f7a10f76dde3976"
+    },
+    {
+      "id": "intro/assets/shots/08-journal-list-thumb.jpg",
+      "path": "intro/assets/shots/08-journal-list-thumb.jpg",
+      "name": "08-journal-list-thumb.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 7718,
+      "sha256": "4ff4c8324147593138bb92e7b0108c2f4ba9356acbae3e3188941921111ba564"
+    },
+    {
       "id": "intro/index.html",
       "path": "intro/index.html",
       "name": "index.html",
       "category": "other",
       "format": "HTML",
-      "bytes": 48009,
-      "sha256": "209658001405ea8bbf2f085a3ff87c4acbd29a7b6a7a1fdb3b50ba97c06c27b7"
+      "bytes": 52844,
+      "sha256": "2edf8f131edd23d37aaab6d576953c27dbfd554ecebf12903bc3ffc6b9bd9414"
     },
     {
       "id": "media/heart-balloon.riv",
