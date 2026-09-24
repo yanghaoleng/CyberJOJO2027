@@ -37,6 +37,7 @@ import { FaceLandmarker, FilesetResolver, GestureRecognizer, ImageSegmenter } fr
 import { Calligraph } from "calligraph";
 import QRCode from "qrcode";
 import { PcmSpeechPlayer } from "./pcm-speech-player.js";
+import { createVoicePrewarm } from "./voice-prewarm.js";
 import { createUISFX } from "uisfx";
 import {
   CAMERA_GESTURES,
@@ -851,6 +852,7 @@ function App() {
   const pipStreamRef = useRef(null);
   const pipRequestIdRef = useRef(0);
   const voiceSocketRef = useRef(null);
+  const voicePrewarmRef = useRef(null);
   const voiceAudioGraphRef = useRef(null);
   const voiceIntentionalCloseRef = useRef(false);
   const voiceReadyRef = useRef(false);
@@ -1806,7 +1808,10 @@ function App() {
       voiceAudioGraphRef.current = { context, source, processor, silent };
       }
 
-      const socket = new WebSocket(getVoiceSocketUrl());
+      const warm = audioTrack ? voicePrewarmRef.current?.take() : null;
+      voicePrewarmRef.current?.dispose();
+      voicePrewarmRef.current = null;
+      const socket = warm?.socket || new WebSocket(getVoiceSocketUrl());
       socket.binaryType = "arraybuffer";
       voiceSocketRef.current = socket;
       let readyTimer = null;
@@ -1866,9 +1871,9 @@ function App() {
         if (pcm.byteLength) socket.send(pcm.buffer);
       };
 
-      socket.addEventListener("open", () => {
+      const beginSession = () => {
         if (voiceSocketRef.current !== socket) return;
-        socket.send(JSON.stringify({
+        if (!warm?.startSent) socket.send(JSON.stringify({
           type: "start",
           inputMode: audioTrack ? "voice" : "text",
           sampleRate: 16_000,
@@ -1877,8 +1882,10 @@ function App() {
         }));
         socket.send(JSON.stringify({ type: "context", ...journalContextRef.current() }));
         socket.send(JSON.stringify({ type: "interaction_mode", mode: gameplayModeRef.current || "none" }));
-      });
-      socket.addEventListener("message", (event) => {
+        if (warm?.startSent) socket.send(JSON.stringify({ type: "activate" }));
+      };
+      socket.addEventListener("open", beginSession);
+      const handleMessage = (event) => {
         if (voiceSocketRef.current !== socket) return;
         if (typeof event.data !== "string") return;
         let message;
@@ -2040,7 +2047,12 @@ function App() {
           showToast(message.message || "语音识别暂时不可用");
           if (message.code === "ASR_UNAVAILABLE") scheduleVoiceReconnect();
         }
-      });
+      };
+      socket.addEventListener("message", handleMessage);
+      // A ready event may have arrived on the cover; replay only readiness,
+      // never audio. The server starts the greeting only after activation.
+      if (warm?.readyMessage) handleMessage({ data: JSON.stringify(warm.readyMessage) });
+      if (socket.readyState === WebSocket.OPEN) beginSession();
       socket.addEventListener("error", () => {
         if (voiceSocketRef.current !== socket) return;
         voiceReadyRef.current = false;
@@ -2065,6 +2077,25 @@ function App() {
       return null;
     }
   }, [activeCharacter, clearCharacterSpeech, dismissCollection, enqueueSynthesizedSpeech, prepareStreamingSpeech, recordConversationMessage, scheduleAutoCapture, setHiddenStoryFocus, showToast, stopVoiceSession]);
+
+  useEffect(() => {
+    if (cameraState !== "idle" && cameraState !== "error") return;
+    const prepare = () => {
+      voicePrewarmRef.current?.dispose();
+      voicePrewarmRef.current = null;
+      if (document.visibilityState !== "hidden") {
+        try { voicePrewarmRef.current = createVoicePrewarm(getVoiceSocketUrl(), activeCharacter); }
+        catch { /* Click-to-start retains the normal connection fallback. */ }
+      }
+    };
+    prepare();
+    document.addEventListener("visibilitychange", prepare);
+    return () => {
+      document.removeEventListener("visibilitychange", prepare);
+      // Preserve the connection across the opening/permission transition.
+      // Unmount cleanup below owns its final disposal.
+    };
+  }, [cameraState, activeCharacter]);
 
   const updateMask = useCallback((result) => {
     const masks = result.confidenceMasks;
@@ -3290,6 +3321,7 @@ function App() {
 
   useEffect(() => () => {
     cameraReadyRef.current = false;
+    voicePrewarmRef.current?.dispose();
     stopVoiceSession();
     stopPipCamera();
     streamRef.current?.getTracks().forEach((track) => track.stop());

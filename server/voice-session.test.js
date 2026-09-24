@@ -4,13 +4,75 @@ import { once } from "node:events";
 import http from "node:http";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import WebSocket from "ws";
+import WebSocket, { WebSocketServer } from "ws";
 
 async function waitFor(condition, timeout = 6000) {
   const started = Date.now();
   while (!condition()) { if (Date.now() - started > timeout) throw new Error("Voice session test timed out"); await new Promise((resolve) => setTimeout(resolve, 15)); }
 }
 async function freePort() { const server = http.createServer(); server.listen(0, "127.0.0.1"); await once(server, "listening"); const port = server.address().port; await new Promise((resolve) => server.close(resolve)); return port; }
+
+test("cover warmup waits for activation, reuses upstream, and greets once even with early clicks", { timeout: 15000 }, async () => {
+  const provider = new WebSocketServer({ port: 0, host: "127.0.0.1" });
+  await once(provider, "listening");
+  const sessions = [];
+  provider.on("connection", socket => {
+    const entry = { socket, messages: [] }; sessions.push(entry);
+    socket.on("message", data => {
+      const message = JSON.parse(data); entry.messages.push(message);
+      if (message.type === "speech_text_buffer.commit") {
+        socket.send(JSON.stringify({ type: "response.output_audio.started" }));
+        socket.send(JSON.stringify({ type: "response.output_audio.delta", delta: "AAAAAA==" }));
+        socket.send(JSON.stringify({ type: "response.output_audio.done" }));
+      }
+    });
+  });
+  const port = await freePort();
+  const child = spawn(process.execPath, [fileURLToPath(new URL("./index.js", import.meta.url))], {
+    env: { PATH: process.env.PATH, PORT: String(port), VOLC_ARK_API_KEY: "test-only", VOLC_SPEECH_API_KEY: "test-only", SEEDUPLEX_ENDPOINT: `ws://127.0.0.1:${provider.address().port}`, JOCAM_ALLOWED_ORIGINS: "http://127.0.0.1:5173" },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let output = ""; child.stdout.on("data", data => { output += data; }); child.stderr.on("data", data => { output += data; });
+  const clients = [];
+  try {
+    await waitFor(() => output.includes("bridge listening"));
+    for (const mode of ["ready-first", "click-first", "legacy-start"]) {
+      const socket = new WebSocket(`ws://127.0.0.1:${port}/voice`, { origin: "http://127.0.0.1:5173" }); clients.push(socket);
+      await once(socket, "open");
+      const messages = []; socket.on("message", data => messages.push(JSON.parse(data)));
+      const send = value => socket.send(JSON.stringify(value));
+      const count = sessions.length;
+      send({ type: "start", inputMode: "voice", deferGreeting: mode !== "legacy-start" });
+      await waitFor(() => sessions.length === count + 1 && sessions.at(-1).messages.length > 0);
+      const upstream = sessions.at(-1);
+      const greetings = () => upstream.messages.filter(m => m.type === "speech_text_buffer.commit");
+      if (mode === "click-first") { send({ type: "activate" }); send({ type: "activate" }); }
+      if (mode === "ready-first") {
+        // Audio input received before consent/activation must not reach upstream.
+        socket.send(Buffer.alloc(640));
+      }
+      upstream.socket.send(JSON.stringify({ type: "session.created", session: { id: mode } }));
+      await waitFor(() => messages.some(m => m.type === "ready"));
+      if (mode === "ready-first") {
+        assert.equal(greetings().length, 0);
+        assert.equal(messages.some(m => m.type.startsWith("speech_")), false);
+        assert.equal(upstream.messages.some(m => m.type === "input_audio_buffer.append"), false);
+        send({ type: "activate" }); send({ type: "activate" });
+      }
+      await waitFor(() => messages.some(m => m.type === "speech_end"));
+      assert.equal(greetings().length, 1);
+      assert.equal(sessions.length, count + 1, "activation must not reconnect the model");
+      socket.send(Buffer.alloc(640));
+      await waitFor(() => upstream.messages.some(m => m.type === "input_audio_buffer.append"));
+      const closed = once(socket, "close"); socket.close(); await closed;
+    }
+  } finally {
+    for (const socket of clients) socket.terminate();
+    child.kill("SIGTERM");
+    for (const socket of provider.clients) socket.terminate();
+    await new Promise(resolve => provider.close(resolve));
+  }
+});
 
 test("text-only voice sessions preserve gameplay transcripts and let a newer turn preempt an unfinished reply", { timeout: 25000 }, async () => {
   const calls = [];

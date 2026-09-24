@@ -155,6 +155,10 @@ websocketServer.on("connection", (client) => {
   let asr = null;
   let seeduplex = null;
   let started = false;
+  let activated = false;
+  let upstreamReady = false;
+  let openingSent = false;
+  let warmupTimer = null;
   let storyDay = storyDayFromDate();
   let storyAgeGroup = "mid";
   let sessionStartedAt = 0;
@@ -301,6 +305,7 @@ websocketServer.on("connection", (client) => {
   const endSession = () => {
     if (closed) return;
     closed = true;
+    clearTimeout(warmupTimer);
     cancelPending();
     clearPendingSpeech();
     asr?.close();
@@ -316,9 +321,24 @@ websocketServer.on("connection", (client) => {
   }, MAX_SESSION_MS) : null;
   hardStop?.unref();
 
+  const greetWhenActive = () => {
+    if (!activated || !upstreamReady || openingSent || closed) return;
+    openingSent = true;
+    clearTimeout(warmupTimer);
+    if (seeduplex) {
+      seeduplex.setMuted(interactionMode !== "none");
+      seeduplex.greet(buildOpeningText(storyDay, storyAgeGroup));
+    } else {
+      sendSpeech(buildOpeningText(storyDay, storyAgeGroup), { opening: true, character: activeCharacter }).catch((error) => {
+        console.error("Opening speech failed", { name: error.name });
+      });
+    }
+  };
+
   client.on("message", async (data, isBinary) => {
     try {
     if (isBinary) {
+      if (!activated) return;
       if (seeduplex) seeduplex.sendAudio(data);
       else asr?.sendAudio(data);
       return;
@@ -331,6 +351,13 @@ websocketServer.on("connection", (client) => {
     }
     if (!message || typeof message !== "object" || Array.isArray(message)) {
       sendJson(client, { type: "error", code: "INVALID_MESSAGE", message: "这条消息没有识别成功，请再试一次。" });
+      return;
+    }
+    if (message.type === "activate") {
+      if (!started || closed || activated) return;
+      activated = true;
+      clearTimeout(warmupTimer);
+      greetWhenActive();
       return;
     }
     if (message.type === "character") {
@@ -444,6 +471,8 @@ websocketServer.on("connection", (client) => {
     }
     if (message.type !== "start" || started) return;
     started = true;
+    activated = message.deferGreeting !== true;
+    if (!activated) warmupTimer = setTimeout(() => client.close(1000, "cover warmup expired"), 30_000);
     activeCharacter = normalizeCharacter(message.character);
     if (Number.isInteger(Number(message.storyDay))) {
       storyDay = Math.min(7, Math.max(1, Number(message.storyDay)));
@@ -463,6 +492,7 @@ websocketServer.on("connection", (client) => {
         voice: seeduplexConfig.voices[activeCharacter] || ttsConfig.voices[activeCharacter],
         context: context.entries,
         onTranscript: (transcript) => {
+          if (!activated) return;
           const corrected = correctBrandTranscript(transcript.text);
           const normalizedTranscript = { ...transcript, text: corrected.text.slice(0, 1000),
             id: transcript.final ? `dialogue-${randomUUID()}` : undefined,
@@ -487,25 +517,27 @@ websocketServer.on("connection", (client) => {
           }
         },
         onAudioStart: () => {
+          if (!activated) return;
           speechStreamId = randomUUID();
           sendJson(client, { type: "speech_start", streamId: speechStreamId, character: activeCharacter, sampleRate: 24_000 });
         },
-        onText: ({ text }) => sendJson(client, { type: "speech_text", text, character: activeCharacter }),
+        onText: ({ text }) => { if (activated) sendJson(client, { type: "speech_text", text, character: activeCharacter }); },
         onAudioDelta: ({ audio }) => {
-          if (!closed && speechStreamId) sendJson(client, { type: "speech_chunk", streamId: speechStreamId, audio });
+          if (activated && !closed && speechStreamId) sendJson(client, { type: "speech_chunk", streamId: speechStreamId, audio });
         },
         onCancel: () => {
           sendJson(client, { type: "speech_cancel", streamId: speechStreamId });
           speechStreamId = "";
         },
         onAudioDone: ({ text }) => {
-          if (closed) return;
+          if (!activated || closed) return;
           const cleanText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 1000);
           sendJson(client, { type: "speech_end", streamId: speechStreamId, text: cleanText, character: activeCharacter, sessionId });
           if (cleanText) context.entries = [...context.entries, { role: "assistant", text: cleanText }].slice(-16);
           armLeaveNote();
         },
         onFunctionCall: ({ callId, arguments: raw }) => {
+          if (!activated) { seeduplex?.sendToolResult(callId); return; }
           const signal = parseCharacterSignal(raw);
           if (signal.action) sendJson(client, { type: "action", action: signal.action });
           if (signal.thread !== "none") sendJson(client, { type: "story", thread: signal.thread });
@@ -516,9 +548,10 @@ websocketServer.on("connection", (client) => {
           sendJson(client, { type: "error", code: "ASR_UNAVAILABLE", message: "语音识别暂时不可用" });
         },
         onReady: () => {
+          upstreamReady = true;
           sendJson(client, { type: "ready", transport: "seeduplex" });
-          seeduplex?.setMuted(interactionMode !== "none");
-          seeduplex?.greet(buildOpeningText(storyDay, storyAgeGroup));
+          seeduplex?.setMuted(!activated || interactionMode !== "none");
+          greetWhenActive();
         },
       });
       try {
@@ -531,10 +564,9 @@ websocketServer.on("connection", (client) => {
     asr = new VolcAsrSession({
       config: asrConfig,
       onReady: () => {
+        upstreamReady = true;
         sendJson(client, { type: "ready" });
-        sendSpeech(buildOpeningText(storyDay, storyAgeGroup), { opening: true, character: activeCharacter }).catch((error) => {
-          console.error("Opening speech failed", { name: error.name, message: error.message });
-        });
+        greetWhenActive();
       },
       onTranscript: (transcript) => {
         const corrected = correctBrandTranscript(transcript.text);
