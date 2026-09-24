@@ -10,6 +10,13 @@ test("inspection and collection of food do not accidentally launch feeding", () 
   assert.equal(parseVoiceIntent("帮我收藏这个苹果").type, "collect");
 });
 
+test("showing Domi a small object in Chinese or English starts inspection", () => {
+  for (const phrase of ["我拿一个笔给Domi看", "拿支笔给绿豆看", "Look at this pen", "Can you see my pen?"]) {
+    assert.equal(shouldTriggerSceneAnalysis(phrase), true, phrase);
+    assert.equal(parseVoiceIntent(phrase), null, phrase);
+  }
+});
+
 test("fixed heart phrases trigger the heart action", () => {
   assert.deepEqual(parseVoiceIntent("叫叫，给我比个心"), { type: "heart", size: "small" });
   assert.deepEqual(parseVoiceIntent("我想看你比心"), { type: "heart", size: "small" });

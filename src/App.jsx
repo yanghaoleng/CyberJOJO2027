@@ -115,7 +115,10 @@ import {
   isTabletViewport,
 } from "./device-layout.js";
 import { useCameraSceneAnalysis } from "./use-camera-scene-analysis.js";
-import { getCollectionFollowUp, parseVoiceIntent, shouldInspectAfterSpeech, shouldTriggerSceneAnalysis } from "./voice-intents.js";
+import { createSceneFingerprint } from "./scene-analysis.js";
+import { AUTO_CAPTURE_COOLDOWN_MS, getTopicCaptureChange } from "./auto-capture-policy.js";
+import { advancePresentationGate, createPresentationGate, finishPresentationRequest, PRESENTATION_SAMPLE_MS } from "./presentation-gate.js";
+import { getCollectionFollowUp, parseVoiceIntent, shouldTriggerSceneAnalysis } from "./voice-intents.js";
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -837,7 +840,8 @@ function App() {
   const gestureOutlineBuffersRef = useRef(null);
   const takePhotoRef = useRef(null);
   const autoCaptureTimerRef = useRef(null);
-  const lastAutoCaptureAtRef = useRef(0);
+  const lastAutoCaptureAtRef = useRef(-Infinity);
+  const previousTopicTitleRef = useRef("");
   const guideAudioRef = useRef(null);
   const pcmSpeechRef = useRef(null);
   const nextSpeechRef = useRef(null);
@@ -914,7 +918,9 @@ function App() {
   const lastFeedTriggerAtRef = useRef(-Infinity);
   const storyFocusRef = useRef(null);
   const inspectStoryRef = useRef(null);
-  const sceneTriggerRef = useRef(null);
+  const presentationGateRef = useRef(null);
+  const presentationCanvasRef = useRef(null);
+  const presentationSubjectRef = useRef("");
   const storyFrameTimerRef = useRef(null);
   const lastStoryInspectAtRef = useRef(-Infinity);
   const gameplayTargetRef = useRef(null);
@@ -1068,6 +1074,7 @@ function App() {
   const [textSending, setTextSending] = useState(false);
   const [gameplayReaction, setGameplayReaction] = useState(null);
   const [storyFocus, setStoryFocus] = useState(null);
+  const [observedScene, setObservedScene] = useState(null);
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
   const [mediaLibraryClosing, setMediaLibraryClosing] = useState(false);
   const [mediaLibraryDragY, setMediaLibraryDragY] = useState(0);
@@ -1114,6 +1121,11 @@ function App() {
   }, []);
 
   const setHiddenStoryFocus = useCallback((next) => {
+    if (!next) {
+      presentationGateRef.current = null;
+      presentationSubjectRef.current = "";
+    }
+    else if (!storyFocusRef.current) presentationGateRef.current = createPresentationGate(performance.now());
     storyFocusRef.current = next;
     setStoryFocus(next);
   }, []);
@@ -1440,6 +1452,7 @@ function App() {
   }, [showToast]);
 
   const scheduleAutoCapture = useCallback((reason, delay = 360) => {
+    if (!/^(?:topic|event):/.test(reason)) return;
     if (autoCaptureTimerRef.current) window.clearTimeout(autoCaptureTimerRef.current);
     autoCaptureTimerRef.current = window.setTimeout(() => {
       autoCaptureTimerRef.current = null;
@@ -1448,7 +1461,7 @@ function App() {
         recordingRef.current
         || mediaPreviewRef.current
         || mediaLibraryOpenRef.current
-        || now - lastAutoCaptureAtRef.current < 1_200
+        || now - lastAutoCaptureAtRef.current < AUTO_CAPTURE_COOLDOWN_MS
       ) return;
       lastAutoCaptureAtRef.current = now;
       takePhotoRef.current?.({ automatic: true, reason });
@@ -1652,10 +1665,9 @@ function App() {
         setActiveGestureEffect("");
       }, HEART_FEEDBACK_DURATION_MS);
     }
-    scheduleAutoCapture(`voice:${gesture}`, 720);
     showToast(`${CHARACTERS[activeCharacter].label}${action.toast}`);
     return true;
-  }, [activeCharacter, scheduleAutoCapture, showToast, triggerPropEffect]);
+  }, [activeCharacter, showToast, triggerPropEffect]);
   triggerHeartVoiceRef.current = triggerHeartVoice;
 
   const triggerWreathVoice = useCallback(() => {
@@ -1699,11 +1711,10 @@ function App() {
         gestureEffectUntilRef.current = 0;
         setActiveGestureEffect("");
       }, effectDuration);
-      scheduleAutoCapture(`gesture:${update.trigger}`);
     }
     notifyVoiceInteraction(update.trigger);
     showToast(`${CHARACTERS[activeCharacter].label}${action.toast}`);
-  }, [activeCharacter, notifyVoiceInteraction, scheduleAutoCapture, showToast]);
+  }, [activeCharacter, notifyVoiceInteraction, showToast]);
 
   const handleSceneReaction = useCallback((reaction) => {
     const action = VOICE_ACTIONS[reaction.action];
@@ -1728,13 +1739,12 @@ function App() {
     }
   }, [activeCharacter, enqueueSynthesizedSpeech, recordConversationMessage, replaceCharacterBubble]);
 
-  const { visionState: sceneVisionState, sceneReaction, triggerSceneAnalysis } = useCameraSceneAnalysis({
+  const { visionState: sceneVisionState, sceneReaction } = useCameraSceneAnalysis({
     enabled: cameraState === "ready" && !recording && !mediaPreview && !mediaLibraryOpen && !gameplayMode && !storyFocus,
     videoRef,
     activeCharacter,
     onReaction: handleSceneReaction,
   });
-  sceneTriggerRef.current = triggerSceneAnalysis;
 
   const recentConversationTopic = useMemo(
     () => getRecentConversationTopic(conversationEntries),
@@ -1742,12 +1752,19 @@ function App() {
   );
   const contextualCaption = useMemo(() => getContextualCaption({
     gesture: activeGestureEffect,
-    sceneReaction,
+    sceneReaction: observedScene || sceneReaction,
     characterLabel: CHARACTERS[activeCharacter].label,
     conversationTopic: recentConversationTopic,
     fallbackMode: captionMode,
     day,
-  }), [activeCharacter, activeGestureEffect, captionMode, day, recentConversationTopic, sceneReaction]);
+  }), [activeCharacter, activeGestureEffect, captionMode, day, recentConversationTopic, observedScene, sceneReaction]);
+
+  useEffect(() => {
+    if (cameraState !== "ready") return;
+    const change = getTopicCaptureChange(previousTopicTitleRef.current, contextualCaption);
+    previousTopicTitleRef.current = change.title;
+    if (change.reason) scheduleAutoCapture(change.reason, 900);
+  }, [cameraState, contextualCaption, scheduleAutoCapture]);
   const stopVoiceSession = useCallback(() => {
     pcmSpeechRef.current?.stop();
     voiceTransportRef.current = "classic";
@@ -1952,12 +1969,12 @@ function App() {
             if (shouldTriggerSceneAnalysis(text)) {
               clearCharacterSpeech();
               socket.send(JSON.stringify({ type: "cancel" }));
-              sceneTriggerRef.current?.();
+              presentationSubjectRef.current = text.slice(0, 80);
+              setHiddenStoryFocus({ phase: "waiting" });
+              presentationGateRef.current = createPresentationGate(performance.now());
             }
             if (/^(?:没有|没找到|不找了|不想找|算了|先不看了)[。！!，, ]*$/.test(text)) {
               setHiddenStoryFocus(null);
-            } else if (shouldInspectAfterSpeech(text, storyFocusRef.current?.phase)) {
-              inspectStoryRef.current?.();
             }
             collectionDialogueRef.current?.(text);
             recordConversationMessage({ ...message, role: "user", text, source: "child_speech", character: activeCharacter });
@@ -1980,7 +1997,6 @@ function App() {
           const action = VOICE_ACTIONS[message.action];
           if (!action || !rivePlayAnimationRef.current?.(action.animation)) return;
           showToast(action.toast);
-          scheduleAutoCapture(`voice:${message.action}`, 420);
           return;
         }
         if (message.type === "story") {
@@ -4236,14 +4252,17 @@ function App() {
       window.clearTimeout(storyFrameTimerRef.current);
       storyFrameTimerRef.current = null;
     }
-    setHiddenStoryFocus({ phase: "checking" });
+    const checkingFocus = { phase: "checking" };
+    setHiddenStoryFocus(checkingFocus);
     const askToFrame = () => {
       const text = activeCharacter === "lvdou" ? "I can't see it yet. Please move it into the white frame." : "我还没看清，把它放进白色虚线框里好吗？";
-      setGameplayReaction({ action: "curious", text, id: crypto.randomUUID(), character: activeCharacter });
-      replaceCharacterBubble(text);
-      const socket = voiceSocketRef.current;
-      if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", text }));
-      else speakCharacterFallback(text);
+      if ((presentationGateRef.current?.attempts || 0) <= 1) {
+        setGameplayReaction({ action: "curious", text, id: crypto.randomUUID(), character: activeCharacter });
+        replaceCharacterBubble(text);
+        const socket = voiceSocketRef.current;
+        if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", text }));
+        else speakCharacterFallback(text);
+      }
       if (storyFrameTimerRef.current) window.clearTimeout(storyFrameTimerRef.current);
       storyFrameTimerRef.current = window.setTimeout(() => {
         storyFrameTimerRef.current = null;
@@ -4253,24 +4272,56 @@ function App() {
     try {
       const frame = await captureGameplayFrame();
       const result = await requestGameplay({
-        source: "observe", image: frame.image, roundId: crypto.randomUUID(), frameId: crypto.randomUUID(), character: activeCharacter,
+        source: "observe", image: frame.image, subject: presentationSubjectRef.current,
+        roundId: crypto.randomUUID(), frameId: crypto.randomUUID(), character: activeCharacter,
       });
+      if (storyFocusRef.current !== checkingFocus) return;
       if (!result.evaluable || !result.label || !result.category) {
         setHiddenStoryFocus({ phase: "framing" });
         askToFrame();
         return;
       }
       setHiddenStoryFocus(null);
+      setObservedScene({ subject: result.label, category: result.category });
+      scheduleAutoCapture(`event:observe:${result.category}:${result.label}`, 850);
       const socket = voiceSocketRef.current;
       if (socket?.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: "story_observation", observation: { label: result.label, category: result.category } }));
       }
     } catch {
+      if (storyFocusRef.current !== checkingFocus) return;
       setHiddenStoryFocus({ phase: "framing" });
       askToFrame();
     }
-  }, [activeCharacter, captureGameplayFrame, replaceCharacterBubble, setHiddenStoryFocus, speakCharacterFallback]);
+  }, [activeCharacter, captureGameplayFrame, replaceCharacterBubble, scheduleAutoCapture, setHiddenStoryFocus, speakCharacterFallback]);
   inspectStoryRef.current = inspectStoryObject;
+
+  useEffect(() => {
+    if (!["waiting", "framing"].includes(storyFocus?.phase) || cameraState !== "ready" || recording || mediaPreview || mediaLibraryOpen || gameplayMode) return;
+    if (!presentationGateRef.current) presentationGateRef.current = createPresentationGate(performance.now());
+    if (!presentationCanvasRef.current) {
+      presentationCanvasRef.current = document.createElement("canvas");
+      presentationCanvasRef.current.width = 64;
+      presentationCanvasRef.current.height = 40;
+    }
+    const sample = () => {
+      const video = videoRef.current;
+      const canvas = presentationCanvasRef.current;
+      if (!video || video.readyState < 2 || !canvas || !presentationGateRef.current) return;
+      try {
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const fingerprint = createSceneFingerprint(context.getImageData(0, 0, canvas.width, canvas.height));
+        const update = advancePresentationGate(presentationGateRef.current, fingerprint, performance.now());
+        presentationGateRef.current = update.state;
+        if (update.shouldRequest) Promise.resolve(inspectStoryRef.current?.()).finally(() => {
+          if (presentationGateRef.current) presentationGateRef.current = finishPresentationRequest(presentationGateRef.current);
+        });
+      } catch (error) { console.warn("Presentation frame sampling unavailable", error); }
+    };
+    const timer = window.setInterval(sample, PRESENTATION_SAMPLE_MS);
+    return () => window.clearInterval(timer);
+  }, [storyFocus?.phase, cameraState, recording, mediaPreview, mediaLibraryOpen, gameplayMode]);
 
   const startGameplay = useCallback(async (mode) => {
     if (mode && (
@@ -4349,7 +4400,7 @@ function App() {
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", text: reaction.text }));
     else speakCharacterFallback(reaction.text);
   }, [activeCharacter, replaceCharacterBubble, speakCharacterFallback]);
-  const handleGameplayFound = useCallback(() => scheduleAutoCapture("gameplay:find", 420), [scheduleAutoCapture]);
+  const handleGameplayFound = useCallback(() => scheduleAutoCapture("event:find-success", 420), [scheduleAutoCapture]);
   const analyzeToy = useCallback((image, { signal } = {}) => requestGameplay({ source: "toy", image,
     roundId: crypto.randomUUID(), frameId: crypto.randomUUID(), character: activeCharacter }, { signal }), [activeCharacter]);
   const handleFriendSaved = useCallback((friend) => setFriends((current) => [friend, ...current.filter((item) => item.id !== friend.id)]), []);
@@ -4426,7 +4477,7 @@ function App() {
         data-camera-menu={cameraMenuOpen ? "open" : "closed"}
         data-voice-state={voiceState}
         data-ai-state={aiState}
-        data-scene-vision-state={sceneVisionState}
+        data-scene-vision-state={storyFocus?.phase === "checking" ? "analyzing" : sceneVisionState}
         data-reading-day={day}
         data-caption-mode={captionMode}
         aria-label="和叫叫合拍相机"
