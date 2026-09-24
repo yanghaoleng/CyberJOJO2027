@@ -107,21 +107,37 @@ test("internals expose the fixed duplex endpoint and model", () => {
 });
 
 
-test("assembleWavBase64 builds a valid RIFF/WAVE header with pcm payload", () => {
-  const chunks = [Buffer.from([1, 0, 2, 0]).toString("base64"), Buffer.from([3, 0, 4, 0]).toString("base64")];
+test("assembleWavBase64 converts float32 pcm to int16 wav payload", () => {
+  // 0.5f -> 00 00 00 3F ; -0.5f -> 00 00 00 BF （32bit float 小端）
+  const chunks = [
+    Buffer.from([0, 0, 0, 0x3f]).toString("base64"),
+    Buffer.from([0, 0, 0, 0xbf]).toString("base64"),
+  ];
   const wav = assembleWavBase64(chunks, 24_000);
   const buf = Buffer.from(wav, "base64");
   assert.equal(buf.toString("ascii", 0, 4), "RIFF");
   assert.equal(buf.toString("ascii", 8, 12), "WAVE");
   assert.equal(buf.toString("ascii", 12, 16), "fmt ");
   assert.equal(buf.toString("ascii", 36, 40), "data");
-  assert.equal(buf.readUInt16LE(20), 1);
-  assert.equal(buf.readUInt16LE(22), 1);
+  assert.equal(buf.readUInt16LE(20), 1); // PCM
+  assert.equal(buf.readUInt16LE(22), 1); // mono
   assert.equal(buf.readUInt32LE(24), 24_000);
-  assert.equal(buf.readUInt16LE(34), 16);
-  assert.equal(buf.readUInt32LE(40), 8);
-  assert.equal(buf.length, 44 + 8);
-  assert.deepEqual([...buf.subarray(44)], [1, 0, 2, 0, 3, 0, 4, 0]);
+  assert.equal(buf.readUInt16LE(34), 16); // 16bit
+  assert.equal(buf.readUInt32LE(40), 4); // 2 samples * 2 bytes
+  assert.equal(buf.length, 44 + 4);
+  // 0.5*32767 -> 16384 (0x4000) ; -0.5*32767 -> Math.round(-16383.5) = -16383
+  assert.equal(buf.readInt16LE(44), 16384);
+  assert.equal(buf.readInt16LE(46), -16383);
+});
+
+test("assembleWavBase64 passes through when payload is not float32-sized", () => {
+  // 3 字节（非 4 的倍数）→ 原样透传
+  const chunks = [Buffer.from([1, 0, 2]).toString("base64")];
+  const wav = assembleWavBase64(chunks, 24_000);
+  const buf = Buffer.from(wav, "base64");
+  assert.equal(buf[40], 3); // data size 低字节
+  assert.equal(buf.length, 44 + 3);
+  assert.deepEqual([...buf.subarray(44)], [1, 0, 2]);
 });
 
 test("buildWavHeader matches RIFF spec sizes", () => {

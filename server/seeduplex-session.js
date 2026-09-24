@@ -119,9 +119,23 @@ export function buildWavHeader(pcmByteLength, sampleRate = OUTPUT_AUDIO_RATE, ch
 }
 
 // 把 Base64 PCM 片段拼成完整 WAV 音频的 Base64
+// Seeduplex 的 pcm 下行实际为 32bit float（小端、24000Hz 单声道），
+// 浏览器 <audio> 对 WAV float32 支持不一（Safari 不播），且按 16bit 播放会爆音。
+// 因此统一转换为 16bit 有符号 PCM 再组 WAV 头。
 export function assembleWavBase64(chunks, sampleRate = OUTPUT_AUDIO_RATE) {
-  const pcm = Buffer.concat(chunks.map((chunk) => Buffer.from(chunk, "base64")));
-  return Buffer.concat([buildWavHeader(pcm.length, sampleRate), pcm]).toString("base64");
+  const raw = Buffer.concat(chunks.map((chunk) => Buffer.from(chunk, "base64")));
+  if (raw.length % 4 !== 0) {
+    // 若上游恰好输出 16bit 小端（如未来格式变化），则原样透传
+    return Buffer.concat([buildWavHeader(raw.length, sampleRate), raw]).toString("base64");
+  }
+  const count = raw.length / 4;
+  const pcm16 = Buffer.alloc(count * 2);
+  for (let i = 0; i < count; i++) {
+    const f = raw.readFloatLE(i * 4);
+    const v = Math.max(-1, Math.min(1, f));
+    pcm16.writeInt16LE(Math.round(v * 32767), i * 2);
+  }
+  return Buffer.concat([buildWavHeader(pcm16.length, sampleRate), pcm16]).toString("base64");
 }
 
 export function parseDownstreamEvent(payload) {
