@@ -20,6 +20,8 @@ function isSummonCommand(text, name) {
 export function detectCharacterSwitchCommand(text) {
   const compact = compactSpeech(text);
   if (!compact) return null;
+  if (/^(?:叫叫|jiaojiao)$/i.test(compact)) return "jiaojiao";
+  if (/^(?:绿豆|domi)$/i.test(compact)) return "lvdou";
   if (JIAOJIAO.test(compact) && (/(?:想|见|找|换|切|叫|请|聊|来|要)/.test(compact) || /\b(?:want|see|talk|switch|call|miss)\b/i.test(String(text)))) return "jiaojiao";
   if (DOMI.test(compact) && (/(?:想|见|找|换|切|叫|请|聊|来|要)/.test(compact) || /\b(?:want|see|talk|switch|call|miss)\b/i.test(String(text)))) return "lvdou";
   for (const [character, name] of Object.entries(CHARACTER_NAMES)) {

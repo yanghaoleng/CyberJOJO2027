@@ -36,3 +36,8 @@ test("missing either companion and saying Domi switches by voice", () => {
   for (const phrase of ["我想绿豆了", "想要见Domi", "I want to see Domi"]) assert.equal(detectCharacterSwitchCommand(phrase), "lvdou", phrase);
   assert.equal(detectCharacterSwitchCommand("今天我和绿豆看了一本书"), null);
 });
+
+test("calling either companion by name alone also switches", () => {
+  for (const phrase of ["叫叫", "Jiaojiao!"]) assert.equal(detectCharacterSwitchCommand(phrase), "jiaojiao", phrase);
+  for (const phrase of ["绿豆", "Domi!"]) assert.equal(detectCharacterSwitchCommand(phrase), "lvdou", phrase);
+});
