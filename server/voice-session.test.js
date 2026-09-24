@@ -45,7 +45,7 @@ test("cover warmup waits for activation, reuses upstream, and greets once even w
       send({ type: "start", inputMode: "voice", character: mode === "domi-start" ? "lvdou" : "jiaojiao", deferGreeting: mode !== "legacy-start" && mode !== "domi-start" });
       await waitFor(() => sessions.length === count + 1 && sessions.at(-1).messages.length > 0);
       const upstream = sessions.at(-1);
-      const greetings = () => upstream.messages.filter(m => m.type === "speech_text_buffer.commit");
+      const greetings = () => sessions.slice(count).flatMap(entry => entry.messages.filter(m => m.type === "speech_text_buffer.commit"));
       if (mode !== "legacy-start") send({ type: "context", entries: [{ role: "user", text: "我读了小兔子的绘本" }] });
       if (mode === "click-first") { send({ type: "activate", storyDay: 2 }); send({ type: "activate", storyDay: 2 }); }
       if (mode === "ready-first") {
@@ -88,16 +88,22 @@ test("cover warmup waits for activation, reuses upstream, and greets once even w
         }
         upstream.socket.send(JSON.stringify({ type: "conversation.item.input_audio_transcription.completed", text: "我想Domi了" }));
         await waitFor(() => messages.some(m => m.type === "character_switch" && m.character === "lvdou"));
-        assert.ok(upstream.messages.some(m => m.type === "session.update" && m.session.instructions.includes("Speak only English")));
-        upstream.socket.send(JSON.stringify({ type: "response.canceled" }));
+        await waitFor(() => sessions.length === count + 2);
+        const domiUpstream = sessions.at(-1);
+        assert.notEqual(domiUpstream, upstream, "a persona switch gets a fresh upstream voice session");
+        assert.ok(domiUpstream.messages.some(m => m.type === "session.create" && m.session.audio.output.voice.includes("naiqimengwa")));
+        domiUpstream.socket.send(JSON.stringify({ type: "session.created", session: { id: `${mode}-domi` } }));
         await waitFor(() => greetings().some(m => m.text.includes("I'm Domi")));
-        upstream.socket.send(JSON.stringify({ type: "conversation.item.input_audio_transcription.completed", text: "我想叫叫了" }));
+        domiUpstream.socket.send(JSON.stringify({ type: "conversation.item.input_audio_transcription.completed", text: "我想叫叫了" }));
         await waitFor(() => messages.some(m => m.type === "character_switch" && m.character === "jiaojiao"));
-        upstream.socket.send(JSON.stringify({ type: "response.canceled" }));
+        await waitFor(() => sessions.length === count + 3);
+        const jiaojiaoUpstream = sessions.at(-1);
+        assert.ok(jiaojiaoUpstream.messages.some(m => m.type === "session.create" && m.session.audio.output.voice.includes("tiancaitongsheng")));
+        jiaojiaoUpstream.socket.send(JSON.stringify({ type: "session.created", session: { id: `${mode}-jiaojiao` } }));
         await waitFor(() => greetings().some(m => m.text.includes("绘本")));
       }
       socket.send(Buffer.alloc(640));
-      await waitFor(() => upstream.messages.some(m => m.type === "input_audio_buffer.append"));
+      await waitFor(() => sessions.at(-1).messages.some(m => m.type === "input_audio_buffer.append"));
       const closed = once(socket, "close"); socket.close(); await closed;
     }
   } finally {

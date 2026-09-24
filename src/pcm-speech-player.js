@@ -1,14 +1,24 @@
 // Seeduplex output is mono float32 little-endian PCM at 24 kHz.
 // Schedule chunks on one audio clock instead of waiting for a complete WAV.
 export class PcmSpeechPlayer {
-  constructor(context, { onStart = () => {}, onEnd = () => {} } = {}) {
+  constructor(context, {
+    onStart = () => {},
+    onEnd = () => {},
+    onStall = () => {},
+    startTimeoutMs = 5_000,
+    chunkTimeoutMs = 4_000,
+  } = {}) {
     this.context = context;
     this.onStart = onStart;
     this.onEnd = onEnd;
+    this.onStall = onStall;
+    this.startTimeoutMs = startTimeoutMs;
+    this.chunkTimeoutMs = chunkTimeoutMs;
     this.sources = new Set();
     this.streamId = "";
     this.playing = false;
     this.tail = new Uint8Array();
+    this.watchdog = null;
   }
 
   start(streamId, sampleRate = 24000) {
@@ -17,6 +27,7 @@ export class PcmSpeechPlayer {
     this.sampleRate = sampleRate;
     this.nextTime = 0;
     this.finished = false;
+    this.armWatchdog(this.startTimeoutMs, streamId, "first_chunk");
     void this.context.resume().catch(() => {});
   }
 
@@ -28,6 +39,7 @@ export class PcmSpeechPlayer {
     const frames = Math.floor(bytes.length / 4);
     this.tail = bytes.slice(frames * 4);
     if (!frames) return;
+    this.armWatchdog(this.chunkTimeoutMs, streamId, "chunk");
     const buffer = this.context.createBuffer(1, frames, this.sampleRate);
     const samples = buffer.getChannelData(0);
     const view = new DataView(bytes.buffer);
@@ -52,11 +64,28 @@ export class PcmSpeechPlayer {
 
   end(streamId) {
     if (streamId !== this.streamId) return;
+    this.clearWatchdog();
     this.finished = true;
     if (!this.sources.size) this.stop();
   }
 
+  armWatchdog(delay, streamId, phase) {
+    this.clearWatchdog();
+    this.watchdog = setTimeout(() => {
+      if (this.streamId !== streamId || this.finished) return;
+      this.onStall({ streamId, phase });
+      this.stop();
+    }, delay);
+    this.watchdog.unref?.();
+  }
+
+  clearWatchdog() {
+    if (this.watchdog) clearTimeout(this.watchdog);
+    this.watchdog = null;
+  }
+
   stop() {
+    this.clearWatchdog();
     for (const source of this.sources) {
       source.onended = null;
       source.stop(); source.disconnect();

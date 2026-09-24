@@ -867,6 +867,12 @@ function App() {
   const voiceReadyPromiseRef = useRef(null);
   const voiceReadyResolveRef = useRef(null);
   const voiceSessionGenerationRef = useRef(0);
+  // The server can switch personas before the Rive transition finishes. Keep
+  // the audio persona and stream generation explicit so stale PCM cannot be
+  // played under the next character.
+  const voiceCharacterRef = useRef("jiaojiao");
+  const voiceStreamRef = useRef({ id: "", character: "", epoch: 0 });
+  const voiceStreamEpochRef = useRef(0);
   const voiceReconnectTimerRef = useRef(null);
   const voiceReconnectAttemptsRef = useRef(0);
   const pendingTextRef = useRef(null);
@@ -1178,6 +1184,8 @@ function App() {
 
   const clearCharacterSpeech = useCallback(() => {
     gameSpeechEpochRef.current += 1;
+    voiceStreamEpochRef.current += 1;
+    voiceStreamRef.current = { id: "", character: "", epoch: voiceStreamEpochRef.current };
     synthesizedSpeechQueueRef.current = [];
     pcmSpeechRef.current?.stop();
     guideAudioRef.current?.pause();
@@ -1531,11 +1539,16 @@ function App() {
           setAiState((current) => current === "speaking" ? "idle" : current);
           window.queueMicrotask(() => nextSpeechRef.current?.());
         },
+        onStall: ({ streamId, phase }) => {
+          const socket = voiceSocketRef.current;
+          if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "cancel", streamId, reason: `pcm_${phase}` }));
+          if (voiceStreamRef.current.id === streamId) clearCharacterSpeech();
+        },
       });
     }
     void pcmSpeechRef.current.context.resume().catch(() => {});
     return pcmSpeechRef.current;
-  }, []);
+  }, [clearCharacterSpeech]);
   useEffect(() => () => {
     pcmSpeechRef.current?.stop();
     void pcmSpeechRef.current?.context.close();
@@ -1766,6 +1779,8 @@ function App() {
     if (change.reason) scheduleAutoCapture(change.reason, 900);
   }, [cameraState, contextualCaption, scheduleAutoCapture]);
   const stopVoiceSession = useCallback(() => {
+    voiceStreamEpochRef.current += 1;
+    voiceStreamRef.current = { id: "", character: "", epoch: voiceStreamEpochRef.current };
     pcmSpeechRef.current?.stop();
     voiceTransportRef.current = "classic";
     voiceSessionGenerationRef.current += 1;
@@ -1898,6 +1913,7 @@ function App() {
 
       const beginSession = () => {
         if (voiceSocketRef.current !== socket) return;
+        voiceCharacterRef.current = activeCharacter;
         const storyDay = getStoryVisit({ activate: activeCharacter === "jiaojiao" });
         socket.send(JSON.stringify({ type: "context", ...journalContextRef.current() }));
         if (!warm?.startSent) socket.send(JSON.stringify({
@@ -2005,7 +2021,13 @@ function App() {
         }
         if (message.type === "character_switch") {
           const requestedCharacter = CHARACTERS[message.character] ? message.character : null;
-          if (requestedCharacter) void switchCharacterToRef.current?.(requestedCharacter);
+          if (requestedCharacter) {
+            // The server's persona is authoritative as soon as it switches.
+            // Cut the old stream before the visual character finishes loading.
+            voiceCharacterRef.current = requestedCharacter;
+            clearCharacterSpeech();
+            void switchCharacterToRef.current?.(requestedCharacter);
+          }
           return;
         }
         if (message.type === "ai") {
@@ -2014,33 +2036,42 @@ function App() {
         }
         if (message.type === "speech") {
           if (gameplayModeRef.current && !message.local) return;
+          const messageCharacter = CHARACTERS[message.character] ? message.character : voiceCharacterRef.current;
+          if (!message.local && messageCharacter !== voiceCharacterRef.current) return;
           if (!message.opening && !message.local) {
             recordConversationMessage({
               role: "assistant",
               text: message.text,
-              character: message.character || activeCharacter,
+              character: messageCharacter,
             });
-            if (message.character === "jiaojiao") idiomReplyRef.current?.(message.text);
+            if (messageCharacter === "jiaojiao") idiomReplyRef.current?.(message.text);
           }
-          enqueueSynthesizedSpeech(message);
+          enqueueSynthesizedSpeech({ ...message, character: messageCharacter });
           return;
         }
         if (message.type === "speech_start") {
           voiceHasReplyRef.current = true;
           if (gameplayModeRef.current) return;
+          if (!message.streamId) return;
+          const streamCharacter = CHARACTERS[message.character] ? message.character : voiceCharacterRef.current;
+          if (streamCharacter !== voiceCharacterRef.current) return;
+          const streamEpoch = voiceStreamEpochRef.current;
+          voiceStreamRef.current = { id: message.streamId, character: streamCharacter, epoch: streamEpoch };
           synthesizedSpeechQueueRef.current = [];
           guideAudioRef.current?.pause();
           prepareStreamingSpeech()?.start(message.streamId, message.sampleRate);
           return;
         }
         if (message.type === "speech_chunk") {
+          if (voiceStreamRef.current.id !== message.streamId || voiceStreamRef.current.epoch !== voiceStreamEpochRef.current) return;
           try { pcmSpeechRef.current?.append(message.streamId, message.audio); }
           catch (error) { console.warn("Streaming speech decode failed", error); pcmSpeechRef.current?.stop(); }
           return;
         }
         if (message.type === "speech_text") {
-          if (!gameplayModeRef.current && message.text) {
-            setCharacterBubble((current) => ({ id: current?.tone === "speech" ? current.id : crypto.randomUUID(), text: message.text, tone: "speech", character: message.character || activeCharacter }));
+          const messageCharacter = CHARACTERS[message.character] ? message.character : voiceCharacterRef.current;
+          if (!gameplayModeRef.current && message.text && messageCharacter === voiceCharacterRef.current) {
+            setCharacterBubble((current) => ({ id: current?.tone === "speech" ? current.id : crypto.randomUUID(), text: message.text, tone: "speech", character: messageCharacter }));
           }
           return;
         }
@@ -2049,14 +2080,18 @@ function App() {
           return;
         }
         if (message.type === "speech_end") {
-          if (pcmSpeechRef.current?.streamId !== message.streamId) return;
-          if (message.text) recordConversationMessage({ role: "assistant", text: message.text, character: message.character || activeCharacter });
-          if (message.text && message.character === "jiaojiao") idiomReplyRef.current?.(message.text);
+          if (voiceStreamRef.current.id !== message.streamId || pcmSpeechRef.current?.streamId !== message.streamId) return;
+          const messageCharacter = CHARACTERS[message.character] ? message.character : voiceStreamRef.current.character;
+          if (message.text) recordConversationMessage({ role: "assistant", text: message.text, character: messageCharacter });
+          if (message.text && messageCharacter === "jiaojiao") idiomReplyRef.current?.(message.text);
           pcmSpeechRef.current?.end(message.streamId);
+          voiceStreamRef.current = { id: "", character: "", epoch: voiceStreamEpochRef.current };
           return;
         }
         if (message.type === "leave_note") {
           if (gameplayModeRef.current) return;
+          const messageCharacter = CHARACTERS[message.character] ? message.character : voiceCharacterRef.current;
+          if (messageCharacter !== voiceCharacterRef.current) return;
           let audioBlob;
           try {
             if (message.audio && message.audio.length < 2_700_000) {
@@ -2068,12 +2103,13 @@ function App() {
           recordConversationMessage({
             role: "assistant",
             text: message.text,
-            character: message.character || activeCharacter,
+            character: messageCharacter,
             source: "leave_note",
             audioBlob,
           });
           enqueueSynthesizedSpeech({
             ...message,
+            character: messageCharacter,
             opening: false,
             local: false,
             mime: message.mime || "audio/mpeg",
@@ -3600,6 +3636,19 @@ function App() {
     }
     if (!nextBuffer || !riveLoadCharacterRef.current) return;
 
+    // Start the voice handover while the Rive asset is animating. This keeps
+    // the upstream persona and the visual persona from spending a whole
+    // transition speaking as different characters.
+    const previousCharacter = activeCharacter;
+    voiceCharacterRef.current = nextCharacter;
+    clearCharacterSpeech();
+    const voiceSocket = voiceSocketRef.current;
+    if (voiceSocket?.readyState === WebSocket.OPEN) voiceSocket.send(JSON.stringify({
+      type: "character",
+      character: nextCharacter,
+      ...(nextCharacter === "jiaojiao" ? { storyDay: getStoryVisit({ activate: true }) } : {}),
+    }));
+
     characterSwitchingRef.current = true;
     setCharacterSwitching(true);
     const outputWidth = outputCanvasRef.current?.width || frameSize.width;
@@ -3619,6 +3668,12 @@ function App() {
       showToast(nextCharacter === "lvdou" ? "绿豆来啦" : "叫叫回来啦");
     } catch (error) {
       console.warn("角色切换失败", error);
+      voiceCharacterRef.current = previousCharacter;
+      if (voiceSocket?.readyState === WebSocket.OPEN) voiceSocket.send(JSON.stringify({
+        type: "character",
+        character: previousCharacter,
+        ...(previousCharacter === "jiaojiao" ? { storyDay: getStoryVisit({ activate: true }) } : {}),
+      }));
       if (previousBuffer) await riveLoadCharacterRef.current(previousBuffer);
       characterOffsetXRef.current = offscreenLeft;
       await animateCharacterOffset(0, CHARACTER_ENTER_DURATION_MS, "enter");
@@ -3627,7 +3682,7 @@ function App() {
       characterSwitchingRef.current = false;
       setCharacterSwitching(false);
     }
-  }, [activeCharacter, animateCharacterOffset, frameSize.width, playInterfaceSound, preloadLvdou, showToast]);
+  }, [activeCharacter, animateCharacterOffset, clearCharacterSpeech, frameSize.width, playInterfaceSound, preloadLvdou, showToast]);
 
   useEffect(() => {
     switchCharacterToRef.current = switchCharacterTo;
