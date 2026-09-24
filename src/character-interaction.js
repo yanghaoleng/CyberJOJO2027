@@ -49,7 +49,10 @@ export function mouthAnchorOnCanvas(instance, mouthNode) {
 export function createCharacterInteraction(instance) {
   const artboard = instance?.artboard;
   const eyes = safeNode(artboard, "controller_eyeball_location");
-  const head = safeNode(artboard, "controller_faceq");
+  // The compact export removes authoring controllers but retains both pupil
+  // transform groups. Use those real nodes rather than silently losing gaze.
+  const pupils = eyes ? [] : [safeNode(artboard, "IP_CJ_eyeball_L_X"), safeNode(artboard, "IP_CJ_eyeball_R_X")].filter(Boolean);
+  const head = safeNode(artboard, "controller_faceq") || safeNode(artboard, "IP_CJ_face_X");
   const mouth = safeNode(artboard, "IP_CJ_mouth_Y");
   const mouthAnchor = safeNode(artboard, "IP_CJ_mouth1");
   const animations = [];
@@ -69,7 +72,7 @@ export function createCharacterInteraction(instance) {
   // the separate close timeline. Keep using the explicit pose when available.
   const closedPose = makePose("Talking_Normal_close", 0) || makePose("Talking_Normal", 0);
   const capabilities = Object.freeze({
-    eyes: Boolean(eyes), head: Boolean(head), mouth: Boolean(mouth && openPose && closedPose),
+    eyes: Boolean(eyes || pupils.length === 2), head: Boolean(head), mouth: Boolean(mouth && openPose && closedPose),
     chewing: Boolean(mouth && openPose && closedPose), anchor: Boolean(mouthAnchor),
     method: "verified-rive-control-nodes", chewingMethod: "procedural-jaw",
   });
@@ -83,6 +86,7 @@ export function createCharacterInteraction(instance) {
       if (!node || !saved) continue;
       for (const [property, value] of Object.entries(saved)) if (Number.isFinite(value)) node[property] = value;
     }
+    pupils.forEach((node, index) => Object.assign(node, baseline.pupils[index]));
   };
 
   const reset = () => {
@@ -97,7 +101,7 @@ export function createCharacterInteraction(instance) {
   const update = (value, timestamp = clock()) => {
     if (disposed) return;
     if (!value) { reset(); return; }
-    if (!baseline) baseline = { eyes: transformSnapshot(eyes), head: transformSnapshot(head), mouth: transformSnapshot(mouth) };
+    if (!baseline) baseline = { eyes: transformSnapshot(eyes), pupils: pupils.map(transformSnapshot), head: transformSnapshot(head), mouth: transformSnapshot(mouth) };
     if (value.chewing && !target?.chewing) chewStarted = timestamp;
     target = { x: clamp(Number(value.x) || 0, -1, 1), y: clamp(Number(value.y) || 0, -1, 1), mouthOpen: Boolean(value.mouthOpen), chewing: Boolean(value.chewing) };
     instance._needsRedraw = true;
@@ -119,6 +123,10 @@ export function createCharacterInteraction(instance) {
         mouth.scaleX = baseline.mouth.scaleX * (chewing ? chewing.scaleX : target.mouthOpen ? 1.04 : 1);
       }
       if (eyes) { eyes.x = baseline.eyes.x + eyeX * 110; eyes.y = baseline.eyes.y + eyeY * 80; }
+      pupils.forEach((node, index) => {
+        node.x = baseline.pupils[index].x + eyeX * 22;
+        node.y = baseline.pupils[index].y + eyeY * 16;
+      });
       if (head) { head.x = baseline.head.x + headX * 32; head.y = baseline.head.y + headY * 22 + (chewing?.headBob || 0); }
       artboard.advance(0);
       instance._needsRedraw = true;

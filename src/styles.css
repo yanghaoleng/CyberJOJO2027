@@ -1390,6 +1390,7 @@ button {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
   align-content: start;
+  align-items: start;
   gap: 11px;
 }
 
@@ -1478,10 +1479,7 @@ button {
 
 /* 时间线里的贴纸卡：按收集日期归入当天，不置顶 */
 .media-day-friends {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 12px;
-  margin-top: 6px;
+  display: contents;
 }
 /* 贴纸卡 = 正方形贴纸区 + 固定名字行，防止被压扁压窄 */
 .media-library-card.is-friend {
@@ -1507,18 +1505,9 @@ button {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  padding: 5px;
+  box-sizing: border-box;
   border-radius: 8px;
-}
-.media-friend-badge {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  color: #e9ca97;
-  background: rgba(0, 0, 0, 0.42);
-  border-radius: 999px;
-  padding: 2px 7px;
 }
 .media-friend-name {
   display: block;
@@ -1536,10 +1525,6 @@ button {
 .media-friend-name small {
   font-size: 11px;
   color: rgba(244, 227, 194, 0.6);
-}
-.app-shell.is-mobile-device:not(.is-tablet-device).is-portrait .media-day-friends {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 7px;
 }
 .app-shell.is-mobile-device:not(.is-tablet-device).is-portrait .media-library-card.is-friend .media-library-visual { padding-top: 100%; aspect-ratio: auto; }
 .app-shell.is-mobile-device:not(.is-tablet-device).is-portrait .media-library-card.is-friend .media-friend-name { min-height: 30px; font-size: 11px; padding: 5px 4px 6px; }

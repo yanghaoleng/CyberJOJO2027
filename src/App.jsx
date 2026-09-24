@@ -36,6 +36,7 @@ import {
 import { FaceLandmarker, FilesetResolver, GestureRecognizer, ImageSegmenter } from "@mediapipe/tasks-vision";
 import { Calligraph } from "calligraph";
 import QRCode from "qrcode";
+import { PcmSpeechPlayer } from "./pcm-speech-player.js";
 import { createUISFX } from "uisfx";
 import {
   CAMERA_GESTURES,
@@ -611,7 +612,9 @@ function getVoiceSocketUrl() {
   const configured = import.meta.env.VITE_JOCAM_VOICE_URL;
   if (configured) return configured;
   if (["localhost", "127.0.0.1"].includes(window.location.hostname)) return "ws://127.0.0.1:8787/voice";
-  return "wss://rive.mikeywa.site/jocam/api/voice";
+  const endpoint = new URL("api/voice", window.location.href);
+  endpoint.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return endpoint.href;
 }
 
 function roundedRectPath(context, x, y, width, height, radius) {
@@ -833,6 +836,9 @@ function App() {
   const autoCaptureTimerRef = useRef(null);
   const lastAutoCaptureAtRef = useRef(0);
   const guideAudioRef = useRef(null);
+  const pcmSpeechRef = useRef(null);
+  const nextSpeechRef = useRef(null);
+  const voiceTransportRef = useRef("classic");
   const characterEchoGateUntilRef = useRef(0);
   const riveRef = useRef(null);
   const rivePlaybackRateRef = useRef(COVER_RIVE_PLAYBACK_RATE);
@@ -1151,6 +1157,7 @@ function App() {
   const clearCharacterSpeech = useCallback(() => {
     gameSpeechEpochRef.current += 1;
     synthesizedSpeechQueueRef.current = [];
+    pcmSpeechRef.current?.stop();
     guideAudioRef.current?.pause();
     if (synthesizedAudioUrlRef.current) URL.revokeObjectURL(synthesizedAudioUrlRef.current);
     synthesizedAudioUrlRef.current = "";
@@ -1490,7 +1497,29 @@ function App() {
     })
   ), []);
 
+  const prepareStreamingSpeech = useCallback(() => {
+    if (!pcmSpeechRef.current) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return null;
+      pcmSpeechRef.current = new PcmSpeechPlayer(new AudioContext(), {
+        onStart: () => { setAiState("speaking"); riveMouthPlaybackRef.current?.(true); },
+        onEnd: () => {
+          riveMouthPlaybackRef.current?.(false);
+          setAiState((current) => current === "speaking" ? "idle" : current);
+          window.queueMicrotask(() => nextSpeechRef.current?.());
+        },
+      });
+    }
+    void pcmSpeechRef.current.context.resume().catch(() => {});
+    return pcmSpeechRef.current;
+  }, []);
+  useEffect(() => () => {
+    pcmSpeechRef.current?.stop();
+    void pcmSpeechRef.current?.context.close();
+    pcmSpeechRef.current = null;
+  }, []);
   const unlockVoicePlayback = useCallback(() => {
+    prepareStreamingSpeech();
     const audio = guideAudioRef.current;
     if (!audio) return;
     audio.dataset.voiceKind = "unlock";
@@ -1504,9 +1533,10 @@ function App() {
     }).catch(() => {
       audio.muted = false;
     });
-  }, []);
+  }, [prepareStreamingSpeech]);
 
   const playNextSynthesizedSpeech = useCallback(() => {
+    if (pcmSpeechRef.current?.streamId) return;
     const audio = guideAudioRef.current;
     if (!audio || (!audio.paused && audio.dataset.voiceKind === "synthesized")) return;
     const message = synthesizedSpeechQueueRef.current.shift();
@@ -1545,6 +1575,7 @@ function App() {
       window.queueMicrotask(playNextSynthesizedSpeech);
     });
   }, [activeCharacter, replaceCharacterBubble]);
+  nextSpeechRef.current = playNextSynthesizedSpeech;
 
   const enqueueSynthesizedSpeech = useCallback((message) => {
     if (!message?.audio) return;
@@ -1679,6 +1710,11 @@ function App() {
         ...reaction,
         opening: false,
       });
+    } else {
+      const socket = voiceSocketRef.current;
+      if (socket?.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: "scene_speech", text: reaction.text }));
+      }
     }
   }, [activeCharacter, enqueueSynthesizedSpeech, recordConversationMessage, replaceCharacterBubble]);
 
@@ -1703,6 +1739,8 @@ function App() {
     day,
   }), [activeCharacter, activeGestureEffect, captionMode, day, recentConversationTopic, sceneReaction]);
   const stopVoiceSession = useCallback(() => {
+    pcmSpeechRef.current?.stop();
+    voiceTransportRef.current = "classic";
     voiceSessionGenerationRef.current += 1;
     voiceReadyRef.current = false;
     voiceReadyResolveRef.current?.(null);
@@ -1758,7 +1796,8 @@ function App() {
       if (generation !== voiceSessionGenerationRef.current) { void context.close(); return null; }
       inputSampleRate = context.sampleRate;
       const source = context.createMediaStreamSource(new MediaStream([audioTrack]));
-      processor = context.createScriptProcessor(4096, 1, 1);
+      // About 21 ms at 48 kHz, close to the provider's recommended 20 ms cadence.
+      processor = context.createScriptProcessor(1024, 1, 1);
       const silent = context.createGain();
       silent.gain.value = 0;
       source.connect(processor);
@@ -1819,7 +1858,8 @@ function App() {
         // Keep the ASR transport alive while character speech is gated. Sending
         // silence, rather than pausing packets, prevents the provider's idle
         // timeout without letting the character's own audio become a transcript.
-        const samples = isCharacterEchoGateActive(characterEchoGateUntilRef.current, performance.now())
+        const localAudioPlaying = guideAudioRef.current?.dataset.voiceKind === "synthesized" && !guideAudioRef.current?.paused;
+        const samples = (voiceTransportRef.current !== "seeduplex" || localAudioPlaying) && isCharacterEchoGateActive(characterEchoGateUntilRef.current, performance.now())
           ? new Float32Array(event.inputBuffer.length)
           : event.inputBuffer.getChannelData(0);
         const pcm = downsampleToPcm16(samples, inputSampleRate);
@@ -1848,6 +1888,7 @@ function App() {
           return;
         }
         if (message.type === "ready") {
+          voiceTransportRef.current = message.transport || "classic";
           voiceReadyRef.current = true;
           voiceReconnectAttemptsRef.current = 0;
           settleReady(socket);
@@ -1855,7 +1896,7 @@ function App() {
           return;
         }
         if (message.type === "transcript") {
-          if (isCharacterEchoGateActive(characterEchoGateUntilRef.current, performance.now())) return;
+          if (voiceTransportRef.current !== "seeduplex" && isCharacterEchoGateActive(characterEchoGateUntilRef.current, performance.now())) return;
           const text = String(message.text || "").trim().slice(0, 1000);
           if (!text) return;
           if (!message.final) setAiState("recognizing");
@@ -1865,7 +1906,7 @@ function App() {
           // a transcript on supported devices; two characters avoids reacting to
           // a one-syllable echo artifact.
           const activeAudio = guideAudioRef.current;
-          if (!message.final && text.length >= 2 && activeAudio?.dataset.voiceKind === "synthesized" && !activeAudio.paused) {
+          if (!message.final && text.length >= 2 && (pcmSpeechRef.current?.playing || (activeAudio?.dataset.voiceKind === "synthesized" && !activeAudio.paused))) {
             clearCharacterSpeech();
             socket.send(JSON.stringify({ type: "cancel" }));
           }
@@ -1891,6 +1932,8 @@ function App() {
               });
             }
             if (shouldTriggerSceneAnalysis(text)) {
+              clearCharacterSpeech();
+              socket.send(JSON.stringify({ type: "cancel" }));
               sceneTriggerRef.current?.();
             }
             if (/^(?:没有|没找到|不找了|不想找|算了|先不看了)[。！!，, ]*$/.test(text)) {
@@ -1947,6 +1990,34 @@ function App() {
           enqueueSynthesizedSpeech(message);
           return;
         }
+        if (message.type === "speech_start") {
+          if (gameplayModeRef.current) return;
+          synthesizedSpeechQueueRef.current = [];
+          guideAudioRef.current?.pause();
+          prepareStreamingSpeech()?.start(message.streamId, message.sampleRate);
+          return;
+        }
+        if (message.type === "speech_chunk") {
+          try { pcmSpeechRef.current?.append(message.streamId, message.audio); }
+          catch (error) { console.warn("Streaming speech decode failed", error); pcmSpeechRef.current?.stop(); }
+          return;
+        }
+        if (message.type === "speech_text") {
+          if (!gameplayModeRef.current && message.text) {
+            setCharacterBubble((current) => ({ id: current?.tone === "speech" ? current.id : crypto.randomUUID(), text: message.text, tone: "speech", character: message.character || activeCharacter }));
+          }
+          return;
+        }
+        if (message.type === "speech_cancel") {
+          if (!message.streamId || pcmSpeechRef.current?.streamId === message.streamId) clearCharacterSpeech();
+          return;
+        }
+        if (message.type === "speech_end") {
+          if (pcmSpeechRef.current?.streamId !== message.streamId) return;
+          if (message.text) recordConversationMessage({ role: "assistant", text: message.text, character: message.character || activeCharacter });
+          pcmSpeechRef.current?.end(message.streamId);
+          return;
+        }
         if (message.type === "leave_note") {
           if (gameplayModeRef.current) return;
           recordConversationMessage({
@@ -1993,7 +2064,7 @@ function App() {
       if (audioTrack) return startVoiceSession(stream, { textOnly: true });
       return null;
     }
-  }, [activeCharacter, clearCharacterSpeech, dismissCollection, enqueueSynthesizedSpeech, recordConversationMessage, scheduleAutoCapture, setHiddenStoryFocus, showToast, stopVoiceSession]);
+  }, [activeCharacter, clearCharacterSpeech, dismissCollection, enqueueSynthesizedSpeech, prepareStreamingSpeech, recordConversationMessage, scheduleAutoCapture, setHiddenStoryFocus, showToast, stopVoiceSession]);
 
   const updateMask = useCallback((result) => {
     const masks = result.confidenceMasks;
@@ -2738,15 +2809,15 @@ function App() {
                 instance.animator?.animations?.find((animation) => animation.name === name) || null
               );
 
-              const playAtIndex = (index) => {
+              const playAtIndex = (index, requestedAnimation) => {
                 if (riveRef.current !== instance) return;
                 const availableAnimations = riveAnimationsRef.current;
                 if (!availableAnimations.length) return;
                 const normalizedIndex = (index + availableAnimations.length) % availableAnimations.length;
-                const nextAnimation = availableAnimations[normalizedIndex];
-                const speaking = guideAudioRef.current
+                const nextAnimation = requestedAnimation || availableAnimations[normalizedIndex];
+                const speaking = pcmSpeechRef.current?.playing || (guideAudioRef.current
                   && !guideAudioRef.current.paused
-                  && guideAudioRef.current.dataset.voiceKind === "synthesized";
+                  && guideAudioRef.current.dataset.voiceKind === "synthesized");
                 const playbackAnimations = [RIVE_POSITION_ANIMATION, nextAnimation];
                 if (speaking && gameplayModeRef.current !== "feed") playbackAnimations.push(RIVE_MOUTH_ANIMATION);
                 switchingAnimation = true;
@@ -2909,10 +2980,11 @@ function App() {
                 return true;
               };
               rivePlayAnimationRef.current = (animationName) => {
-                const resolvedName = resolveCharacterAnimation(animationName, riveAnimationsRef.current);
+                const resolvedName = resolveCharacterAnimation(animationName, instance.animationNames || []);
+                if (!resolvedName) return false;
                 const animationIndex = riveAnimationsRef.current.indexOf(resolvedName);
-                if (animationIndex < 0) return false;
-                playAtIndex(animationIndex);
+                // Explicit actions (e.g. Chew_FullBody) are not random idle poses.
+                playAtIndex(Math.max(0, animationIndex), resolvedName);
                 return true;
               };
               playAtIndex(0);
@@ -3332,6 +3404,8 @@ function App() {
         setCameraLensMode(preferredCamera.lensMode);
       }
       streamRef.current = stream;
+      // Start the speech connection while video playback / optional PiP warms up.
+      void startVoiceSession(stream, { textOnly: microphoneUnavailable });
       const video = videoRef.current;
       video.srcObject = stream;
       await video.play();
@@ -3345,6 +3419,7 @@ function App() {
           stream = acquired.stream;
           microphoneUnavailable = acquired.microphoneUnavailable;
           streamRef.current = stream;
+          void startVoiceSession(stream, { textOnly: microphoneUnavailable });
           video.srcObject = stream;
           await video.play();
         }
@@ -3369,7 +3444,6 @@ function App() {
           };
         }
       }
-      startVoiceSession(stream, { textOnly: microphoneUnavailable });
       if (microphoneUnavailable) showToast("相机已打开，也可以点右上角打字聊天");
       if (pipResult && !pipResult.ok) {
         showToast("当前设备暂不支持前后双摄，已保留后摄主画面");
@@ -3378,6 +3452,7 @@ function App() {
       }
     } catch (error) {
       cameraReadyRef.current = false;
+      stopVoiceSession();
       stream?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
       const denied = error instanceof DOMException && ["NotAllowedError", "SecurityError"].includes(error.name);
@@ -4170,12 +4245,26 @@ function App() {
     return () => clearInterval(timer);
   }, [gameplayMode]);
   const handleGameplayTarget = useCallback((target) => {
+    const wasChewing = gameplayTargetRef.current?.chewing;
     gameplayTargetRef.current = target;
     const rect = characterDrawRectRef.current;
-    if (!target || !rect) { characterInteractionRef.current?.reset(); return; }
+    if (!target || !rect) {
+      characterInteractionRef.current?.reset();
+      if (wasChewing) rivePlayAnimationRef.current?.("TalkingEmotion_Normal");
+      return;
+    }
+    if (target.chewing) {
+      characterInteractionRef.current?.reset();
+      if (rivePlayAnimationRef.current?.(CHARACTER_TIMELINES.CHEW_FULL_BODY)) {
+        const animation = riveRef.current?.artboard?.animationByName?.(CHARACTER_TIMELINES.CHEW_FULL_BODY);
+        const frames = (animation?.workEnd || animation?.duration || 0) - (animation?.workStart || 0);
+        const duration = frames / (animation?.fps || 60) * 1000 / (rivePlaybackRateRef.current || 1);
+        return Number.isFinite(duration) && duration > 0 ? duration + 80 : 2400;
+      }
+    }
     characterInteractionRef.current?.update({
       x: clamp((target.x - rect.mouthX) / Math.max(rect.width * 0.45, 1), -1, 1),
-      y: clamp((target.y - rect.mouthY) / Math.max(rect.height * 0.4, 1), -1, 1),
+      y: clamp((target.y - (rect.mouthY - rect.height * 0.12)) / Math.max(rect.height * 0.4, 1), -1, 1),
       mouthOpen: target.mouthOpen, chewing: target.chewing,
     });
   }, []);
@@ -4287,6 +4376,8 @@ function App() {
             riveMouthPlaybackRef.current?.(false);
           }}
           onEnded={() => {
+            characterEchoGateUntilRef.current = endCharacterEchoGate(performance.now());
+            riveMouthPlaybackRef.current?.(false);
             playNextSynthesizedSpeech();
           }}
           aria-hidden="true"
@@ -4692,7 +4783,6 @@ function App() {
                               >
                                 <span className="media-library-visual">
                                   {friend.stickerUrl && <img src={friend.stickerUrl} alt="" />}
-                                  <span className="media-friend-badge" aria-hidden="true">✦ 贴纸</span>
                                 </span>
                                 <span className="media-friend-name">{friend.name}<small>{friend.english ? `· ${friend.english}` : ""}</small></span>
                               </button>

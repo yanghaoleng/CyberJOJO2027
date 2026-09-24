@@ -3,6 +3,24 @@ import { Readable } from "node:stream";
 import test from "node:test";
 import { createVisionRequestHandler } from "./vision-route.js";
 
+test("explicit inspection bypasses background cooldown and returns before optional speech synthesis", async () => {
+  let time = 10_000, enriched = 0;
+  const handler = createVisionRequestHandler({ allowedOrigins: new Set(["https://cyberjojo.mikeywa.site"]), now: () => time,
+    assessScene: async () => ({ assessment: { evaluable: true, text: "是一盆植物" } }),
+    enrichResponse: async () => { enriched++; return { audio: "audio" }; },
+  });
+  await handler(createRequest({ body: "{}" }), createResponse());
+  time += 800;
+  const response = createResponse();
+  await handler(createRequest({ body: JSON.stringify({ source: "explicit", includeAudio: false }) }), response);
+  assert.equal(response.status, 200);
+  assert.equal(JSON.parse(response.body).audio, undefined);
+  assert.equal(enriched, 1);
+  const limited = createResponse();
+  await handler(createRequest({ body: JSON.stringify({ source: "explicit" }) }), limited);
+  assert.equal(limited.status, 429);
+});
+
 function createRequest({ body = "", method = "POST", origin = "https://cyberjojo.mikeywa.site", ip = "203.0.113.8" } = {}) {
   const request = Readable.from(body ? [Buffer.from(body)] : []);
   request.url = "/vision";

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+
 import {
   DEFAULT_BRAND_TERMS,
   IP_DOCUMENT_TERMS,
@@ -7,6 +8,11 @@ import {
   correctBrandTranscript,
   getBrandTerms,
 } from "./brand-lexicon.js";
+
+test("the companion's common homophone 娇娇 is corrected in partial and full text", () => {
+  assert.equal(correctBrandTranscript("娇娇").text, "叫叫");
+  assert.equal(correctBrandTranscript("娇娇，你看看这本书").text, "叫叫，你看看这本书");
+});
 
 test("default brand lexicon contains the requested product vocabulary", () => {
   for (const term of [

@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getCollectionFollowUp, parseVoiceIntent, shouldInspectAfterSpeech } from "./voice-intents.js";
+import { getCollectionFollowUp, parseVoiceIntent, shouldInspectAfterSpeech, shouldTriggerSceneAnalysis } from "./voice-intents.js";
+
+test("inspection and collection of food do not accidentally launch feeding", () => {
+  for (const phrase of ["叫叫看看这个苹果", "这是什么", "帮我看看这盆植物", "你看这个蛋糕", "叫叫看看这本书", "叫叫，看东西"]) {
+    assert.equal(shouldTriggerSceneAnalysis(phrase), true);
+    assert.equal(parseVoiceIntent(phrase), null);
+  }
+  assert.equal(parseVoiceIntent("帮我收藏这个苹果").type, "collect");
+});
 
 test("fixed heart phrases trigger the heart action", () => {
   assert.deepEqual(parseVoiceIntent("叫叫，给我比个心"), { type: "heart", size: "small" });

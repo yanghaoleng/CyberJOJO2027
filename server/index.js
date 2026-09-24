@@ -112,7 +112,7 @@ function sendJson(socket, payload) {
   if (socket.readyState === 1) socket.send(JSON.stringify(payload));
 }
 
-const OPENING_TEXT = "我来啦！今天读了什么好玩的，还是吃了什么好吃的呀？";
+const OPENING_TEXT = "嗨，我来啦！";
 const buildOpeningText = (storyDayValue, storyAgeGroupValue) => {
   const arc = getStoryArc(storyDayValue, storyAgeGroupValue);
   return `${OPENING_TEXT} 对了，${arc.opening}`;
@@ -413,17 +413,27 @@ websocketServer.on("connection", (client) => {
     if (message.type === "cancel") { cancelPending(); return; }
     if (message.type === "interaction_mode") {
       if (!["none", "toy", "find", "feed"].includes(message.mode)) return;
+      if (interactionMode === message.mode) return;
       cancelPending();
       interactionMode = message.mode;
       seeduplex?.setMuted(message.mode !== "none");
       return;
     }
-    if (message.type === "local_speech") {
+    if (message.type === "local_speech" || message.type === "scene_speech") {
       if (!started || Date.now() - lastLocalSpeechAt < 700) return;
       const text = String(message.text || "").replace(/\s+/g, " ").trim().slice(0, 80);
       if (!text) return;
       lastLocalSpeechAt = Date.now();
       localSpeechSequence += 1;
+      if (message.type === "scene_speech" && interactionMode === "none") {
+        cancelPending();
+        context.entries = [...context.entries, { role: "assistant", text }].slice(-16);
+        if (seeduplex) {
+          seeduplex.update({ instructions: `${buildCharacterInstructions(activeCharacter, storyInstructions(false))}\n刚才镜头观察得到的描述：${text}。后续谈到这个物品时参考它，不要编造其他视觉细节。` });
+          seeduplex.greet(text);
+          return;
+        }
+      }
       void sendSpeech(text, { local: true }).catch((error) => console.error("Interaction speech failed", { name: error.name }));
       return;
     }
@@ -446,6 +456,7 @@ websocketServer.on("connection", (client) => {
       return;
     }
     if (seeduplexConfig?.enabled) {
+      let speechStreamId = "";
       seeduplex = new SeeduplexSession({
         config: seeduplexConfig,
         instructions: buildCharacterInstructions(activeCharacter, storyInstructions(false)),
@@ -475,10 +486,22 @@ websocketServer.on("connection", (client) => {
             context.entries = [...context.entries, { role: "user", text: String(corrected.text).replace(/\s+/g, " ").trim().slice(0, 1000) }].slice(-16);
           }
         },
-        onAudioDone: ({ audio, text, statusCode }) => {
-          if (!audio || closed) return;
-          const cleanText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 48);
-          sendJson(client, { type: "speech", text: cleanText, character: activeCharacter, sessionId, mime: "audio/wav", audio });
+        onAudioStart: () => {
+          speechStreamId = randomUUID();
+          sendJson(client, { type: "speech_start", streamId: speechStreamId, character: activeCharacter, sampleRate: 24_000 });
+        },
+        onText: ({ text }) => sendJson(client, { type: "speech_text", text, character: activeCharacter }),
+        onAudioDelta: ({ audio }) => {
+          if (!closed && speechStreamId) sendJson(client, { type: "speech_chunk", streamId: speechStreamId, audio });
+        },
+        onCancel: () => {
+          sendJson(client, { type: "speech_cancel", streamId: speechStreamId });
+          speechStreamId = "";
+        },
+        onAudioDone: ({ text }) => {
+          if (closed) return;
+          const cleanText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 1000);
+          sendJson(client, { type: "speech_end", streamId: speechStreamId, text: cleanText, character: activeCharacter, sessionId });
           if (cleanText) context.entries = [...context.entries, { role: "assistant", text: cleanText }].slice(-16);
           armLeaveNote();
         },
@@ -493,7 +516,8 @@ websocketServer.on("connection", (client) => {
           sendJson(client, { type: "error", code: "ASR_UNAVAILABLE", message: "语音识别暂时不可用" });
         },
         onReady: () => {
-          sendJson(client, { type: "ready" });
+          sendJson(client, { type: "ready", transport: "seeduplex" });
+          seeduplex?.setMuted(interactionMode !== "none");
           seeduplex?.greet(buildOpeningText(storyDay, storyAgeGroup));
         },
       });

@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
 import WebSocket from "ws";
+import { buildHotwordContext, getBrandTerms } from "./brand-lexicon.js";
 
 /**
  * 豆包实时语音模型 3.0（Seeduplex）全双工端到端语音会话。
  * 协议：wss://openspeech.bytedance.com/api/v3/duplex/realtime/dialogue
  * 把 ASR + LLM + TTS 三个环节合并为一路 WebSocket S2S，
- * 上行音频（16k PCM）直接送模型，下行直接拿流式语音（ogg_opus 24k）。
+ * 上行音频（16k PCM）直接送模型，下行直接拿流式语音（float32 PCM 24k）。
  */
 
 const DEFAULT_ENDPOINT = "wss://openspeech.bytedance.com/api/v3/duplex/realtime/dialogue";
@@ -14,10 +15,11 @@ const DEFAULT_VOICES = Object.freeze({
   jiaojiao: "zh_male_tiancaitongsheng_uranus_bigtts",
   lvdou: "zh_male_naiqimengwa_uranus_bigtts",
 });
-// 输出改 PCM（24000Hz 16bit 小端）：服务端组装 WAV 头，浏览器 <audio> 全平台可播
-// （ogg_opus 在 iOS Safari 的 <audio> 上不支持，会导致实时对话无声）
+// PCM avoids the iOS <audio> ogg_opus limitation. Web Audio plays float32 chunks;
+// non-streaming consumers retain the int16 WAV conversion below.
 const OUTPUT_AUDIO_TYPE = "pcm";
 const OUTPUT_AUDIO_RATE = 24_000;
+const withBrandHints = (instructions) => `专有名词：本应用的角色名字写作“叫叫”和“绿豆”。称呼叫叫时不要写成“娇娇”或“佳佳”。遵循下文当前角色的身份。\n${String(instructions || "")}`.slice(0, 12_000);
 
 export function getSeeduplexConfig(env = process.env) {
   const apiKey = String(env.SEEDUPLEX_API_KEY || env.VOLC_SPEECH_API_KEY || "").trim();
@@ -27,6 +29,7 @@ export function getSeeduplexConfig(env = process.env) {
     endpoint: env.SEEDUPLEX_ENDPOINT || DEFAULT_ENDPOINT,
     apiKey,
     model: env.SEEDUPLEX_MODEL || DEFAULT_MODEL,
+    hotwords: getBrandTerms(env),
     voices: {
       jiaojiao: env.JOCAM_SEEDUPLEX_JIAOJIAO_VOICE || env.JOCAM_TTS_JIAOJIAO_VOICE || DEFAULT_VOICES.jiaojiao,
       lvdou: env.JOCAM_SEEDUPLEX_LVDOU_VOICE || env.JOCAM_TTS_LVDOU_VOICE || DEFAULT_VOICES.lvdou,
@@ -43,7 +46,7 @@ export function buildSessionCreate(config, { instructions, voice, context = [], 
     type: "session.create",
     session: {
       model: config.model,
-      instructions: String(instructions || "").slice(0, 12_000),
+      instructions: withBrandHints(instructions),
       audio: {
         input: { format: { type: "pcm", rate: 16_000 } },
         output: {
@@ -52,6 +55,11 @@ export function buildSessionCreate(config, { instructions, voice, context = [], 
         },
       },
       ...(history.length ? { dialog_context: history } : {}),
+      // Seeduplex's documented ASR extension, not a prompt-only spelling hint.
+      extension: { asr: { extra: { context: JSON.stringify({
+        ...JSON.parse(buildHotwordContext(config.hotwords) || "{}"),
+        correct_words: { "娇娇": "叫叫", "佳佳": "叫叫", "驴豆": "绿豆" },
+      }) } } },
       ...(tools.length ? { tools } : {}),
     },
   };
@@ -149,7 +157,7 @@ export function parseDownstreamEvent(payload) {
   }
   if (!event || typeof event !== "object") return { type: "unknown" };
   const type = String(event.type || "");
-  const transcript = (event.utterance || event.text || "").replace(/\s+/g, " ").trim();
+  const transcript = String(event.utterance || event.text || (type.includes("audio.delta") ? "" : event.delta) || "");
   switch (type) {
     case "session.created":
       return { type, sessionId: event.session?.id || "" };
@@ -213,7 +221,7 @@ export function buildSessionUpdate({ instructions, voice }) {
   return {
     type: "session.update",
     session: {
-      ...(instructions !== undefined ? { instructions: String(instructions || "").slice(0, 12_000) } : {}),
+      ...(instructions !== undefined ? { instructions: withBrandHints(instructions) } : {}),
       ...(voice ? { audio: { output: { format: { type: OUTPUT_AUDIO_TYPE, rate: OUTPUT_AUDIO_RATE }, voice } } } : {}),
     },
   };
@@ -235,13 +243,15 @@ export function buildToolResult({ callId, ok = true }) {
 }
 
 export class SeeduplexSession {
-  constructor({ config, instructions, voice, context = [], onTranscript, onText, onAudioDelta, onAudioDone, onFunctionCall, onDone, onError, onReady }) {
+  constructor({ config, instructions, voice, context = [], onTranscript, onText, onAudioStart, onAudioDelta, onAudioDone, onCancel, onFunctionCall, onDone, onError, onReady }) {
     this.config = config;
     this.instructions = instructions;
     this.voice = voice;
     this.context = context;
     this.onTranscript = onTranscript;
     this.onText = onText;
+    this.onAudioStart = onAudioStart;
+    this.onCancel = onCancel;
     this.onAudioDelta = onAudioDelta;
     this.onAudioDone = onAudioDone;
     this.onFunctionCall = onFunctionCall;
@@ -257,6 +267,9 @@ export class SeeduplexSession {
     this.audioStartedAt = 0;
     this.textBuffer = "";
     this.replyText = "";
+    this.acceptAudio = true;
+    this.outputActive = false;
+    this.awaitingCancelAck = false;
   }
 
   connect() {
@@ -268,8 +281,20 @@ export class SeeduplexSession {
       });
       this.socket = socket;
       const fail = (error) => {
+        clearTimeout(this.readyTimer);
+        this.resolveReady = null;
         if (!this.ready) reject(error);
         this.onError?.(error);
+      };
+      this.readyTimer = setTimeout(() => {
+        fail(new Error("Seeduplex session readiness timeout"));
+        socket.close();
+      }, 10_000);
+      this.resolveReady = () => {
+        clearTimeout(this.readyTimer);
+        this.ready = true;
+        this.onReady?.();
+        resolve();
       };
 
       socket.once("open", () => {
@@ -280,9 +305,6 @@ export class SeeduplexSession {
           context: this.context,
           tools,
         })));
-        this.ready = true;
-        this.onReady?.();
-        resolve();
       });
 
       socket.on("message", (data) => {
@@ -295,6 +317,8 @@ export class SeeduplexSession {
       });
       socket.once("error", fail);
       socket.once("close", (code) => {
+        clearTimeout(this.readyTimer);
+        if (!this.ready) reject(new Error(`Seeduplex closed before ready (${code})`));
         this.ready = false;
         if (!this.closed && code !== 1000) fail(new Error(`Seeduplex connection closed (${code})`));
       });
@@ -305,41 +329,61 @@ export class SeeduplexSession {
     switch (event.type) {
       case "session.created":
         this.sessionId = event.sessionId;
+        if (!this.ready && !this.closed) this.resolveReady?.();
         break;
       case "conversation.item.input_audio_transcription.started":
         this.textBuffer = "";
         break;
       case "conversation.item.input_audio_transcription.delta":
         this.textBuffer += event.text;
-        this.onTranscript?.({ text: event.text, final: false });
+        this.onTranscript?.({ text: this.textBuffer, final: false });
         break;
       case "conversation.item.input_audio_transcription.completed":
-        this.onTranscript?.({ text: event.text, final: true });
+        this.onTranscript?.({ text: event.text || this.textBuffer, final: true });
+        this.textBuffer = "";
         break;
       case "response.output_text.delta":
         this.replyText += event.text;
-        this.onText?.({ text: event.text, final: false });
+        if (this.acceptAudio) this.onText?.({ text: this.replyText, final: false });
         break;
       case "response.output_text.done":
-        this.onText?.({ text: event.text, final: true });
+        this.replyText = event.text || this.replyText;
+        if (this.acceptAudio) this.onText?.({ text: this.replyText, final: true });
         break;
       case "response.output_audio.started":
-        this.audioChunks = [];
-        this.audioStartedAt = Date.now();
+        if (this.awaitingCancelAck) break;
+        this.acceptAudio = true;
+        // TTSSentenceStart can repeat inside one reply. Preserve scheduled audio
+        // and accumulated PCM until the turn-level output_audio.done event.
+        if (!this.outputActive) {
+          this.outputActive = true;
+          this.audioChunks = [];
+          this.audioStartedAt = Date.now();
+          this.onAudioStart?.();
+          if (this.replyText) this.onText?.({ text: this.replyText, final: false });
+        }
         break;
       case "response.output_audio.delta":
-        if (event.audio) this.audioChunks.push(event.audio);
+        if (!this.acceptAudio || !event.audio) break;
+        // Streaming consumers do not need a second, full-turn audio copy.
+        if (!this.onAudioDelta) this.audioChunks.push(event.audio);
         this.onAudioDelta?.({ audio: event.audio, pending: this.audioChunks.length });
         break;
       case "response.output_audio.done":
+        if (!this.acceptAudio) break;
         this.onAudioDone?.({
-          audio: assembleWavBase64(this.audioChunks),
+          audio: this.onAudioDelta ? "" : assembleWavBase64(this.audioChunks),
           text: this.replyText,
           startedAt: this.audioStartedAt,
           statusCode: event.statusCode,
         });
         this.replyText = "";
         this.audioChunks = [];
+        this.outputActive = false;
+        break;
+      case "response.canceled":
+        this.awaitingCancelAck = false;
+        this.cancelOutput();
         break;
       case "response.function_call_arguments.done":
         this.onFunctionCall?.({ callId: event.callId, name: event.name, arguments: event.arguments });
@@ -376,8 +420,18 @@ export class SeeduplexSession {
   }
 
   interrupt() {
+    this.cancelOutput();
     if (!this.ready || this.socket?.readyState !== WebSocket.OPEN) return;
+    this.awaitingCancelAck = true;
     this.socket.send(JSON.stringify(buildCancel()));
+  }
+
+  cancelOutput() {
+    this.acceptAudio = false;
+    this.outputActive = false;
+    this.audioChunks = [];
+    this.replyText = "";
+    this.onCancel?.();
   }
 
   update({ instructions, voice }) {
@@ -393,6 +447,7 @@ export class SeeduplexSession {
   close() {
     if (this.closed) return;
     this.closed = true;
+    clearTimeout(this.readyTimer);
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(buildSessionClose()));
       const socket = this.socket;

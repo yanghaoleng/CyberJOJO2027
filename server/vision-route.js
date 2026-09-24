@@ -78,20 +78,26 @@ export function createVisionRequestHandler({
 
     const ip = getClientIp(request);
     const requestedAt = now();
-    const waitMs = minIntervalMs - (requestedAt - (lastRequestByIp.get(ip) || 0));
-    if (activeIps.has(ip) || waitMs > 0) {
+    if (activeIps.has(ip)) {
       sendJson(response, 429, {
         ok: false,
         code: "VISION_RATE_LIMIT",
-        retryAfterMs: Math.max(750, waitMs),
+        retryAfterMs: 750,
       }, corsHeaders);
       return true;
     }
 
     activeIps.add(ip);
-    lastRequestByIp.set(ip, requestedAt);
     try {
       const body = await readJsonBody(request, maxBodyBytes);
+      const interval = body.source === "explicit" ? Math.min(minIntervalMs, 750) : minIntervalMs;
+      const lastRequest = lastRequestByIp.get(ip);
+      const waitMs = lastRequest === undefined ? 0 : interval - (requestedAt - lastRequest);
+      if (waitMs > 0) {
+        sendJson(response, 429, { ok: false, code: "VISION_RATE_LIMIT", retryAfterMs: waitMs }, corsHeaders);
+        return true;
+      }
+      lastRequestByIp.set(ip, requestedAt);
       const result = await assessScene(body.image, body.character, arkConfig);
       let payload = {
         ok: true,
@@ -101,7 +107,7 @@ export function createVisionRequestHandler({
           outputTokens: Number(result.usage.output_tokens || 0),
         } : null,
       };
-      if (payload.evaluable && enrichResponse) {
+      if (payload.evaluable && enrichResponse && body.includeAudio !== false) {
         payload = { ...payload, ...(await enrichResponse(payload, body)) };
       }
       sendJson(response, 200, payload, corsHeaders);

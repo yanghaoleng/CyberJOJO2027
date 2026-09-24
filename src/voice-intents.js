@@ -4,7 +4,7 @@ const WREATH_INTENT = /(?:比(?:个)?花圈|花圈|爱心花圈|心形花圈)/;
 const FOOD_WORDS = ["吃东西", "饿了", "好饿", "想吃", "美食", "好吃的", "好吃吗", "吃饭", "吃面", "吃菜", "吃", "喝", "饭", "面条", "米饭", "菜", "肉", "鱼", "蛋", "水果", "苹果", "香蕉", "橘子", "橙子", "西瓜", "葡萄", "草莓", "桃", "梨", "蔬菜", "胡萝卜", "玉米", "土豆", "面包", "蛋糕", "饼干", "糖果", "糖", "巧克力", "牛奶", "酸奶", "果汁", "汤", "饺子", "包子", "馒头", "粥", "汉堡", "披萨", "薯条", "冰淇淋", "零食", "早餐", "午餐", "晚餐", "早饭", "中饭", "晚饭", "夜宵"];
 const FEED_INTENT = new RegExp(`(?:${FOOD_WORDS.join("|")})`);
 const COLLECTION_INTENT = /(?:收集|收藏|收录|做成(?:一张|一个)?(?:单词)?贴纸|放进(?:朋友|图鉴|收藏))/;
-const INSPECTION_READY = /(?:找到了|拿来了|拿过来了|放好了|摆好了|准备好了|给你看|你看(?:看)?|看这个|再看(?:一下)?|就在(?:中间|镜头前)|放在(?:中间|框里)|认一下|识别一下|看得见吗)/;
+const INSPECTION_READY = /(?:找到了|拿来了|拿过来了|放好了|摆好了|准备好了|给你看|你看(?:看)?|看(?:看|一下)?(?:这(?:个|本|棵|盆|只)|东西|这里)|帮我看|这(?:个)?是什么|再看(?:一下)?|看一下|就在(?:中间|镜头前)|放在(?:中间|框里)|认一下|识别一下|看得见吗)/;
 
 function cleanSubject(value) {
   return String(value || "")
@@ -23,10 +23,12 @@ export function parseVoiceIntent(value) {
   if (!text) return null;
   if (WREATH_INTENT.test(text)) return { type: "wreath" };
   if (HEART_INTENT.test(text) || LARGE_HEART_INTENT.test(text)) return { type: "heart", size: LARGE_HEART_INTENT.test(text) ? "large" : "small" };
-  if (FEED_INTENT.test(text)) return { type: "feed" };
   if (COLLECTION_INTENT.test(text)) {
     return { type: "collect", subject: cleanSubject(text) || "镜头里的这个东西" };
   }
+  // Looking at an apple must not launch feeding and disable the camera inspector.
+  if (INSPECTION_READY.test(text)) return null;
+  if (FEED_INTENT.test(text)) return { type: "feed" };
   return null;
 }
 

@@ -13,6 +13,11 @@
 .gameplay-feed[data-gameplay-phase="ready"] .gameplay-panel>p:not(.gameplay-error),.gameplay-feed[data-gameplay-phase="dragging"] .gameplay-panel>p:not(.gameplay-error),.gameplay-feed[data-gameplay-phase="returning"] .gameplay-panel>p:not(.gameplay-error),.gameplay-feed[data-gameplay-phase="eating"] .gameplay-panel>p:not(.gameplay-error){display:none}
 .gameplay-feed[data-gameplay-phase="dragging"] .gameplay-panel{opacity:0;transform:translateY(-8px);pointer-events:none}
 .gameplay-feed .gameplay-food.is-dragging{z-index:6}
+.gameplay-feed .gameplay-topbar{justify-content:flex-end}
+.gameplay-feed .gameplay-food{width:112px;height:112px;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 32% 24%,#ffffffe8,#ffffff35 70%);box-shadow:inset 0 1px 5px #ffffffe0,0 8px 24px #162c2626;opacity:1}
+.gameplay-feed .gameplay-food-model{inset:0;width:100%;height:100%;border-radius:50%;background:transparent}
+.gameplay-feed .gameplay-food.is-ready{animation:gameplay-food-float 2.8s ease-in-out infinite}
+@keyframes gameplay-food-float{0%,100%{translate:0 0}50%{translate:0 -7px}}
 .gameplay-panel h2{margin:0;font-size:20px;line-height:1.35;letter-spacing:-.03em;font-weight:850}
 .gameplay-panel p{margin:7px 0 0;font-size:13px;line-height:1.55;color:#69704e}
 .gameplay-actions{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap}

@@ -76,6 +76,7 @@ export const DEFAULT_BRAND_TERMS = Object.freeze([
 ]);
 
 const HIGH_CONFIDENCE_CORRECTIONS = Object.freeze([
+  ["娇娇", "叫叫"],
   ["佳佳", "叫叫"],
   ["笑笑", "叫叫"],
   ["驴豆", "绿豆"],

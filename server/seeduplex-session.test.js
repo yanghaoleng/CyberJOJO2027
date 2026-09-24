@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { once } from "node:events";
+import { WebSocketServer } from "ws";
 import {
   assembleWavBase64,
   buildAudioAppend,
@@ -11,8 +13,76 @@ import {
   buildWavHeader,
   getSeeduplexConfig,
   parseDownstreamEvent,
+  SeeduplexSession,
   seeduplexInternals,
 } from "./seeduplex-session.js";
+
+test("greeting is sent only after the upstream acknowledges session creation", async (t) => {
+  const server = new WebSocketServer({ port: 0, host: "127.0.0.1" });
+  await once(server, "listening");
+  let acknowledge, session;
+  const received = [];
+  const created = new Promise((resolve) => {
+    server.on("connection", (socket) => {
+      socket.on("message", (data) => {
+        const event = JSON.parse(String(data)); received.push(event);
+        if (event.type === "session.create") { acknowledge = () => socket.send(JSON.stringify({ type: "session.created", session: { id: "test" } })); resolve(); }
+      });
+    });
+  });
+  t.after(() => { session.close(); for (const client of server.clients) client.terminate(); server.close(); });
+  session = new SeeduplexSession({ config: { endpoint: `ws://127.0.0.1:${server.address().port}`, apiKey: "test", model: "test" }, onReady: () => session.greet("嗨，我来啦！") });
+  const connected = session.connect();
+  await created;
+  assert.equal(session.ready, false);
+  assert.equal(received.length, 1);
+  const greeted = new Promise((resolve) => [...server.clients][0].on("message", (data) => { if (JSON.parse(String(data)).type === "speech_text_buffer.commit") resolve(); }));
+  acknowledge();
+  await connected; await greeted;
+  assert.equal(session.ready, true);
+  assert.equal(received.at(-1).text, "嗨，我来啦！");
+});
+
+test("partial transcripts use text deltas and completed events can fall back to accumulated text", () => {
+  const transcripts = [];
+  const session = new SeeduplexSession({ onTranscript: (entry) => transcripts.push(entry) });
+  session._dispatch({ type: "conversation.item.input_audio_transcription.started" });
+  for (const delta of ["娇", "娇，", "看看这个"]) session._dispatch(parseDownstreamEvent({ type: "conversation.item.input_audio_transcription.delta", delta }));
+  session._dispatch({ type: "conversation.item.input_audio_transcription.completed", text: "" });
+  assert.deepEqual(transcripts.map((entry) => entry.text), ["娇", "娇娇，", "娇娇，看看这个", "娇娇，看看这个"]);
+  assert.equal(transcripts.at(-1).final, true);
+});
+
+test("streaming emits chunks before completion and drops audio after cancellation", () => {
+  const emitted = [];
+  const session = new SeeduplexSession({ onAudioStart: () => emitted.push("start"), onAudioDelta: ({ audio }) => emitted.push(audio), onAudioDone: ({ audio }) => emitted.push(`done:${audio}`), onCancel: () => emitted.push("cancel") });
+  session._dispatch({ type: "response.output_audio.started" });
+  session._dispatch({ type: "response.output_audio.delta", audio: "AAAAAA==" });
+  assert.deepEqual(emitted, ["start", "AAAAAA=="]);
+  assert.deepEqual(session.audioChunks, []);
+  session._dispatch({ type: "response.output_audio.started" });
+  assert.deepEqual(emitted, ["start", "AAAAAA=="], "a second sentence must not restart browser playback");
+  session._dispatch({ type: "response.output_audio.done" });
+  session.interrupt();
+  session._dispatch({ type: "response.output_audio.delta", audio: "stale" });
+  assert.deepEqual(emitted, ["start", "AAAAAA==", "done:", "cancel"]);
+  session._dispatch({ type: "response.output_audio.started" });
+  session._dispatch({ type: "response.output_audio.delta", audio: "new" });
+  assert.equal(emitted.at(-1), "new");
+});
+
+test("late sentence starts cannot resurrect a reply while cancellation is pending", () => {
+  let starts = 0;
+  const session = new SeeduplexSession({ onAudioStart: () => starts++ });
+  session.ready = true;
+  session.socket = { readyState: 1, send() {} };
+  session.interrupt();
+  session._dispatch({ type: "response.output_audio.started" });
+  assert.equal(starts, 0);
+  session._dispatch({ type: "response.canceled" });
+  session._dispatch({ type: "response.output_audio.started" });
+  assert.equal(starts, 1);
+});
 
 test("seeduplex config is null without a speech key and enabled with one", () => {
   assert.equal(getSeeduplexConfig({}), null);
@@ -32,6 +102,9 @@ test("session.create carries persona instructions, pcm input and voice output", 
   assert.equal(event.type, "session.create");
   assert.equal(event.session.model, "1.2.6.1");
   assert.ok(event.session.instructions.includes("小烦恼"));
+  const asrContext = JSON.parse(event.session.extension.asr.extra.context);
+  assert.ok(asrContext.hotwords.some(({ word }) => word === "叫叫"));
+  assert.equal(asrContext.correct_words["娇娇"], "叫叫");
   assert.deepEqual(event.session.audio.input.format, { type: "pcm", rate: 16_000 });
   assert.equal(event.session.audio.output.format.type, "pcm");
   assert.equal(event.session.audio.output.voice, "zh_male_tiancaitongsheng_uranus_bigtts");
@@ -67,7 +140,8 @@ test("session.update only patches provided fields", () => {
   assert.equal(voiceOnly.session.audio.output.voice, "new-voice");
   const instructionsOnly = buildSessionUpdate({ instructions: "新指令" });
   assert.equal(instructionsOnly.session.audio, undefined);
-  assert.equal(instructionsOnly.session.instructions, "新指令");
+  assert.ok(instructionsOnly.session.instructions.endsWith("新指令"));
+  assert.ok(instructionsOnly.session.instructions.includes("叫叫"));
 });
 
 test("function call results are returned as tool items with the same call id", () => {

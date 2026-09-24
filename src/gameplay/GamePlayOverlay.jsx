@@ -47,8 +47,6 @@ export default function GamePlayOverlay({ mode, onClose, captureFrame, onReactio
   const [foodId, setFoodId] = useState(() => mode === "feed" && FOOD_LABELS[initialFoodId] ? initialFoodId : null);
   const [foodSource, setFoodSource] = useState("");
   const [foodPosition, setFoodPosition] = useState(null);
-  const [manualOpen, setManualOpen] = useState(false);
-  const [nearMouth, setNearMouth] = useState(false);
   const [target, setTarget] = useState(null);
   const [selection, setSelection] = useState(null);
   const [steady, setSteady] = useState(false);
@@ -104,10 +102,10 @@ export default function GamePlayOverlay({ mode, onClose, captureFrame, onReactio
 
   useEffect(() => {
     stopTransient(); roundRef.current = makeId(); retryAtRef.current = 0;
-    const voiceFoodId = mode === "feed" && FOOD_LABELS[initialFoodId] ? initialFoodId : null;
+    const voiceFoodId = mode === "feed" ? (FOOD_LABELS[initialFoodId] ? initialFoodId : "apple") : null;
     setPhase(voiceFoodId ? "ready" : "idle"); setError(""); setMessage(voiceFoodId ? `给叫叫准备了${FOOD_LABELS[voiceFoodId]}，拖给它尝尝吧` : ""); setTarget(null); setConfirmed(null);
-    setFoodId(voiceFoodId); setFoodPosition(null); setFoodSource(voiceFoodId ? "voice" : ""); setNearMouth(false);
-    setSelection(null); setSteady(false); setManualOpen(false); setRetrySeconds(0); stabilityRef.current = null;
+    setFoodId(voiceFoodId); setFoodPosition(null); setFoodSource(voiceFoodId ? "voice" : "");
+    setSelection(null); setSteady(false); setRetrySeconds(0); stabilityRef.current = null;
   }, [mode, frameKey, initialFoodId, stopTransient]);
 
   useEffect(() => {
@@ -192,11 +190,6 @@ export default function GamePlayOverlay({ mode, onClose, captureFrame, onReactio
     } finally { if (requestRef.current === controller) requestRef.current = null; }
   };
 
-  const pickFood = (id) => {
-    stopTransient(); setFoodId(id); setFoodSource("manual"); setFoodPosition(null); setPhase("ready");
-    setError(""); setMessage(`你选了${FOOD_LABELS[id]}，拖给叫叫吧`); setNearMouth(false); setManualOpen(false);
-  };
-
   const pointerPoint = (event) => {
     const rect = elementRef.current.getBoundingClientRect();
     return { x: clamp(event.clientX - rect.left, 24, rect.width - 24), y: clamp(event.clientY - rect.top, 24, rect.height - 24) };
@@ -208,7 +201,7 @@ export default function GamePlayOverlay({ mode, onClose, captureFrame, onReactio
     event.currentTarget.setPointerCapture(event.pointerId);
     const point = pointerPoint(event);
     dragRef.current = { pointerId: event.pointerId, element: event.currentTarget, point };
-    setPhase("dragging"); setFoodPosition(point); setNearMouth(isNearMouth(point, mouth, 15));
+    setPhase("dragging"); setFoodPosition(point);
     callbacks.current.onTarget?.({ ...point, mouthOpen: isNearMouth(point, mouth, 15), chewing: false });
   };
 
@@ -217,30 +210,30 @@ export default function GamePlayOverlay({ mode, onClose, captureFrame, onReactio
     event.preventDefault();
     const point = pointerPoint(event); dragRef.current.point = point;
     const close = isNearMouth(point, mouth, 15);
-    setFoodPosition(point); setNearMouth(close);
+    setFoodPosition(point);
     callbacks.current.onTarget?.({ ...point, mouthOpen: close, chewing: false });
   };
 
   const eatFoodAtMouth = () => {
     if (!mouth || !mountedRef.current) return;
     setFoodPosition({ x: mouth.x, y: mouth.y }); setPhase("eating"); setMessage("啊呜，接住啦！");
-    callbacks.current.onTarget?.({ x: mouth.x, y: mouth.y, mouthOpen: false, chewing: true });
+    const chewingDuration = callbacks.current.onTarget?.({ x: mouth.x, y: mouth.y, mouthOpen: false, chewing: true });
     timerRef.current = setTimeout(() => {
       if (!mountedRef.current) return;
       callbacks.current.onTarget?.(null);
       callbacks.current.onReaction?.({ action: "happy", text: "谢谢你的分享！" });
       setFoodPosition(null); setPhase("ready"); setMessage("再喂一口，或者换一种食物");
-    }, 1_650);
+    }, Math.max(1000, Math.min(10_000, Number(chewingDuration) || 1_650)));
   };
 
   const keyboardFeed = (event) => {
     if (!["Enter", " "].includes(event.key)) return;
     event.preventDefault();
     if (event.repeat || phase !== "ready" || !foodId || !mouth || character !== "jiaojiao") return;
-    setFoodPosition({ x: mouth.x, y: mouth.y }); setPhase("dragging"); setNearMouth(true);
+    setFoodPosition({ x: mouth.x, y: mouth.y }); setPhase("dragging");
     setMessage("把这一口递给叫叫");
     callbacks.current.onTarget?.({ x: mouth.x, y: mouth.y, mouthOpen: true, chewing: false });
-    timerRef.current = setTimeout(() => { setNearMouth(false); eatFoodAtMouth(); }, 320);
+    timerRef.current = setTimeout(eatFoodAtMouth, 320);
   };
 
   const selectWithKeyboard = (event) => {
@@ -258,7 +251,6 @@ export default function GamePlayOverlay({ mode, onClose, captureFrame, onReactio
     dragRef.current = null;
     if (!cancelled) drag.point = pointerPoint(event);
     try { drag.element.releasePointerCapture(event.pointerId); } catch { /* Pointer cancellation already releases capture. */ }
-    setNearMouth(false);
     if (cancelled || !isNearMouth(drag.point, mouth)) {
       setPhase("returning"); setFoodPosition(null); callbacks.current.onTarget?.(null);
       timerRef.current = setTimeout(() => { if (mountedRef.current) setPhase("ready"); }, 320);
@@ -279,7 +271,7 @@ export default function GamePlayOverlay({ mode, onClose, captureFrame, onReactio
       {mode === "find" && phase === "searching" && <button type="button" className="gameplay-select-surface" aria-label="点选要给叫叫看的物品，方向键移动圆圈，回车回到中心" onKeyDown={selectWithKeyboard} onPointerDown={(event) => { setSelection(pointerPoint(event)); setError(""); }} />}
       {mode === "find" && ["searching", "verifying"].includes(phase) && <div className={`gameplay-reticle ${steady ? "is-steady" : ""}`} style={{ left: selectedPoint.x, top: selectedPoint.y }} aria-hidden="true"><i /><i /><i /><i /></div>}
       <header className="gameplay-topbar">
-        <div><span className="gameplay-eyebrow">和叫叫一起玩</span><strong>{mode === "feed" ? "分你一口" : "叫叫找一找"}</strong></div>
+        {mode !== "feed" && <div><span className="gameplay-eyebrow">和叫叫一起玩</span><strong>叫叫找一找</strong></div>}
         <button type="button" className="gameplay-close" aria-label="结束当前玩法" onClick={close}>×</button>
       </header>
       {mode === "feed" && foodId && <button type="button" className={`gameplay-food is-${phase}`} aria-label={`拖动${FOOD_LABELS[foodId]}喂叫叫，也可以按回车喂一口`} onKeyDown={keyboardFeed}
@@ -287,20 +279,9 @@ export default function GamePlayOverlay({ mode, onClose, captureFrame, onReactio
         onPointerDown={dragStart} onPointerMove={dragMove} onPointerUp={(event) => releaseDrag(event)}
         onPointerCancel={(event) => releaseDrag(event, true)} onLostPointerCapture={(event) => releaseDrag(event, true)} onContextMenu={(event) => event.preventDefault()}>
         <FoodModel foodId={foodId} className="gameplay-food-model" interactive={false} autoRotate={phase === "ready"} transparent />
-        <span>{FOOD_LABELS[foodId]}</span>
       </button>}
-      {mode === "feed" && phase === "dragging" && mouth && <div className={`gameplay-mouth-guide ${nearMouth ? "is-near" : ""}`} style={{ left: mouth.x, top: mouth.y, width: mouth.radius * 2, height: mouth.radius * 2 }} aria-hidden="true" />}
-      <section ref={panelRef} className="gameplay-panel" aria-label={mode === "feed" ? "喂食操作" : "找一找操作"}>
-        {mode === "feed" ? <>
-          <h2>{phase === "eating" ? "啊呜，接住啦！" : foodId ? "拖到嘴边，再松开" : "让叫叫看看你的食物"}</h2>
-          <p>{character !== "jiaojiao" ? "先换叫叫来尝一口吧" : foodId && !mouth ? "叫叫还没站好，等它出现再喂一口" : message || "把苹果、蛋糕或面条放到镜头前"}</p>
-          {foodSource === "manual" && <span className="gameplay-source-tag">自己选的食物</span>}
-          <div className="gameplay-actions">
-            <button type="button" className="gameplay-primary" disabled={busy || retrySeconds > 0 || ['dragging', 'eating'].includes(phase)} onClick={() => observe("food")}>{phase === "recognizing" ? "正在看食物…" : retrySeconds ? `${retrySeconds} 秒后再看` : foodId ? "再认一次" : "看看是什么"}</button>
-            <button type="button" className="gameplay-secondary" disabled={['dragging', 'eating'].includes(phase)} onClick={() => setManualOpen(!manualOpen)} aria-expanded={manualOpen}>自己选一个</button>
-          </div>
-          {manualOpen && <div className="gameplay-food-picker" aria-label="手动选择食物">{Object.entries(FOOD_LABELS).map(([id, label]) => <button key={id} type="button" onClick={() => pickFood(id)}>{label}</button>)}</div>}
-        </> : <>
+      {mode !== "feed" && <section ref={panelRef} className="gameplay-panel" aria-label="找一找操作">
+        <>
           <h2>{target?.prompt || "发现身边的小惊喜"}</h2>
           <p>{phase === "creating" ? "叫叫正在观察周围…" : phase === "verifying" ? "正在看你选的这个东西…" : message || "先让叫叫看看周围，再一起找一找"}</p>
           {phase === "searching" && <span className={`gameplay-stability ${steady ? "is-ready" : ""}`}>{steady ? "镜头稳啦，可以确认" : "稳住镜头一小会儿"}</span>}
@@ -309,9 +290,9 @@ export default function GamePlayOverlay({ mode, onClose, captureFrame, onReactio
               : <button type="button" className="gameplay-primary" disabled={busy || retrySeconds > 0} onClick={() => observe("quest")}>{phase === "creating" ? "正在出题…" : retrySeconds ? `${retrySeconds} 秒后再试` : phase === "success" ? "找下一个" : "看看周围，出一道题"}</button>}
             {target && phase !== "success" && <button type="button" className="gameplay-secondary" disabled={busy || retrySeconds > 0} onClick={() => observe("quest")}>换一道</button>}
           </div>
-        </>}
+        </>
         {error && <p className="gameplay-error" role="alert">{error}</p>}
-      </section>
+      </section>}
       <span className="gameplay-announcement" aria-live="polite">{message}</span>
     </div>
   );

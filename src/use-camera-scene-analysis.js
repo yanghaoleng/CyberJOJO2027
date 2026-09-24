@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { requestScene } from "./scene-request.js";
 import {
   beginImmediateSceneRequest,
   createSceneFingerprint,
@@ -11,7 +12,6 @@ import {
 const REACTION_VISIBLE_MS = 5_800;
 const FINGERPRINT_WIDTH = 64;
 const FINGERPRINT_HEIGHT = 40;
-const INITIAL_SCENE_SAMPLE_DELAY_MS = 2_000;
 
 function getVisionApiUrl() {
   const configured = import.meta.env.VITE_JOCAM_VISION_URL;
@@ -19,7 +19,7 @@ function getVisionApiUrl() {
   if (["localhost", "127.0.0.1"].includes(window.location.hostname)) {
     return "http://127.0.0.1:8787/vision";
   }
-  return "https://rive.mikeywa.site/jocam/api/vision";
+  return new URL("api/vision", window.location.href).href;
 }
 
 function createFrameCanvas(width, height) {
@@ -65,6 +65,8 @@ export function useCameraSceneAnalysis({
   const fingerprintCanvasRef = useRef(null);
   const captureCanvasRef = useRef(null);
   const analyzeStableSceneRef = useRef(null);
+  const pendingRequestRef = useRef(false);
+  const triggerRef = useRef(null);
 
   useEffect(() => {
     onReactionRef.current = onReaction;
@@ -77,6 +79,7 @@ export function useCameraSceneAnalysis({
   useEffect(() => {
     if (!enabled) {
       gateRef.current = createSceneGate(performance.now());
+      pendingRequestRef.current = false;
       setVisionState("idle");
       return undefined;
     }
@@ -105,25 +108,22 @@ export function useCameraSceneAnalysis({
       const requestTimeout = window.setTimeout(() => requestController?.abort(), 11_000);
       setVisionState("analyzing");
       try {
-        const response = await fetch(getVisionApiUrl(), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image, character: activeCharacterRef.current }),
-          signal: requestController.signal,
-        });
-        if (!response.ok) throw new Error(`Vision request failed (${response.status})`);
-        const result = await response.json();
-        if (!result?.ok) throw new Error("Vision response was not successful");
+        const result = await requestScene(getVisionApiUrl(), { image, character: activeCharacterRef.current }, { signal: requestController.signal });
+        if (cancelled) return;
         gateRef.current = finishSceneRequest(gateRef.current, fingerprint, true);
         setVisionState("idle");
+        if (pendingRequestRef.current) return;
 
-        if (!result.evaluable || !result.text) return;
+        if (!result.evaluable || !result.text) {
+          result.text = "我还没看清，把它靠近镜头一点，再让我看看吧。";
+          result.action = "curious";
+        }
         const now = Date.now();
         if (!forceReaction && !shouldShowSceneReaction(reactionHistoryRef.current, result.repeatKey, now)) return;
         reactionHistoryRef.current.set(result.repeatKey, now);
         const reaction = {
           id: `${now}-${Math.random().toString(36).slice(2, 8)}`,
-          text: String(result.text).slice(0, 42),
+          text: String(result.text).slice(0, 200),
           subject: String(result.subject || "").slice(0, 24),
           category: result.category,
           tone: result.tone,
@@ -142,37 +142,29 @@ export function useCameraSceneAnalysis({
           setSceneReaction((current) => current?.id === reaction.id ? null : current);
         }, REACTION_VISIBLE_MS);
       } catch (error) {
+        if (cancelled) return;
         gateRef.current = finishSceneRequest(gateRef.current, fingerprint, false);
-        if (!cancelled && error.name !== "AbortError") {
+        if (!pendingRequestRef.current) {
           console.warn("Camera scene analysis unavailable", error);
           setVisionState("unavailable");
+          onReactionRef.current?.({ text: "刚才没看成功，再给我看一下好吗？", character: activeCharacterRef.current, action: "curious" });
         }
       } finally {
         window.clearTimeout(requestTimeout);
         requestController = null;
+        if (!cancelled && pendingRequestRef.current) {
+          pendingRequestRef.current = false;
+          window.queueMicrotask(() => triggerRef.current?.());
+        }
       }
     };
 
     analyzeStableSceneRef.current = analyzeStableScene;
 
-    // 接通后约 2 秒识别一次当前场景，用于开场找话题。
-    // 之后不再自动轮询，只由语义触发（孩子说"让叫叫看"等）再次识别。
-    const initialTimer = window.setTimeout(() => {
-      if (cancelled) return;
-      const video = videoRef.current;
-      if (!video || video.readyState < 2 || gateRef.current.inFlight) return;
-      try {
-        const fingerprint = captureFingerprint(video, fingerprintCanvasRef.current);
-        const update = beginImmediateSceneRequest(gateRef.current, fingerprint, performance.now());
-        gateRef.current = update.state;
-        if (update.shouldRequest) void analyzeStableScene(update.fingerprint, { forceReaction: true });
-      } catch (error) {
-        console.warn("Camera scene sampling unavailable", error);
-      }
-    }, INITIAL_SCENE_SAMPLE_DELAY_MS);
+    // Wait for the child's invitation; do not compete with the opening greeting.
     return () => {
       cancelled = true;
-      window.clearTimeout(initialTimer);
+      pendingRequestRef.current = false;
       requestController?.abort();
       analyzeStableSceneRef.current = null;
       gateRef.current = createSceneGate(performance.now());
@@ -181,7 +173,9 @@ export function useCameraSceneAnalysis({
 
   const triggerSceneAnalysis = useCallback(() => {
     const video = videoRef.current;
-    if (!video || video.readyState < 2 || gateRef.current.inFlight) return;
+    if (!analyzeStableSceneRef.current) return;
+    if (gateRef.current.inFlight) { pendingRequestRef.current = true; return; }
+    if (!video || video.readyState < 2) return;
     try {
       const fingerprint = captureFingerprint(video, fingerprintCanvasRef.current);
       const update = beginImmediateSceneRequest(gateRef.current, fingerprint, performance.now());
@@ -191,6 +185,7 @@ export function useCameraSceneAnalysis({
       console.warn("Camera scene sampling unavailable", error);
     }
   }, [videoRef]);
+  triggerRef.current = triggerSceneAnalysis;
 
   useEffect(() => () => {
     if (reactionTimerRef.current) window.clearTimeout(reactionTimerRef.current);

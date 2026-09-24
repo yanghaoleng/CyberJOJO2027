@@ -1,6 +1,5 @@
 export const CHARACTER_TIMELINES = Object.freeze({
-  // Reserved contracts for the next Rive delivery. They deliberately describe
-  // the whole-body actions, rather than the current mouth-only procedure.
+  // Explicit full-body actions; do not include chewing in the random idle loop.
   CHEW_FULL_BODY: "Chew_FullBody",
   HEART_FULL_BODY: "Reaction_Heart_FullBody",
 });

@@ -2,6 +2,26 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createCharacterInteraction, getChewingPose, mouthAnchorOnCanvas } from "./character-interaction.js";
 
+test("compact exports track the pointer through both pupil nodes without editor controllers", () => {
+  const names = ["IP_CJ_eyeball_L_X", "IP_CJ_eyeball_R_X", "IP_CJ_face_X"];
+  const nodes = new Map(names.map((name) => [name, { x: 0, y: 0, scaleX: 1, scaleY: 1 }]));
+  const instance = { artboard: { node: (name) => nodes.get(name), advance() {} } };
+  const controller = createCharacterInteraction(instance);
+  assert.equal(controller.capabilities.eyes, true);
+  controller.update({ x: 1, y: -1 }, 1);
+  controller.afterAdvance(17);
+  for (const name of names.slice(0, 2)) {
+    assert.ok(nodes.get(name).x > 0);
+    assert.ok(nodes.get(name).y < 0);
+  }
+  controller.update({ x: -1, y: 1 }, 30);
+  controller.afterAdvance(100);
+  assert.ok(nodes.get(names[0]).x < 0);
+  controller.reset();
+  assert.equal(nodes.get(names[0]).x, 0);
+  assert.equal(nodes.get(names[1]).y, 0);
+});
+
 test("chewing has a closed jaw, open jaw and returns to closed on its own rhythm", () => {
   const period = 1000 / 3.8;
   const closed = getChewingPose(0), open = getChewingPose(period / 2), again = getChewingPose(period);
