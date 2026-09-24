@@ -14,7 +14,9 @@ const DEFAULT_VOICES = Object.freeze({
   jiaojiao: "zh_male_tiancaitongsheng_uranus_bigtts",
   lvdou: "zh_male_naiqimengwa_uranus_bigtts",
 });
-const OUTPUT_AUDIO_TYPE = "ogg_opus";
+// 输出改 PCM（24000Hz 16bit 小端）：服务端组装 WAV 头，浏览器 <audio> 全平台可播
+// （ogg_opus 在 iOS Safari 的 <audio> 上不支持，会导致实时对话无声）
+const OUTPUT_AUDIO_TYPE = "pcm";
 const OUTPUT_AUDIO_RATE = 24_000;
 
 export function getSeeduplexConfig(env = process.env) {
@@ -87,7 +89,39 @@ export function buildFunctionCallTool() {
 }
 
 function extractBase64Audio(event) {
-  return typeof event.audio === "string" && event.audio ? event.audio : "";
+  // Seeduplex 全双工下行音频字段为 delta（Base64 PCM/Opus）；部分事件兼容 audio 字段
+  return typeof event.delta === "string" && event.delta
+    ? event.delta
+    : typeof event.audio === "string" && event.audio
+      ? event.audio
+      : "";
+}
+
+// 标准 RIFF/WAVE 头（PCM 16bit 小端单声道）
+export function buildWavHeader(pcmByteLength, sampleRate = OUTPUT_AUDIO_RATE, channels = 1, bitsPerSample = 16) {
+  const byteRate = sampleRate * channels * (bitsPerSample / 8);
+  const blockAlign = channels * (bitsPerSample / 8);
+  const header = Buffer.alloc(44);
+  header.write("RIFF", 0, "ascii");
+  header.writeUInt32LE(36 + pcmByteLength, 4);
+  header.write("WAVE", 8, "ascii");
+  header.write("fmt ", 12, "ascii");
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20); // PCM
+  header.writeUInt16LE(channels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(bitsPerSample, 34);
+  header.write("data", 36, "ascii");
+  header.writeUInt32LE(pcmByteLength, 40);
+  return header;
+}
+
+// 把 Base64 PCM 片段拼成完整 WAV 音频的 Base64
+export function assembleWavBase64(chunks, sampleRate = OUTPUT_AUDIO_RATE) {
+  const pcm = Buffer.concat(chunks.map((chunk) => Buffer.from(chunk, "base64")));
+  return Buffer.concat([buildWavHeader(pcm.length, sampleRate), pcm]).toString("base64");
 }
 
 export function parseDownstreamEvent(payload) {
@@ -285,7 +319,7 @@ export class SeeduplexSession {
         break;
       case "response.output_audio.done":
         this.onAudioDone?.({
-          audio: this.audioChunks.join(""),
+          audio: assembleWavBase64(this.audioChunks),
           text: this.replyText,
           startedAt: this.audioStartedAt,
           statusCode: event.statusCode,
@@ -369,4 +403,6 @@ export const seeduplexInternals = {
   buildSessionUpdate,
   buildToolResult,
   parseDownstreamEvent,
+  assembleWavBase64,
+  buildWavHeader,
 };

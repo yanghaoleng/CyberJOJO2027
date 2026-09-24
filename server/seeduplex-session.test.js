@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  assembleWavBase64,
   buildAudioAppend,
   buildGreet,
   buildMute,
   buildSessionCreate,
   buildSessionUpdate,
   buildToolResult,
+  buildWavHeader,
   getSeeduplexConfig,
   parseDownstreamEvent,
   seeduplexInternals,
@@ -31,7 +33,7 @@ test("session.create carries persona instructions, pcm input and voice output", 
   assert.equal(event.session.model, "1.2.6.1");
   assert.ok(event.session.instructions.includes("小烦恼"));
   assert.deepEqual(event.session.audio.input.format, { type: "pcm", rate: 16_000 });
-  assert.equal(event.session.audio.output.format.type, "ogg_opus");
+  assert.equal(event.session.audio.output.format.type, "pcm");
   assert.equal(event.session.audio.output.voice, "zh_male_tiancaitongsheng_uranus_bigtts");
   assert.equal(event.session.dialog_context.length, 2);
   assert.equal(event.session.tools[0].name, "respond_as_character");
@@ -102,4 +104,28 @@ test("malformed downstream events degrade to unknown without throwing", () => {
 test("internals expose the fixed duplex endpoint and model", () => {
   assert.equal(seeduplexInternals.DEFAULT_ENDPOINT, "wss://openspeech.bytedance.com/api/v3/duplex/realtime/dialogue");
   assert.equal(seeduplexInternals.DEFAULT_MODEL, "1.2.6.1");
+});
+
+
+test("assembleWavBase64 builds a valid RIFF/WAVE header with pcm payload", () => {
+  const chunks = [Buffer.from([1, 0, 2, 0]).toString("base64"), Buffer.from([3, 0, 4, 0]).toString("base64")];
+  const wav = assembleWavBase64(chunks, 24_000);
+  const buf = Buffer.from(wav, "base64");
+  assert.equal(buf.toString("ascii", 0, 4), "RIFF");
+  assert.equal(buf.toString("ascii", 8, 12), "WAVE");
+  assert.equal(buf.toString("ascii", 12, 16), "fmt ");
+  assert.equal(buf.toString("ascii", 36, 40), "data");
+  assert.equal(buf.readUInt16LE(20), 1);
+  assert.equal(buf.readUInt16LE(22), 1);
+  assert.equal(buf.readUInt32LE(24), 24_000);
+  assert.equal(buf.readUInt16LE(34), 16);
+  assert.equal(buf.readUInt32LE(40), 8);
+  assert.equal(buf.length, 44 + 8);
+  assert.deepEqual([...buf.subarray(44)], [1, 0, 2, 0, 3, 0, 4, 0]);
+});
+
+test("buildWavHeader matches RIFF spec sizes", () => {
+  const header = buildWavHeader(8000, 24_000);
+  assert.equal(header.length, 44);
+  assert.equal(header.readUInt32LE(4), 36 + 8000);
 });

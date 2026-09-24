@@ -478,7 +478,7 @@ websocketServer.on("connection", (client) => {
         onAudioDone: ({ audio, text, statusCode }) => {
           if (!audio || closed) return;
           const cleanText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 48);
-          sendJson(client, { type: "speech", text: cleanText, character: activeCharacter, sessionId, mime: "audio/ogg; codecs=opus", audio });
+          sendJson(client, { type: "speech", text: cleanText, character: activeCharacter, sessionId, mime: "audio/wav", audio });
           if (cleanText) context.entries = [...context.entries, { role: "assistant", text: cleanText }].slice(-16);
           armLeaveNote();
         },
