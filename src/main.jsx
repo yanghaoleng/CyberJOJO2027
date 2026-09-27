@@ -3,10 +3,12 @@ import "./safe-area.css";
 import { createRoot } from "react-dom/client";
 const isAssetGallery = /^\/assets\/?$/.test(window.location.pathname);
 const isChangelog = /^\/changelog\/?$/.test(window.location.pathname);
-if (isAssetGallery || isChangelog) document.getElementById("startup-cover")?.remove();
+const isDataDashboard = /^\/data\/?$/.test(window.location.pathname);
+if (isAssetGallery || isChangelog || isDataDashboard) document.getElementById("startup-cover")?.remove();
 const Page = lazy(() => isAssetGallery
   ? import("./assets-gallery/AssetsGallery.jsx")
   : isChangelog ? import("./changelog/Changelog.jsx")
+    : isDataDashboard ? import("./data/DataDashboard.jsx")
     : Promise.all([import("./App.jsx"), import("./styles.css")]).then(([app]) => app));
 
 class StartupBoundary extends Component {
@@ -29,6 +31,6 @@ function Boot() {
     return () => { cancelAnimationFrame(first); cancelAnimationFrame(second); clearTimeout(task); };
   }, []);
   if (!painted) return null;
-  return <Suspense fallback={isAssetGallery || isChangelog ? <p className="page-loading">正在准备{isAssetGallery ? "资源陈列馆" : "更新日志"}…</p> : null}><Page /></Suspense>;
+  return <Suspense fallback={isAssetGallery || isChangelog || isDataDashboard ? <p className="page-loading">正在准备{isAssetGallery ? "资源陈列馆" : isChangelog ? "更新日志" : "数据概览"}…</p> : null}><Page /></Suspense>;
 }
 createRoot(document.getElementById("root")).render(<StrictMode><StartupBoundary><Boot /></StartupBoundary></StrictMode>);
