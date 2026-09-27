@@ -71,12 +71,27 @@ function AccessGate({ onUnlock }) {
 function Trend({ days, metric }) {
   const values = days.map((day) => metric === "conversation" ? day.conversations : day.captures);
   const max = Math.max(1, ...values);
-  const points = values.map((value, index) => `${(index / (values.length - 1)) * 100},${92 - (value / max) * 76}`).join(" ");
+  const chart = { width: 1000, height: 320, left: 24, right: 18, top: 26, bottom: 42 };
+  const plotWidth = chart.width - chart.left - chart.right;
+  const baseline = chart.height - chart.bottom;
+  const plotHeight = baseline - chart.top;
+  const coordinates = values.map((value, index) => ({
+    x: chart.left + (index / (values.length - 1)) * plotWidth,
+    y: baseline - (value / max) * plotHeight,
+    value,
+  }));
+  const points = coordinates.map(({ x, y }) => `${x},${y}`).join(" ");
+  const area = `${chart.left},${baseline} ${points} ${chart.width - chart.right},${baseline}`;
+  const hasData = values.some(Boolean);
   return <div className="trend-wrap">
-    <svg className="trend" viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label={`近 30 天${metric === "conversation" ? "对话轮次" : "作品"}趋势`}>
-      <line x1="0" y1="92" x2="100" y2="92" />
-      <polyline points={points} />
-      {values.map((value, index) => <circle key={days[index].key} cx={(index / (values.length - 1)) * 100} cy={92 - (value / max) * 76} r="1.25"><title>{days[index].key}：{value}</title></circle>)}
+    <svg className="trend" viewBox={`0 0 ${chart.width} ${chart.height}`} preserveAspectRatio="none" role="img" aria-label={`近 30 天${metric === "conversation" ? "对话轮次" : "作品"}趋势`}>
+      {[0, .5, 1].map((ratio) => <line className="trend-grid" key={ratio} x1={chart.left} y1={chart.top + plotHeight * ratio} x2={chart.width - chart.right} y2={chart.top + plotHeight * ratio} />)}
+      {hasData && <>
+        <polygon className="trend-area" points={area} />
+        <polyline className="trend-line" points={points} />
+        {coordinates.map(({ x, y, value }, index) => <circle tabIndex="0" aria-label={`${days[index].key}：${value}`} key={days[index].key} cx={x} cy={y} r="5"><title>{days[index].key}：{value}</title></circle>)}
+      </>}
+      {!hasData && <text className="trend-empty" x="500" y="160" textAnchor="middle">开始互动后，这里会出现趋势</text>}
     </svg>
     <div className="trend-labels"><span>{fmt.format(new Date(`${days[0].key}T00:00:00`))}</span><span>今天</span></div>
   </div>;
