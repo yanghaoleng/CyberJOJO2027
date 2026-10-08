@@ -78,6 +78,9 @@ import { createStickerFromCapture } from "./sticker-matting.js";
 import CollectionFlight from "./friends/CollectionFlight.jsx";
 import { requestGameplay } from "./gameplay/gameplay-api.js";
 import GamePlayOverlay from "./gameplay/GamePlayOverlay.jsx";
+import ActivityExperience, { ActivityReports } from "./activities/ActivityExperience.jsx";
+import { loadActivityReports, saveActivityReport, deleteActivityReport } from "./activities/activity-contract.js";
+import { getLocalDayKey } from "./daily-timeline.js";
 import { createCharacterInteraction } from "./character-interaction.js";
 import { CHARACTER_TIMELINES, resolveCharacterAnimation } from "./character-animations.js";
 import { drawFaceHeartFeedback, drawLargeHeartFeedback, HEART_FEEDBACK_DURATION_MS } from "./heart-feedback.js";
@@ -945,6 +948,8 @@ function App() {
   const mediaLibraryRef = useRef([]);
   const libraryDemoRef = useRef(false);
   const gameplayModeRef = useRef("");
+  const offerActivityRef = useRef(null);
+  const activitySessionRef = useRef(null);
   const feedFoodCursorRef = useRef(0);
   const lastFeedTriggerAtRef = useRef(-Infinity);
   const storyFocusRef = useRef(null);
@@ -1100,6 +1105,9 @@ function App() {
   const [gameplayTranscript, setGameplayTranscript] = useState(null);
   const [gameplayCharacterRect, setGameplayCharacterRect] = useState(null);
   const [libraryTab, setLibraryTab] = useState("all");
+  const [activityCard, setActivityCard] = useState(false);
+  const [activitySession, setActivitySession] = useState(null);
+  const [activityReports, setActivityReports] = useState(loadActivityReports);
   const [textComposerOpen, setTextComposerOpen] = useState(false);
   const [textDraft, setTextDraft] = useState("");
   const [textSending, setTextSending] = useState(false);
@@ -1265,7 +1273,16 @@ function App() {
     sessionActive: cameraState === "ready", onMemoryChange: handleMemoryChange });
   const { entries: conversationEntries, records: conversationSummaries, states: conversationSummaryStates,
     entriesByDay: conversationEntriesByDay, timeline: mediaTimeline, recordMessage: recordConversationMessage } = journal;
-  const visibleTimeline = libraryDemo ? DEMO_TIMELINE : mediaTimeline;
+  const visibleTimeline = useMemo(() => {
+    if (libraryDemo) return DEMO_TIMELINE;
+    const days = new Map(mediaTimeline.map(day => [day.dayKey, { ...day, activities: [] }]));
+    for (const record of activityReports) {
+      const dayKey = getLocalDayKey(record.createdAt);
+      if (!days.has(dayKey)) days.set(dayKey, { dayKey, items: [], friends: [], activities: [] });
+      days.get(dayKey).activities.push(record);
+    }
+    return [...days.values()].sort((a, b) => b.dayKey.localeCompare(a.dayKey));
+  }, [libraryDemo, mediaTimeline, activityReports]);
   const visibleFriends = libraryDemo ? DEMO_FRIENDS : friends;
   journalContextRef.current = journal.getContext;
   useEffect(() => { let alive = true; loadFriends().then((records) => { if (alive) { setFriends(records); latestCollectionRef.current = records[0] || null; } }).catch(() => {}); return () => { alive = false; }; }, []);
@@ -1494,6 +1511,7 @@ function App() {
         recordingRef.current
         || mediaPreviewRef.current
         || mediaLibraryOpenRef.current
+        || activitySessionRef.current
         || now - lastAutoCaptureAtRef.current < AUTO_CAPTURE_COOLDOWN_MS
       ) return;
       lastAutoCaptureAtRef.current = now;
@@ -1684,6 +1702,7 @@ function App() {
       || mediaLibraryOpenRef.current
       || characterSwitchingRef.current
       || gameplayModeRef.current
+      || activitySessionRef.current
     ) return false;
     const action = VOICE_ACTIONS.heart;
     const characterPlayed = rivePlayAnimationRef.current?.(action.animation);
@@ -1714,6 +1733,7 @@ function App() {
       || mediaLibraryOpenRef.current
       || characterSwitchingRef.current
       || gameplayModeRef.current
+      || activitySessionRef.current
     ) return false;
     if (!triggerPropEffect("wreath")) return false;
     showToast("爱心花圈来啦");
@@ -1731,6 +1751,7 @@ function App() {
       || mediaLibraryOpenRef.current
       || characterSwitchingRef.current
       || gameplayModeRef.current
+      || activitySessionRef.current
     ) return;
 
     const action = GESTURE_ACTIONS[update.trigger];
@@ -1778,7 +1799,7 @@ function App() {
   }, [activeCharacter, enqueueSynthesizedSpeech, recordConversationMessage, replaceCharacterBubble]);
 
   const { visionState: sceneVisionState, sceneReaction } = useCameraSceneAnalysis({
-    enabled: cameraState === "ready" && !recording && !mediaPreview && !mediaLibraryOpen && !gameplayMode && !storyFocus,
+    enabled: cameraState === "ready" && !recording && !mediaPreview && !mediaLibraryOpen && !gameplayMode && !storyFocus && !activitySession,
     videoRef,
     activeCharacter,
     onReaction: handleSceneReaction,
@@ -1989,6 +2010,13 @@ function App() {
           if (message.final) {
             if (message.clientMessageId && pendingTextRef.current?.id === message.clientMessageId) pendingTextRef.current.finish(true);
             const voiceIntent = parseVoiceIntent(text);
+            if (voiceIntent?.type === "activity") {
+              recordConversationMessage({ ...message, role: "user", text, source: "child_speech", character: activeCharacter });
+              clearCharacterSpeech();
+              socket.send(JSON.stringify({ type: "cancel" }));
+              void offerActivityRef.current?.();
+              return;
+            }
             if (voiceIntent?.type !== "collect") dismissCollection();
             if (voiceIntent?.type === "heart") {
               triggerHeartVoiceRef.current?.(voiceIntent.size, { explicit: true });
@@ -2990,6 +3018,7 @@ function App() {
                   || completionQueued
                   || !activeAnimationName
                   || gameplayModeRef.current
+                  || activitySessionRef.current
                 ) return;
                 const completedAnimation = event.type === RiveEventType.Loop
                   ? event.data?.animation
@@ -4014,6 +4043,7 @@ function App() {
         !isVolumeKey
         || event.repeat
         || cameraState !== "ready"
+        || activitySessionRef.current
         || recordingRef.current
         || mediaPreviewRef.current
         || mediaLibraryOpenRef.current
@@ -4462,6 +4492,34 @@ function App() {
     else rivePlayAnimationRef.current?.("TalkingEmotion_Normal");
   }, [activeCharacter, cameraState, clearCharacterSpeech, setHiddenStoryFocus, switchCharacterTo]);
   startGameplayRef.current = startGameplay;
+  const offerActivity = useCallback(async () => {
+    if (recordingRef.current || gameplayModeRef.current || activitySessionRef.current) return;
+    setHiddenStoryFocus(null); setGameplayMenuOpen(false); setTextComposerOpen(false);
+    clearCharacterSpeech();
+    if (activeCharacter !== "lvdou") await switchCharacterTo("lvdou");
+    setActivityCard(true);
+  }, [activeCharacter, clearCharacterSpeech, setHiddenStoryFocus, switchCharacterTo]);
+  offerActivityRef.current = offerActivity;
+  const openActivity = useCallback(() => {
+    if (recordingRef.current || gameplayModeRef.current || characterSwitchingRef.current || activitySessionRef.current) return;
+    const session = { id: crypto.randomUUID(), activityId: "words", createdAt: Date.now() };
+    activitySessionRef.current = session;
+    stopVoiceSession(); clearCharacterSpeech(); setHiddenStoryFocus(null);
+    streamRef.current?.getAudioTracks().forEach(track => { track.enabled = false; });
+    setActivityCard(false); setActivitySession(session);
+  }, [clearCharacterSpeech, setHiddenStoryFocus, stopVoiceSession]);
+  const finishActivity = useCallback(record => {
+    if (!activitySessionRef.current || record.id !== activitySessionRef.current.id) return;
+    try { setActivityReports(saveActivityReport(record)); showToast("练习记录已收进相册"); }
+    catch { setActivityReports(current => [record, ...current.filter(r => r.id !== record.id)]); showToast("本机存储已满，记录暂留本次页面"); }
+    activitySessionRef.current = null; setActivitySession(null);
+    const stream = streamRef.current;
+    stream?.getAudioTracks().forEach(track => { track.enabled = true; });
+    if (stream) void startVoiceSession(stream, { textOnly: !stream.getAudioTracks().length });
+  }, [showToast, startVoiceSession]);
+  const removeActivityReport = useCallback(id => {
+    try { setActivityReports(deleteActivityReport(id)); } catch { showToast("暂时没有删除成功，请再试一次"); }
+  }, [showToast]);
   useEffect(() => {
     if (cameraState !== "ready") { gameplayModeRef.current = ""; setGameplayMode(""); setGameplayMenuOpen(false); }
   }, [cameraState]);
@@ -4562,7 +4620,7 @@ function App() {
 
   return (
     <IconoirProvider iconProps={{ strokeWidth: 2.5 }}>
-    <main className={`app-shell is-${frameOrientation} ${isMobileDevice ? "is-mobile-device" : "is-desktop-device"} ${isTabletDevice ? "is-tablet-device" : ""}`}>
+    <main inert={activitySession ? true : undefined} className={`app-shell is-${frameOrientation} ${isMobileDevice ? "is-mobile-device" : "is-desktop-device"} ${isTabletDevice ? "is-tablet-device" : ""}`}>
       <section
         className={`camera-stage is-${frameOrientation} ${cameraState === "ready" ? "is-live" : ""} ${riveReady ? "is-rive-ready" : ""} ${characterSwitching ? "is-character-switching" : ""}`}
         data-frame-orientation={frameOrientation}
@@ -4638,6 +4696,11 @@ function App() {
               {speechText}
             </Calligraph>
           </div>
+          {activityCard && cameraState === "ready" && <article className="activity-link-card" aria-label="开口造世界链接卡片">
+            <small>绿豆邀请你 · 英语跟读</small><h3>开口造世界</h3><p>跟着读一读，让你的英语变成一个小世界。结束后，练习记录会收进相册。</p>
+            <button type="button" onClick={openActivity} disabled={characterSwitching}>进入小世界 ↗</button><button type="button" className="activity-card-dismiss" onClick={() => setActivityCard(false)}>下次再玩</button>
+          </article>}
+          {activitySession && <ActivityExperience session={activitySession} onFinish={finishActivity} />}
           {!gameplayMode && <CharacterCaptionBubble reaction={characterBubble} canvasRendered={recording} />}
           {cameraState === "ready" && gameplayMode && (
             <GamePlayOverlay
@@ -4946,9 +5009,9 @@ function App() {
                 );
               })}
             </nav>
-            {libraryTab === "friends" ? <div className="media-library-timeline" ref={mediaLibraryGridRef}><Suspense fallback={<p>收集正在打开…</p>}><FriendCollection friends={visibleFriends} onSeen={onCollectionsSeen} onRetry={retryCollection} /></Suspense></div> : (visibleTimeline.length || libraryTab === "all") ? (
+            {libraryTab === "activities" ? <div className="media-library-timeline" ref={mediaLibraryGridRef}><ActivityReports records={activityReports} onDelete={removeActivityReport} /></div> : libraryTab === "friends" ? <div className="media-library-timeline" ref={mediaLibraryGridRef}><Suspense fallback={<p>收集正在打开…</p>}><FriendCollection friends={visibleFriends} onSeen={onCollectionsSeen} onRetry={retryCollection} /></Suspense></div> : (visibleTimeline.length || libraryTab === "all") ? (
               <div className="media-library-timeline" ref={mediaLibraryGridRef}>
-                {visibleTimeline.map(({ dayKey, items, friends: dayFriends = [] }, dayIndex) => {
+                {visibleTimeline.map(({ dayKey, items, friends: dayFriends = [], activities: dayActivities = [] }, dayIndex) => {
                   const entries = libraryDemo ? [] : (conversationEntriesByDay.get(dayKey) || []);
                   const summaryRecord = libraryDemo ? demoRecords[dayKey] : conversationSummaries[dayKey];
                   const summaryState = libraryDemo ? "ready" : (conversationSummaryStates[dayKey] || "idle");
@@ -4964,7 +5027,7 @@ function App() {
                         <span className="media-timeline-marker" aria-hidden="true" />
                         <div>
                           <strong>{formatTimelineDay(dayKey)}</strong>
-                          <span>{items.length ? `${items.length} 个作品` : "今天聊过的小事"}</span>
+                          <span>{dayActivities.length ? `${dayActivities.length} 次玩法记录${items.length ? ` · ${items.length} 个作品` : ""}` : items.length ? `${items.length} 个作品` : "今天聊过的小事"}</span>
                         </div>
                       </header>
                       <div className="media-day-grid">
@@ -5032,6 +5095,7 @@ function App() {
                       </div>
                       {(libraryDemo ? DEMO_LEAVE_NOTES.filter((note) => note.dayKey === dayKey) : entries.filter((entry) => entry.source === "leave_note"))
                         .map((note) => <LeaveNoteCard key={note.id || `${note.dayKey}-${note.character}`} note={note} />)}
+                      {dayActivities.length > 0 && <ActivityReports records={dayActivities} onDelete={removeActivityReport} />}
                       <JournalDay record={summaryRecord || { dayKey }} state={summaryState}
                         onChange={libraryDemo ? updateDemoMoment : journal.updateMoment} onForget={libraryDemo ? forgetDemoMoment : journal.forgetMoment} onRetry={libraryDemo ? undefined : () => journal.retry(dayKey)} />
                     </section>

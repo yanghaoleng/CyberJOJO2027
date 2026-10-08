@@ -24,6 +24,7 @@ function cleanSubject(value) {
 export function parseVoiceIntent(value) {
   const text = String(value || "").trim();
   if (!text) return null;
+  if (/(?:开口[，,、\s]*造世界|跟读(?:练习)?)/.test(text) && !/(?:不想|不要|不玩|不做|不练)/.test(text)) return { type: "activity", activityId: "words" };
   if (WREATH_INTENT.test(text)) return { type: "wreath" };
   if (HEART_INTENT.test(text) || LARGE_HEART_INTENT.test(text)) return { type: "heart", size: LARGE_HEART_INTENT.test(text) ? "large" : "small" };
   if (COLLECTION_INTENT.test(text)) {

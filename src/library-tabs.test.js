@@ -15,5 +15,6 @@ test("a right swipe selects the previous library tab", () => {
 test("short swipes and edge swipes keep the current tab", () => {
   assert.equal(getLibraryTabAfterSwipe("all", 47), "all");
   assert.equal(getLibraryTabAfterSwipe("days", 64), "days");
-  assert.equal(getLibraryTabAfterSwipe("friends", -64), "friends");
+  assert.equal(getLibraryTabAfterSwipe("friends", -64), "activities");
+  assert.equal(getLibraryTabAfterSwipe("activities", -64), "activities");
 });

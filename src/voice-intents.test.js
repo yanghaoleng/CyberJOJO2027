@@ -52,3 +52,8 @@ test("collection follow-ups continue the topic", () => {
   assert.match(getCollectionFollowUp("book", "绘本"), /封面|读/);
   assert.match(getCollectionFollowUp("object", "杯子"), /哪里/);
 });
+
+test('word practice opens the activity card before collection or feeding', () => {
+ for (const phrase of ['我想要开口造世界','跟读练习','绿豆，我要跟读苹果','开口，造世界']) assert.deepEqual(parseVoiceIntent(phrase),{type:'activity',activityId:'words'});
+ assert.equal(parseVoiceIntent('不要跟读练习'),null);
+});

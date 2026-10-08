@@ -2,6 +2,7 @@ export const LIBRARY_TABS = Object.freeze([
   { id: "days", label: "时光小记" },
   { id: "all", label: "全部" },
   { id: "friends", label: "收集" },
+  { id: "activities", label: "玩法" },
 ]);
 
 export function getLibraryTabAfterSwipe(currentTab, deltaX, minimumDistance = 48) {
