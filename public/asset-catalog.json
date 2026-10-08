@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-26T05:31:08.121Z",
-  "publicFileCount": 103,
-  "totalBytes": 101281817,
+  "generatedAt": "2026-10-08T04:03:49.054Z",
+  "publicFileCount": 106,
+  "totalBytes": 101394985,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -647,6 +647,32 @@
       "sha256": "e5f837458cba94e8c507644a960754948d1f4b6e8bc68c35afdb89e58a2fdb30"
     },
     {
+      "id": "intro/assets/learning-paths-desktop.webp",
+      "path": "intro/assets/learning-paths-desktop.webp",
+      "name": "learning-paths-desktop.webp",
+      "category": "icon",
+      "format": "WEBP",
+      "bytes": 54494,
+      "sha256": "77604f985e1a64018d129431b9b034f8ef7ed461a24f17299c0c902edb8b1aba",
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "id": "intro/assets/learning-paths-mobile.webp",
+      "path": "intro/assets/learning-paths-mobile.webp",
+      "name": "learning-paths-mobile.webp",
+      "category": "icon",
+      "format": "WEBP",
+      "bytes": 58120,
+      "sha256": "fa34b715ed0ff6ca975fa5eb261e8691c2b6027eb9079645a3e087d9822379d8",
+      "dimensions": [
+        1024,
+        1536
+      ]
+    },
+    {
       "id": "intro/assets/need-case-01.webp",
       "path": "intro/assets/need-case-01.webp",
       "name": "need-case-01.webp",
@@ -791,8 +817,17 @@
       "name": "index.html",
       "category": "other",
       "format": "HTML",
-      "bytes": 53324,
-      "sha256": "9b090f482570076e86ad74b59c56dd4616f9a0eda8d244470c76d4a9a7681796"
+      "bytes": 51828,
+      "sha256": "f4d85ada0425443ee56da92218f2df71fa4dd8cf9511cf7ed5197293819eda56"
+    },
+    {
+      "id": "intro/learning-paths.css",
+      "path": "intro/learning-paths.css",
+      "name": "learning-paths.css",
+      "category": "other",
+      "format": "CSS",
+      "bytes": 2050,
+      "sha256": "d89de8a801200e5ef73b2d231e149b5661693af72575a3c78ef1687f79873618"
     },
     {
       "id": "media/heart-balloon.riv",
