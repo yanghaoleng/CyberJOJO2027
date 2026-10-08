@@ -18,7 +18,13 @@ export function readActivityMessage(event, frameWindow, sessionId, id = 'words')
   const integer = (n, max) => Number.isInteger(n) && n >= 0 && n <= max;
   if (!integer(report.voiceAttempts, 10000) || !integer(report.menuAttempts, 10000) || !integer(report.completedLessons, 1000) || !integer(report.totalLessons, 1000) || report.completedLessons > report.totalLessons || !integer(report.durationSeconds, 86400)) return null;
   if (!Array.isArray(report.words) || report.words.length > 200 || report.words.some(word => typeof word !== 'string' || word.length > 40)) return null;
-  return { type: data.type, report: { status: report.status, voiceAttempts: report.voiceAttempts, menuAttempts: report.menuAttempts, completedLessons: report.completedLessons, totalLessons: report.totalLessons, durationSeconds: report.durationSeconds, words: [...new Set(report.words)], chapter: String(report.chapter || '').slice(0, 80) } };
+  let groups = {};
+  if (report.wordGroupsVersion !== undefined) {
+    const validWords = value => Array.isArray(value) && value.length <= 200 && value.every(word => typeof word === 'string' && word.length <= 40 && report.words.includes(word));
+    if (report.wordGroupsVersion !== 1 || !validWords(report.independentWords) || !validWords(report.guidedWords) || report.independentWords.some(word => report.guidedWords.includes(word))) return null;
+    groups = { wordGroupsVersion: 1, independentWords: [...new Set(report.independentWords)], guidedWords: [...new Set(report.guidedWords)] };
+  }
+  return { type: data.type, report: { status: report.status, voiceAttempts: report.voiceAttempts, menuAttempts: report.menuAttempts, completedLessons: report.completedLessons, totalLessons: report.totalLessons, durationSeconds: report.durationSeconds, words: [...new Set(report.words)], chapter: String(report.chapter || '').slice(0, 80), ...groups } };
 }
 const KEY = 'cyberjojo.activity-reports.v1';
 export function loadActivityReports() {

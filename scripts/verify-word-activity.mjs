@@ -57,7 +57,7 @@ assert.ok(reports[0].report.menuAttempts>=1);assert.ok(reports[0].report.words.l
 console.log('EXIT REPORT',JSON.stringify(reports[0]));
 await page.getByRole('button',{name:/打开作品列表/}).click();
 await page.getByRole('button',{name:'玩法',exact:true}).click();
-await page.locator('.activity-report summary').first().click();
+await page.locator('.activity-report-heading').first().click(); assert.equal(await page.locator('details.activity-report').count(),0);
 await page.screenshot({path:out+'/mobile-report.png'});
 await page.getByRole('button',{name:'关闭作品列表',exact:true}).click();
 await page.waitForTimeout(500);
@@ -70,18 +70,21 @@ const meta=await actualFrame.evaluate(()=>{const st=window.__WORD_GAME__.status;
 const lessons=getChapterLessons(meta.chapter,meta.age,meta.route);
 for(let i=0;i<lessons.length;i++) {
  await actualFrame.waitForFunction(()=>window.__WORD_GAME__.status.recording&&!window.__WORD_GAME__.status.busy&&!document.querySelector('.word-layout').hasAttribute('aria-busy'),{timeout:20000});
- for(const [event,data] of [[450,{}],[451,{results:[{text:lessons[i].example}]}],[459,{}]])wordSocket.send(JSON.stringify({type:'event',event,data}));
+ for(const [event,data] of [[450,{}],[451,{results:[{text:i===0?`${lessons[i].example} dragon`:lessons[i].example}]}],[459,{}]])wordSocket.send(JSON.stringify({type:'event',event,data}));
  await actualFrame.waitForFunction(()=>!window.__WORD_GAME__.status.busy&&window.__WORD_GAME__.status.canAdvance,{timeout:20000});
  await frame.locator('#next-lesson').click();
 }
 await frame.getByRole('button',{name:'返回绿豆 · 收好练习记录'}).click();
 await page.locator('.activity-experience').waitFor({state:'detached'});
 const completed=await page.evaluate(()=>JSON.parse(localStorage.getItem('cyberjojo.activity-reports.v1')));
-assert.equal(completed.length,2);assert.equal(completed[0].report.status,'completed');assert.equal(completed[0].report.voiceAttempts,6);assert.equal(completed[0].report.completedLessons,6);assert.equal(completed[0].report.menuAttempts,0);console.log('COMPLETED REPORT',JSON.stringify(completed[0]));
+assert.equal(completed.length,2);assert.equal(completed[0].report.status,'completed');assert.equal(completed[0].report.voiceAttempts,6);assert.equal(completed[0].report.completedLessons,6);assert.equal(completed[0].report.menuAttempts,0);assert.ok(completed[0].report.independentWords.includes('dragon'));assert.ok(completed[0].report.guidedWords.length>0);console.log('COMPLETED REPORT',JSON.stringify(completed[0]));
 await page.reload();await page.getByRole('button',{name:'开始和叫叫聊聊',exact:true}).click();await page.waitForSelector('.camera-stage.is-live');
 await page.getByRole('button',{name:/打开作品列表/}).click();await page.getByRole('button',{name:'玩法',exact:true}).click();
-assert.equal(await page.locator('.activity-report').count(),2);await page.locator('.activity-report summary').first().click();await page.screenshot({path:out+'/completed-report.png'});
+assert.equal(await page.locator('.activity-report').count(),2);assert.equal(await page.getByRole('region',{name:'自主念出的词',exact:true}).count(),2);await page.locator('.activity-report-heading').first().click(); assert.equal(await page.locator('details.activity-report').count(),0);await page.screenshot({path:out+'/completed-report.png'});
 await page.getByRole('button',{name:'删除这条记录',exact:true}).first().click();assert.equal(await page.locator('.activity-report').count(),1);console.log('PERSISTENCE AND DELETE PASS');
+await page.evaluate(()=>{const key='cyberjojo.activity-reports.v1';const records=JSON.parse(localStorage.getItem(key));for(const record of records){delete record.report.wordGroupsVersion;delete record.report.independentWords;delete record.report.guidedWords;}localStorage.setItem(key,JSON.stringify(records));});
+await page.reload();await page.getByRole('button',{name:'开始和叫叫聊聊',exact:true}).click();await page.waitForSelector('.camera-stage.is-live');await page.getByRole('button',{name:/打开作品列表/}).click();
+assert.ok(await page.getByText('已记录的词 · 未分组').count());assert.equal(await page.locator('details.activity-report').count(),0);console.log('LEGACY RECORD ALWAYS EXPANDED PASS');
 console.log('ERRORS',JSON.stringify(errors));
 await page.screenshot({path:out+'/returned.png'});
 } finally { await browser.close(); }

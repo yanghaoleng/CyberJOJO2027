@@ -18,3 +18,9 @@ test('unbounded counts and impossible results are rejected', () => {
   assert.equal(readActivityMessage(event({data:{...event().data,report:{...report,...patch}}}),frame,session),null);
  }
 });
+test('keeps validated word groups and supports earlier ungrouped reports', () => {
+ const grouped={...report,wordGroupsVersion:1,independentWords:['blue'],guidedWords:['cat']};
+ assert.deepEqual(readActivityMessage(event({data:{...event().data,report:grouped}}),frame,session).report.independentWords,['blue']);
+ assert.equal(readActivityMessage(event(),frame,session).report.wordGroupsVersion,undefined);
+ for (const patch of [{guidedWords:['blue']},{independentWords:['dragon']},{wordGroupsVersion:2},{guidedWords:null}]) assert.equal(readActivityMessage(event({data:{...event().data,report:{...grouped,...patch}}}),frame,session),null);
+});
