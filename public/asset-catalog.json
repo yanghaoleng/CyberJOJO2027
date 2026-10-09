@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-09T02:19:32.003Z",
-  "publicFileCount": 106,
-  "totalBytes": 101394985,
+  "generatedAt": "2026-10-09T02:31:38.526Z",
+  "publicFileCount": 110,
+  "totalBytes": 104515346,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -16,6 +16,42 @@
         180,
         180
       ]
+    },
+    {
+      "id": "assets/fonts/MohrRounded-Bold.ttf",
+      "path": "assets/fonts/MohrRounded-Bold.ttf",
+      "name": "MohrRounded-Bold.ttf",
+      "category": "font",
+      "format": "TTF",
+      "bytes": 171844,
+      "sha256": "f5612239ea62fce3aa38d8eb68c071e60a81527e0c283384b80f9712ad0c2fe8"
+    },
+    {
+      "id": "assets/music/word-world/forget-me-not.mp3",
+      "path": "assets/music/word-world/forget-me-not.mp3",
+      "name": "相机引导 · forget-me-not.mp3",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 1738283,
+      "sha256": "76fcc573f5898aaa48b47a8642bd7b21b919e4775061f6865116ce4b0eede8c1"
+    },
+    {
+      "id": "assets/music/word-world/happy-adventure.mp3",
+      "path": "assets/music/word-world/happy-adventure.mp3",
+      "name": "相机引导 · happy-adventure.mp3",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 656134,
+      "sha256": "e5c4443141332a15f0f245bfe19bde37744c6252d05872af2c6ed820efaab857"
+    },
+    {
+      "id": "assets/music/word-world/happy-lullaby.mp3",
+      "path": "assets/music/word-world/happy-lullaby.mp3",
+      "name": "相机引导 · happy-lullaby.mp3",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 554100,
+      "sha256": "74558cdb09e0c4f23b1b9de91797770a9d5633e90a747f32708e006c13d4bb7b"
     },
     {
       "id": "audio/commands/curious.mp3",
@@ -1198,20 +1234,6 @@
       "license": "MIT"
     },
     {
-      "id": "iconoir:Microphone",
-      "name": "Microphone",
-      "iconName": "Microphone",
-      "category": "interface",
-      "format": "SVG",
-      "weights": [
-        "2.5"
-      ],
-      "usedIn": [
-        "src/activities/domi-world/DomiWorld.jsx"
-      ],
-      "license": "MIT"
-    },
-    {
       "id": "iconoir:MultiWindow",
       "name": "画中画",
       "iconName": "MultiWindow",
@@ -1222,6 +1244,20 @@
       ],
       "usedIn": [
         "src/App.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
+      "id": "iconoir:MusicNote",
+      "name": "MusicNote",
+      "iconName": "MusicNote",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "2.5"
+      ],
+      "usedIn": [
+        "src/activities/domi-world/DomiWorld.jsx"
       ],
       "license": "MIT"
     },
@@ -1307,7 +1343,8 @@
         "2.5"
       ],
       "usedIn": [
-        "src/App.jsx"
+        "src/App.jsx",
+        "src/activities/domi-world/DomiWorld.jsx"
       ],
       "license": "MIT"
     },
@@ -1340,6 +1377,20 @@
       "license": "MIT"
     },
     {
+      "id": "iconoir:SoundOff",
+      "name": "SoundOff",
+      "iconName": "SoundOff",
+      "category": "interface",
+      "format": "SVG",
+      "weights": [
+        "2.5"
+      ],
+      "usedIn": [
+        "src/activities/domi-world/DomiWorld.jsx"
+      ],
+      "license": "MIT"
+    },
+    {
       "id": "iconoir:Sparks",
       "name": "灵感",
       "iconName": "Sparks",
@@ -1350,8 +1401,7 @@
       ],
       "usedIn": [
         "src/App.jsx",
-        "src/activities/ActivityExperience.jsx",
-        "src/activities/domi-world/DomiWorld.jsx"
+        "src/activities/ActivityExperience.jsx"
       ],
       "license": "MIT"
     },
@@ -1365,7 +1415,8 @@
         "2.5"
       ],
       "usedIn": [
-        "src/App.jsx"
+        "src/App.jsx",
+        "src/activities/domi-world/DomiWorld.jsx"
       ],
       "license": "MIT"
     },

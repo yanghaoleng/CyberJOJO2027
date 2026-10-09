@@ -1,0 +1,8 @@
+/* Calligraph animates the visible glyph; the pseudo glyph reserves layout. */
+.calligraph-text { display: inline; font: inherit; }
+.calligraph-glyph { display: inline-grid; position: relative; vertical-align: baseline; font: inherit; }
+.calligraph-glyph::before { content: attr(data-glyph); grid-area: 1 / 1; visibility: hidden; white-space: pre; pointer-events: none; }
+.calligraph-glyph > span { font: inherit; }
+@media (prefers-reduced-motion: reduce) {
+  .calligraph-glyph > span > span { animation: none !important; transition: none !important; }
+}

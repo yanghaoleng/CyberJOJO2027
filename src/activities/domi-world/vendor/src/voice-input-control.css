@@ -1,0 +1,217 @@
+@import url("./text-motion.css");
+
+/* Shared microphone, measured audio level, loading and transcript presentation. */
+.voice-input-control {
+  --voice-control-surface: rgba(255, 255, 255, .96);
+  --voice-control-ink: #3d5846;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--voice-control-ink);
+  box-shadow: none;
+  cursor: pointer;
+  transition: transform 180ms cubic-bezier(.22, 1, .36, 1), opacity 180ms ease;
+}
+
+.voice-input-control__start,
+.voice-input-control__wave,
+.voice-input-control__thinking {
+  box-sizing: border-box;
+}
+
+.voice-input-control__start {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 58px;
+  gap: 9px;
+  padding: 0 22px;
+  border: 1px solid color-mix(in srgb, var(--voice-control-ink) 46%, transparent);
+  border-radius: 999px;
+  background: var(--voice-control-ink);
+  color: #fff;
+  box-shadow: 0 11px 25px rgba(42, 74, 60, .24), inset 0 1px rgba(255, 255, 255, .18);
+  font: 800 15px/1 var(--font-sans, system-ui, sans-serif);
+  letter-spacing: .01em;
+  white-space: nowrap;
+  animation: voice-input-start-in 620ms cubic-bezier(.18, 1.45, .38, 1) both;
+}
+
+.voice-input-control__start svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.75;
+  color: currentColor;
+  pointer-events: none;
+}
+
+.voice-input-control__wave,
+.voice-input-control__thinking {
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.voice-input-control__wave {
+  position: relative;
+  isolation: isolate;
+  width: 74px;
+  min-height: 44px;
+  gap: 3px;
+  background: transparent;
+  box-shadow: none;
+}
+.voice-input-control__wave::before,
+.voice-input-control__thinking::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: 50%;
+  width: 96px;
+  height: 62px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(27, 36, 31, .26) 0%, rgba(27, 36, 31, .13) 44%, transparent 76%);
+  filter: blur(7px);
+  opacity: .78;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.voice-input-control__wave i {
+  display: block;
+  width: 4px;
+  height: 24px;
+  border-radius: 999px;
+  background: #fff;
+  opacity: 1;
+  box-shadow: 0 0 5px rgba(255, 255, 255, .9), 0 0 13px rgba(255, 255, 255, .4);
+  transform: scaleY(var(--voice-bar-scale, .34));
+  transform-origin: center;
+  transition: transform 44ms cubic-bezier(.2, .85, .35, 1);
+}
+
+.voice-input-control__thinking {
+  position: relative;
+  isolation: isolate;
+  width: 48px;
+  height: 48px;
+}
+.voice-input-control__thinking::before {
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+}
+.voice-input-control__thinking i {
+  position: absolute;
+  top: 3px;
+  left: calc(50% - 3.5px);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 5px rgba(255, 255, 255, .9), 0 0 13px rgba(255, 255, 255, .4);
+  transform: rotate(var(--voice-dot-turn, 0deg));
+  transform-origin: 3.5px 21px;
+  animation: voice-input-thinking 1.5s ease-in-out infinite;
+  animation-delay: var(--voice-dot-delay, 0ms);
+}
+
+.voice-input-control[data-voice-visual="wave"] .voice-input-control__start,
+.voice-input-control[data-voice-visual="thinking"] .voice-input-control__start { display: none; }
+.voice-input-control[data-voice-visual="wave"] .voice-input-control__wave { display: inline-flex; }
+.voice-input-control[data-voice-visual="thinking"] .voice-input-control__thinking { display: inline-flex; }
+
+.voice-input-control[data-level-source="activity"][data-voice-active="true"] .voice-input-control__wave i {
+  transform: scaleY(var(--voice-activity-scale, .6));
+}
+
+.voice-input-control:hover { transform: translateY(-1px); }
+.voice-input-control:active { transform: scale(.96); }
+.voice-input-control:focus-visible { outline: 3px solid rgba(87, 112, 76, .42); outline-offset: 4px; }
+.voice-input-control[data-state="paused"] { opacity: .72; }
+.voice-input-control[data-state="error"] { color: #713d36; }
+.voice-input-control:disabled { cursor: default; opacity: .78; }
+
+@keyframes voice-input-thinking {
+  0%, 100% { opacity: 1; transform: rotate(var(--voice-dot-turn, 0deg)) scale(1); }
+  50% { opacity: .3; transform: rotate(var(--voice-dot-turn, 0deg)) scale(.5); }
+}
+
+@keyframes voice-input-start-in {
+  0% { opacity: 0; transform: translateY(10px) scale(.72); }
+  62% { opacity: 1; transform: translateY(-2px) scale(1.075); }
+  82% { transform: translateY(1px) scale(.97); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+
+.voice-input-control { min-width: 48px; min-height: 48px; flex-shrink: 0; font: inherit; -webkit-tap-highlight-color: transparent; }
+.voice-input-control[hidden], .voice-input-transcript[hidden], .voice-input-status[hidden] { display: none !important; }
+.voice-input-transcript {
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  width: fit-content;
+  min-width: 64px;
+  max-width: min(360px, calc(100vw - 28px));
+  min-height: 42px;
+  margin: 0 auto 14px;
+  padding: 10px 15px;
+  border: 1px solid #fff;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, .98);
+  color: #424242;
+  box-shadow: 0 0 0 1px rgba(48, 84, 71, .12), 0 0 18px rgba(255, 255, 255, .96), 0 10px 30px rgba(42, 74, 61, .16), inset 0 1px #fff;
+  font: 750 13px/1.5 ui-rounded, "Hiragino Sans GB", "PingFang SC", "Microsoft YaHei", sans-serif;
+  text-align: center;
+  text-shadow: 0 1px #fff;
+}
+.voice-input-transcript::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 13px;
+  height: 13px;
+  border-radius: 0 0 4px 0;
+  background: #fff;
+  transform: translateX(-50%) rotate(45deg);
+  z-index: -1;
+}
+.voice-input-transcript__text {
+  display: block;
+  max-height: 4.5em;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  scrollbar-width: thin;
+  line-height: inherit;
+}
+.voice-input-transcript--entering { animation: voice-input-transcript-enter 360ms cubic-bezier(.22, 1, .36, 1) both; }
+.voice-input-transcript[data-interim="true"] { color: #424242; }
+.voice-input-status {
+  box-sizing: border-box;
+  max-width: min(360px, calc(100vw - 28px));
+  margin: 6px auto 0;
+  padding: 0;
+  border-radius: 0;
+  color: rgba(255, 255, 255, .52);
+  background: transparent;
+  font: 400 10px/1.5 ui-rounded, "Hiragino Sans GB", "PingFang SC", "Microsoft YaHei", sans-serif;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.voice-input-status[data-state="error"] { color: rgba(255, 255, 255, .68); }
+@keyframes voice-input-transcript-enter {
+  from { opacity: 0; transform: translateY(8px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .voice-input-control, .voice-input-control__start, .voice-input-transcript { animation: none !important; transition: none !important; }
+  .voice-input-control__wave i, .voice-input-control__thinking i { animation: none !important; transition: none !important; }
+}
