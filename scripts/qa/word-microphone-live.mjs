@@ -22,7 +22,7 @@ try{
  await p.waitForSelector('.word-food-bubble[data-word="apple"]',{timeout:55000});
  assert.ok(messages.some(m=>m.type==='transcript'&&m.final&&/apple/i.test(m.text)));
  assert.ok(inputPackets>0);
- assert.equal(await p.locator('audio.guide-audio').evaluate(a=>a.playbackRate),1);
+ assert.equal(await p.locator('audio.guide-audio').evaluate(a=>a.playbackRate),1.5);
  await p.screenshot({path:'/tmp/word-microphone-live.png'});
  await p.locator('.word-food-bubble[data-word="apple"]').click();
  await p.waitForFunction(()=>document.querySelector('.word-bubble-play').dataset.wordLesson==='2');
@@ -30,5 +30,5 @@ try{
  const report=await p.evaluate(()=>JSON.parse(localStorage.getItem('cyberjojo.activity-reports.v1'))[0].report);
  assert.ok(report.guidedWords.includes('apple'));assert.ok(report.completedLessons>=1);
  assert.deepEqual(errors,[]);
- console.log('PASS: captured microphone WAV -> production ASR -> apple bubble -> feeding -> saved report; normal voice speed; no bottom tip');
+ console.log('PASS: captured microphone WAV -> production ASR -> apple bubble -> feeding -> saved report; 1.5x pitch-preserved voice; no bottom tip');
 }finally{await b.close()}

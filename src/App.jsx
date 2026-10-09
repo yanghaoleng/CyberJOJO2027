@@ -1650,7 +1650,7 @@ function App() {
     audio.muted = false;
     audio.dataset.voiceKind = "synthesized";
     audio.dataset.character = message.character || "jiaojiao";
-    audio.playbackRate = 1;
+    audio.playbackRate = message.character === "lvdou" ? 1.5 : 1;
     audio.preservesPitch = true;
     audio.dataset.opening = message.opening ? "true" : "false";
     audio.dataset.speechText = String(message.text || "");

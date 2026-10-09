@@ -4,7 +4,7 @@ The `/words` entry now opens the camera conversation. English and Chinese wake p
 
 Supported goals: apple, banana, orange, strawberry, bread, cake, noodles, candy, juice and milk. Spoken food words create up to three bubbles with real food models. Children can drag a bubble to DOMI, tap it or press Enter. Unused bubbles fly to its mouth after eight seconds, with serialized feeding and Rive mouth-pose chewing. Dragging and background visibility pause automatic feeding.
 
-Reports reuse the album and daily timeline, keeping independent/guided spoken vocabulary and partial progress. Goal progress advances after feeding. DOMI now uses the word-prompt TTS boy voice for all responses at the original playback speed. Its realtime-model PCM is never played; the device speech fallback is disabled for DOMI to avoid changing timbre.
+Reports reuse the album and daily timeline, keeping independent/guided spoken vocabulary and partial progress. Goal progress advances after feeding. DOMI now uses the word-prompt TTS boy voice for all responses at 1.5x playback speed with pitch preservation. Its realtime-model PCM is never played; the device speech fallback is disabled for DOMI to avoid changing timbre.
 
 Browser checks use fake camera and ASR fixtures. They verify actual Rive and food model rendering, automatic/manual feeding, source groups, records and no iframe. These checks do not constitute real-child microphone recognition acceptance.
 
