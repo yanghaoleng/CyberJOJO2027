@@ -1,6 +1,7 @@
 export const ACTIVITY_PROTOCOL = 'cyberjojo.activity.v1';
+const siteOrigin = typeof window === 'undefined' ? 'https://cyberjojo.mikeywa.site' : window.location.origin;
 export const ACTIVITIES = Object.freeze({
-  words: { id: 'words', title: '开口造世界', subtitle: '跟着读一读，用英语变出你的小世界', url: 'https://jma.mikeywa.site/words', origin: 'https://jma.mikeywa.site' },
+  words: { id: 'words', title: '开口造世界', subtitle: '跟着读一读，用英语变出你的小世界', url: `${siteOrigin}/words`, origin: siteOrigin },
 });
 export function activityUrl(id, sessionId) {
   const url = new URL(ACTIVITIES[id].url);

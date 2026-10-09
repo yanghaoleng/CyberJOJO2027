@@ -1,11 +1,12 @@
 import { Component, lazy, StrictMode, Suspense, useEffect, useState } from "react";
 import "./safe-area.css";
 import { createRoot } from "react-dom/client";
+const isWordWorld = /^\/words\/?$/.test(window.location.pathname);
 const isAssetGallery = /^\/assets\/?$/.test(window.location.pathname);
 const isChangelog = /^\/changelog\/?$/.test(window.location.pathname);
 const isDataDashboard = /^\/data\/?$/.test(window.location.pathname);
-if (isAssetGallery || isChangelog || isDataDashboard) document.getElementById("startup-cover")?.remove();
-const Page = lazy(() => isAssetGallery
+if (isWordWorld || isAssetGallery || isChangelog || isDataDashboard) document.getElementById("startup-cover")?.remove();
+const Page = lazy(() => isWordWorld ? import("./activities/domi-world/DomiWorld.jsx") : isAssetGallery
   ? import("./assets-gallery/AssetsGallery.jsx")
   : isChangelog ? import("./changelog/Changelog.jsx")
     : isDataDashboard ? import("./data/DataDashboard.jsx")
@@ -31,6 +32,6 @@ function Boot() {
     return () => { cancelAnimationFrame(first); cancelAnimationFrame(second); clearTimeout(task); };
   }, []);
   if (!painted) return null;
-  return <Suspense fallback={isAssetGallery || isChangelog || isDataDashboard ? <p className="page-loading">正在准备{isAssetGallery ? "资源陈列馆" : isChangelog ? "更新日志" : "数据概览"}…</p> : null}><Page /></Suspense>;
+  return <Suspense fallback={isWordWorld || isAssetGallery || isChangelog || isDataDashboard ? <p className="page-loading">正在准备{isAssetGallery ? "资源陈列馆" : isChangelog ? "更新日志" : "数据概览"}…</p> : null}><Page /></Suspense>;
 }
 createRoot(document.getElementById("root")).render(<StrictMode><StartupBoundary><Boot /></StartupBoundary></StrictMode>);

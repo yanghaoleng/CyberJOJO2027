@@ -1,0 +1,1 @@
+Models and authored vocabulary geometry copied from JOJO-Mysterious-Album commit a14dae2, at the owner’s request. Imports adapted to the local Three.js package. DOMI retains its authored adaptation identity. Source: https://github.com/yanghaoleng/JOJO-Mysterious-Album

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { NavArrowLeft, Sparks } from 'iconoir-react';
 import { createPortal } from 'react-dom';
 import { ACTIVITIES, ACTIVITY_PROTOCOL, activityUrl, readActivityMessage } from './activity-contract.js';
 import './activities.css';
@@ -35,14 +36,14 @@ export default function ActivityExperience({ session, onFinish }) {
   }, [session.id]);
   useEffect(() => { const timer = setTimeout(() => setSlow(true), 20000); return () => clearTimeout(timer); }, [retry]);
   return createPortal(<section className="activity-experience" role="dialog" aria-modal="true" aria-label={activity.title}>
-    <header><button type="button" className="activity-exit" onClick={exit}>‹ 退出</button><strong>{activity.title}</strong><span>和绿豆一起玩</span></header>
+    <header><button type="button" className="activity-exit" onClick={exit}><NavArrowLeft aria-hidden="true"/>退出</button><strong>{activity.title}</strong><span>和绿豆一起玩</span></header>
     {!ready && <div className="activity-loading" role="status">{slow ? <>世界还没打开 <button onClick={() => { setSlow(false); setRetry(n => n + 1); }}>重新加载</button></> : '正在打开你的小世界…'}</div>}
-    <iframe key={retry} ref={frame} src={activityUrl(session.activityId, session.id)} title={activity.title} allow="microphone https://jma.mikeywa.site; autoplay" sandbox="allow-scripts allow-same-origin allow-forms" referrerPolicy="strict-origin-when-cross-origin" />
+    <iframe key={retry} ref={frame} src={activityUrl(session.activityId, session.id)} title={activity.title} allow="microphone; autoplay" sandbox="allow-scripts allow-same-origin allow-forms" referrerPolicy="strict-origin-when-cross-origin" />
   </section>, document.body);
 }
 export function ActivityReports({ records, onDelete }) {
   return <div className="activity-reports">{!records.length && <p className="activity-empty">跟绿豆说“我想要开口造世界”或“跟读练习”，把小世界变成成长记录。</p>}{records.map(record => <article className="activity-report" key={record.id}>
-    <header className="activity-report-heading"><span>✦ {ACTIVITIES[record.activityId]?.title || '互动玩法'}<small>{new Date(record.createdAt).toLocaleString('zh-CN', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</small></span><b>{record.report.status === 'completed' ? '已完成' : '练习记录'}</b></header>
+    <header className="activity-report-heading"><span><Sparks aria-hidden="true"/> {ACTIVITIES[record.activityId]?.title || '互动玩法'}<small>{new Date(record.createdAt).toLocaleString('zh-CN', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</small></span><b>{record.report.status === 'completed' ? '已完成' : '练习记录'}</b></header>
     <p>{record.report.chapter || '我的英语小世界'}</p>
     <div className="activity-metrics"><span><b>{record.report.completedLessons} / {record.report.totalLessons}</b>目标词完成</span><span><b>{record.report.voiceAttempts}</b>开口次数</span><span><b>{record.report.words.length}</b>用到的词</span></div>
     {record.report.wordGroupsVersion === 1 ? <>

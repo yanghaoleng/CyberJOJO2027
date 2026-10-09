@@ -4697,8 +4697,8 @@ function App() {
             </Calligraph>
           </div>
           {activityCard && cameraState === "ready" && <article className="activity-link-card" aria-label="开口造世界链接卡片">
-            <small>绿豆邀请你 · 英语跟读</small><h3>开口造世界</h3><p>跟着读一读，让你的英语变成一个小世界。结束后，练习记录会收进相册。</p>
-            <button type="button" onClick={openActivity} disabled={characterSwitching}>进入小世界 ↗</button><button type="button" className="activity-card-dismiss" onClick={() => setActivityCard(false)}>下次再玩</button>
+            <small>绿豆邀请你 · 英语跟读</small><h3>开口造世界</h3><p>和 DOMI 一起吃点心、开车、交朋友。十关单词冒险结束后，记录会收进相册。</p>
+            <button type="button" onClick={openActivity} disabled={characterSwitching}>进入小世界 <ArrowSeparate aria-hidden="true"/></button><button type="button" className="activity-card-dismiss" onClick={() => setActivityCard(false)}>下次再玩</button>
           </article>}
           {activitySession && <ActivityExperience session={activitySession} onFinish={finishActivity} />}
           {!gameplayMode && <CharacterCaptionBubble reaction={characterBubble} canvasRendered={recording} />}
