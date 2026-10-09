@@ -37,3 +37,13 @@ test("TTS request selects the active character voice", async () => {
   assert.equal(requestBody.req_params.audio_params.pitch_rate, config.voiceProfiles.lvdou.pitchRate);
   assert.equal(audio.toString(), "mp3");
 });
+
+test("DOMI's English reply is not cut off at the old 120-character prompt limit", async () => {
+  const text = "That is a lovely red apple! You can look at its shiny skin and notice its round shape. What other fruit can you find nearby? Show me your next discovery.";
+  let sentText;
+  await synthesizeSpeech(text, "lvdou", getVolcTtsConfig({ VOLC_SPEECH_API_KEY: "fixture" }), async (_url, options) => {
+    sentText = JSON.parse(options.body).req_params.text;
+    return { ok: true, text: async () => JSON.stringify({ code: 0, data: "bXAz" }) };
+  });
+  assert.equal(sentText, text);
+});

@@ -63,7 +63,7 @@ export function parseTtsResponse(payload) {
 }
 
 export async function synthesizeSpeech(text, character, config, fetchImpl = fetch, signal) {
-  const normalizedText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 120);
+  const normalizedText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 1000);
   if (!normalizedText) throw new Error("TTS text is empty");
   const activeCharacter = normalizeCharacter(character);
   const voiceProfile = config.voiceProfiles?.[activeCharacter] || DEFAULT_VOICE_PROFILES[activeCharacter];
