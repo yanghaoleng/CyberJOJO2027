@@ -57,3 +57,11 @@ test('word practice opens the activity card before collection or feeding', () =>
  for (const phrase of ['我想要开口造世界','跟读练习','绿豆，我要跟读苹果','开口，造世界']) assert.deepEqual(parseVoiceIntent(phrase),{type:'activity',activityId:'words'});
  assert.equal(parseVoiceIntent('不要跟读练习'),null);
 });
+
+
+test('English wake phrases share the word activity entry despite casing and punctuation', () => {
+ for (const phrase of ['make a world', 'English words', 'Practice English words', 'Read words', 'read words after you', 'DOMI, MAKE A WORLD!', 'Please practice English words.', 'Read, words after you', '我想练 English words，苹果']) assert.deepEqual(parseVoiceIntent(phrase), {type:'activity',activityId:'words'});
+});
+test('declined English practice and partial word matches do not open the chapter', () => {
+ for (const phrase of ["I don't want to practice English words", 'Don’t read words', 'Do not make a world', 'Not English words', 'Stop reading words', 'unread words', 'English wordsmith']) assert.equal(parseVoiceIntent(phrase), null);
+});

@@ -1,3 +1,5 @@
+const ENGLISH_WORD_ACTIVITY = /\b(?:make\s+a\s+world|(?:practice\s+)?english\s+words|read\s+words(?:\s+after\s+you)?)\b/i;
+const WORD_ACTIVITY_DECLINED = /(?:不想|不要|不玩|不做|不练)|\b(?:don['’]t|do\s+not|not|never|stop|cancel)\b/i;
 const HEART_INTENT = /(?:叫叫[^。！？!?]{0,8})?(?:给我|帮我|想看你|来|可以)?[^。！？!?]{0,6}(?:比个?心|比心|爱心动作)/;
 const LARGE_HEART_INTENT = /(?:大爱心|双手(?:比)?心|两只手(?:比)?心|两个手(?:比)?心)/;
 const WREATH_INTENT = /(?:比(?:个)?花圈|花圈|爱心花圈|心形花圈)/;
@@ -24,7 +26,8 @@ function cleanSubject(value) {
 export function parseVoiceIntent(value) {
   const text = String(value || "").trim();
   if (!text) return null;
-  if (/(?:开口[，,、\s]*造世界|跟读(?:练习)?)/.test(text) && !/(?:不想|不要|不玩|不做|不练)/.test(text)) return { type: "activity", activityId: "words" };
+  const activityText = text.replace(/[，,。.!?！？、]/g, " ");
+  if ((/(?:开口[，,、\s]*造世界|跟读(?:练习)?)/.test(text) || ENGLISH_WORD_ACTIVITY.test(activityText)) && !WORD_ACTIVITY_DECLINED.test(text)) return { type: "activity", activityId: "words" };
   if (WREATH_INTENT.test(text)) return { type: "wreath" };
   if (HEART_INTENT.test(text) || LARGE_HEART_INTENT.test(text)) return { type: "heart", size: LARGE_HEART_INTENT.test(text) ? "large" : "small" };
   if (COLLECTION_INTENT.test(text)) {

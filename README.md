@@ -192,3 +192,5 @@ CyberJOJO 2027 目前是黑客松阶段原型。我们正在验证的，不只�
 开口造世界现为本仓库 `/words` 章节，复用经授权迁入的 DOMI 和词汇实体模型（来源与许可见 `src/activities/domi-world/vendor/PROVENANCE.md`）。十关共用一个舞台，白名单输入经过章节运行时生成动作命令。语音使用现有 `/api/voice` ASR；点词不计开口，输入也不计开口次数。词汇分组按当轮题干判定，输入与语音均保留词汇来源。
 
 DOMI 章节使用 JMA 原版全屏布局、语音输入组件、六条实时测量音量条、逐步识别字幕、折叠单词菜单与音乐，场景改为暗色。成功后可点击继续或等待五秒继续；麦克风持续收音，可随时暂停。
+
+开口造世界也支持英语唤醒：make a world、English words、Practice English words、Read words、read words after you；忽略大小写与常见标点，明确拒绝时不打开。
