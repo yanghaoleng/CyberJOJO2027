@@ -1229,6 +1229,7 @@ function App() {
     if (synthesizedAudioUrlRef.current) URL.revokeObjectURL(synthesizedAudioUrlRef.current);
     synthesizedAudioUrlRef.current = "";
     window.speechSynthesis?.cancel();
+    characterEchoGateUntilRef.current = endCharacterEchoGate(performance.now(), 0);
     setCharacterBubble(null);
     setAiState("idle");
   }, []);
@@ -1253,12 +1254,14 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [activeCharacter, aiState, replaceCharacterBubble]);
   const speakCharacterFallback = useCallback((text) => {
+    // Browser voices vary across devices and cannot preserve DOMI's boy voice.
+    if (activeCharacterRef.current === "lvdou") return;
     if (!window.speechSynthesis || !text) return;
     window.speechSynthesis.cancel();
     characterEchoGateUntilRef.current = startCharacterEchoGate();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = /[\u3400-\u9fff]/.test(text) ? "zh-CN" : "en-US";
-    utterance.rate = activeCharacterRef.current === "lvdou" ? 1.5 : 1;
+    utterance.rate = 1;
     const releaseGate = () => {
       characterEchoGateUntilRef.current = endCharacterEchoGate(performance.now());
     };
@@ -1647,7 +1650,7 @@ function App() {
     audio.muted = false;
     audio.dataset.voiceKind = "synthesized";
     audio.dataset.character = message.character || "jiaojiao";
-    audio.playbackRate = message.character === "lvdou" ? 1.5 : 1;
+    audio.playbackRate = 1;
     audio.preservesPitch = true;
     audio.dataset.opening = message.opening ? "true" : "false";
     audio.dataset.speechText = String(message.text || "");
@@ -2125,7 +2128,7 @@ function App() {
           voiceStreamRef.current = { id: message.streamId, character: streamCharacter, epoch: streamEpoch };
           synthesizedSpeechQueueRef.current = [];
           guideAudioRef.current?.pause();
-          prepareStreamingSpeech()?.start(message.streamId, message.sampleRate, streamCharacter === "lvdou" ? 1.5 : 1);
+          prepareStreamingSpeech()?.start(message.streamId, message.sampleRate);
           return;
         }
         if (message.type === "speech_chunk") {

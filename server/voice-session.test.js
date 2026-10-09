@@ -22,13 +22,15 @@ test("cover warmup waits for activation, reuses upstream, and greets once even w
       const message = JSON.parse(data); entry.messages.push(message);
       if (message.type === "speech_text_buffer.commit") {
         socket.send(JSON.stringify({ type: "response.output_audio.started" }));
+        socket.send(JSON.stringify({ type: "response.output_text.done", text: message.text }));
         socket.send(JSON.stringify({ type: "response.output_audio.delta", delta: "AAAAAA==" }));
         socket.send(JSON.stringify({ type: "response.output_audio.done" }));
       }
     });
   });
   const port = await freePort();
-  const child = spawn(process.execPath, [fileURLToPath(new URL("./index.js", import.meta.url))], {
+  const ttsFixture = `globalThis.fetch=async()=>new Response(JSON.stringify({code:0,data:Buffer.from('mock audio').toString('base64')}));`;
+  const child = spawn(process.execPath, ["--import", `data:text/javascript,${encodeURIComponent(ttsFixture)}`, fileURLToPath(new URL("./index.js", import.meta.url))], {
     env: { PATH: process.env.PATH, PORT: String(port), VOLC_ARK_API_KEY: "test-only", VOLC_SPEECH_API_KEY: "test-only", SEEDUPLEX_ENDPOINT: `ws://127.0.0.1:${provider.address().port}`, JOCAM_ALLOWED_ORIGINS: "http://127.0.0.1:5173" },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -60,11 +62,12 @@ test("cover warmup waits for activation, reuses upstream, and greets once even w
         assert.equal(upstream.messages.some(m => m.type === "input_audio_buffer.append"), false);
         send({ type: "activate", storyDay: 2 }); send({ type: "activate", storyDay: 2 });
       }
-      await waitFor(() => messages.some(m => m.type === "speech_end"));
+      await waitFor(() => messages.some(m => m.type === "speech_end" || (m.type === "speech" && m.character === "lvdou")));
       assert.equal(greetings().length, 1);
       if (mode === "domi-start") {
         assert.match(greetings()[0].text, /I'm Domi/);
         assert.ok(upstream.messages.some(m => m.type === "session.create" && m.session.instructions.includes("Speak only English")));
+        assert.equal(messages.some(m => m.type === "speech_start" || m.type === "speech_chunk"), false);
       }
       if (mode === "ready-first" || mode === "click-first") {
         assert.ok(greetings()[0].text.includes("绘本"));

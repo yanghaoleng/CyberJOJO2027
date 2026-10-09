@@ -344,15 +344,18 @@ websocketServer.on("connection", (client) => {
         }
       },
       onAudioStart: () => {
-        if (seeduplex !== session || !activated) return;
-        voiceStream = { id: randomUUID(), character: activeCharacter, generation };
+        if (seeduplex !== session || !activated || interactionMode !== "none") return;
+        voiceStream = { id: randomUUID(), character: activeCharacter, generation, epoch };
+        // DOMI always speaks through the same TTS voice used by word prompts.
+        // The model's PCM output can sound different even with the same voice ID.
+        if (voiceStream.character === "lvdou") return;
         sendJson(client, { type: "speech_start", streamId: voiceStream.id, character: voiceStream.character, sampleRate: 24_000 });
       },
       onText: ({ text }) => {
-        if (seeduplex === session && activated) sendJson(client, { type: "speech_text", text, character: voiceStream?.character || activeCharacter });
+        if (seeduplex === session && activated && interactionMode === "none" && activeCharacter !== "lvdou") sendJson(client, { type: "speech_text", text, character: voiceStream?.character || activeCharacter });
       },
       onAudioDelta: ({ audio }) => {
-        if (seeduplex === session && activated && !closed && voiceStream?.generation === generation) {
+        if (seeduplex === session && activated && !closed && interactionMode === "none" && voiceStream?.character !== "lvdou" && voiceStream?.generation === generation) {
           sendJson(client, { type: "speech_chunk", streamId: voiceStream.id, audio });
         }
       },
@@ -360,21 +363,27 @@ websocketServer.on("connection", (client) => {
         if (seeduplex !== session) return;
         const stream = voiceStream;
         voiceStream = null;
-        if (stream) sendJson(client, { type: "speech_cancel", streamId: stream.id });
+        if (stream && stream.character !== "lvdou") sendJson(client, { type: "speech_cancel", streamId: stream.id });
       },
       onCancelAcknowledged: () => {},
       onAudioDone: ({ text }) => {
-        if (seeduplex !== session || !activated || closed) return;
+        if (seeduplex !== session || !activated || closed || interactionMode !== "none") return;
         const stream = voiceStream;
         voiceStream = null;
         if (!stream || stream.generation !== generation) return;
         const cleanText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 1000);
-        sendJson(client, { type: "speech_end", streamId: stream.id, text: cleanText, character: stream.character, sessionId });
+        if (stream.character === "lvdou") {
+          if (cleanText) void sendSpeech(cleanText, { character: "lvdou", expectedEpoch: stream.epoch })
+            .catch(error => console.error("DOMI response speech failed", { name: error.name }));
+        } else {
+          sendJson(client, { type: "speech_end", streamId: stream.id, text: cleanText, character: stream.character, sessionId });
+        }
         if (cleanText) context.entries = [...context.entries, { role: "assistant", text: cleanText, character: stream.character }].slice(-16);
         armLeaveNote();
       },
       onFunctionCall: ({ name, arguments: raw }) => {
         if (seeduplex !== session || !activated || name !== "respond_as_character") return false;
+        if (interactionMode !== "none") return true;
         const signal = parseCharacterSignal(raw);
         if (signal.action) sendJson(client, { type: "action", action: signal.action });
         if (signal.thread !== "none") sendJson(client, { type: "story", thread: signal.thread });
@@ -398,7 +407,7 @@ websocketServer.on("connection", (client) => {
           voiceReadySent = true;
           sendJson(client, { type: "ready", transport: "seeduplex" });
         }
-        session.setMuted(!activated || interactionMode !== "none");
+        session.setMuted(!activated);
         if (pendingSwitchGreeting?.generation === generation) {
           const greeting = pendingSwitchGreeting.text;
           pendingSwitchGreeting = null;
@@ -466,7 +475,7 @@ websocketServer.on("connection", (client) => {
     sessionStartedAt = Date.now();
     clearTimeout(warmupTimer);
     if (seeduplex) {
-      seeduplex.setMuted(interactionMode !== "none");
+      seeduplex.setMuted(false);
       seeduplex.greet(buildOpeningText(storyDay, storyAgeGroup, activeCharacter));
     } else {
       sendSpeech(buildOpeningText(storyDay, storyAgeGroup, activeCharacter), { opening: true, character: activeCharacter }).catch((error) => {
@@ -589,7 +598,9 @@ websocketServer.on("connection", (client) => {
       if (interactionMode === message.mode) return;
       cancelPending();
       interactionMode = message.mode;
-      seeduplex?.setMuted(message.mode !== "none");
+      // Provider input mute also disables ASR. Gameplay still needs the child's
+      // microphone; suppress free-chat output in callbacks, never mute input.
+      seeduplex?.setMuted(!activated);
       return;
     }
     if (message.type === "local_speech" || message.type === "scene_speech") {

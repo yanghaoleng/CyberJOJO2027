@@ -98,7 +98,7 @@ JOCAM 以“相机即陪伴界面”验证共同注意和具身表达，当前�
 
 相册“玩法”和今日日志继续保留自主词、引导词、开口次数、目标词进度和时长。记录始终展开，退出也保存部分进度。旧记录不删除。模型来源与授权见 `public/models/food/LICENSE.txt`，新增食物由 `node scripts/generate-word-foods.mjs` 重建。
 
-英语唤醒词：make a world、English words、Practice English words、Read words、read words after you。DOMI 的流式 PCM、完整语音和浏览器后备语音均按 150% 播放；叫叫保持原速度。
+英语唤醒词：make a world、English words、Practice English words、Read words、read words after you。DOMI 对话、引导、思考提示和场景反馈统一使用单词题干的小男孩 TTS 音色，按原始语速播放；不再使用实时模型的另一种 PCM 音色或设备自带语音替代。玩法只屏蔽自由对话回复，不静音麦克风识别。页面只保留上方题干，完成后的保存入口也在上方。
 
 ### 素材陈列馆与 3D 食物
 
