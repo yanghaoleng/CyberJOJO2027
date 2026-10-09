@@ -47,3 +47,17 @@ test("DOMI's English reply is not cut off at the old 120-character prompt limit"
   });
   assert.equal(sentText, text);
 });
+
+test("TTS times out while reading a stalled response body and honors caller cancellation", async () => {
+  const config = { ...getVolcTtsConfig({ VOLC_SPEECH_API_KEY: "fixture" }), timeoutMs: 20 };
+  const stalledFetch = async (_url, { signal }) => ({ ok: true, text: () => new Promise((_resolve, reject) => {
+    if (signal.aborted) reject(signal.reason);
+    else signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+  }) });
+  const keepAlive = setTimeout(() => {}, 1000);
+  try {
+    await assert.rejects(synthesizeSpeech("Apple", "lvdou", config, stalledFetch), { name: "TimeoutError" });
+    const controller = new AbortController(); controller.abort();
+    await assert.rejects(synthesizeSpeech("Apple", "lvdou", config, stalledFetch, controller.signal), { name: "AbortError" });
+  } finally { clearTimeout(keepAlive); }
+});

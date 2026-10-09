@@ -1,3 +1,5 @@
+import { layoutCharacterCaption } from "./character-caption-layout.js";
+
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
@@ -18,23 +20,7 @@ function roundedRectPath(context, x, y, width, height, radius) {
 }
 
 function splitLines(context, text, maxWidth) {
-  const characters = Array.from(String(text || "").trim()).slice(0, 42);
-  const lines = [""];
-  for (const character of characters) {
-    const current = lines.at(-1);
-    if (!current || context.measureText(current + character).width <= maxWidth) {
-      lines[lines.length - 1] = current + character;
-    } else if (lines.length < 2) {
-      lines.push(character);
-    } else {
-      lines[1] += character;
-    }
-  }
-  while (lines.length === 2 && context.measureText(`${lines[1]}…`).width > maxWidth && lines[1].length > 1) {
-    lines[1] = lines[1].slice(0, -1);
-  }
-  if (lines.join("").length < characters.length && lines.length === 2) lines[1] += "…";
-  return lines;
+  return layoutCharacterCaption(text, maxWidth, line => context.measureText(line).width);
 }
 
 export function drawCharacterCaption(
@@ -48,7 +34,7 @@ export function drawCharacterCaption(
   const isLandscape = targetWidth > targetHeight;
   const baseFontSize = clamp(targetWidth * (isLandscape ? 0.022 : 0.039), 22, 31);
   const fontSize = baseFontSize * (isTabletDevice ? 0.78 : 1);
-  const maxBubbleWidth = targetWidth * (isLandscape ? 0.48 : 0.78) * (isTabletDevice ? 0.84 : 1);
+  const maxBubbleWidth = targetWidth * (isLandscape ? 0.70 : 0.94) * (isTabletDevice ? 0.84 : 1);
   const horizontalPadding = fontSize * (isTabletDevice ? 1.35 : 0.95);
   const verticalPadding = fontSize * (isTabletDevice ? 0.72 : 0.39);
   const lineHeight = fontSize * 1.14;
@@ -58,9 +44,7 @@ export function drawCharacterCaption(
   const contentWidth = Math.max(...lines.map((line) => context.measureText(line).width));
   const bubbleWidth = clamp(contentWidth + horizontalPadding * 2, fontSize * 4.4, maxBubbleWidth);
   const bubbleHeight = Math.max(fontSize * 2.12, lines.length * lineHeight + verticalPadding * 2);
-  const centerX = targetWidth * (isLandscape
-    ? (isTabletDevice ? 0.31 : 0.37)
-    : (isTabletDevice ? 0.36 : 0.42));
+  const centerX = targetWidth / 2;
   const bottom = targetHeight - targetHeight * (isLandscape ? 0.1 : 0.09);
   const left = centerX - bubbleWidth / 2;
   const top = bottom - bubbleHeight;

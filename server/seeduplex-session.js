@@ -320,8 +320,19 @@ export class SeeduplexSession {
           fail(error);
         }
       });
+      socket.on("pong", () => { this.awaitingPong = false; });
+      // Native WS control frames keep quiet sessions alive without creating
+      // artificial speech or a model turn.
+      this.heartbeatTimer = setInterval(() => {
+        if (this.closed || socket.readyState !== WebSocket.OPEN) return;
+        if (this.awaitingPong) { this.failStalled("heartbeat timeout", "connection"); return; }
+        this.awaitingPong = true;
+        socket.ping();
+      }, this.config.heartbeatMs || 20_000);
+      this.heartbeatTimer.unref?.();
       socket.once("error", fail);
       socket.once("close", (code) => {
+        clearInterval(this.heartbeatTimer);
         clearTimeout(this.readyTimer);
         if (!this.ready) reject(new Error(`Seeduplex closed before ready (${code})`));
         this.ready = false;
@@ -341,18 +352,24 @@ export class SeeduplexSession {
         break;
       case "conversation.item.input_audio_transcription.started":
         clearTimeout(this.responseTimer);
+        this.transcriptionStartedAt = Date.now();
+        this.armTranscriptionTimeout();
         this.textBuffer = "";
         break;
       case "conversation.item.input_audio_transcription.delta":
+        this.armTranscriptionTimeout();
         this.textBuffer += event.text;
         this.onTranscript?.({ text: this.textBuffer, final: false });
         break;
       case "conversation.item.input_audio_transcription.completed":
+        clearTimeout(this.transcriptionTimer);
+        this.transcriptionStartedAt = 0;
         this.armResponseTimeout();
         this.onTranscript?.({ text: event.text || this.textBuffer, final: true });
         this.textBuffer = "";
         break;
       case "response.output_text.delta":
+        this.armResponseTimeout();
         this.replyText += event.text;
         if (this.acceptAudio) this.onText?.({ text: this.replyText, final: false });
         break;
@@ -421,15 +438,31 @@ export class SeeduplexSession {
   armResponseTimeout() {
     clearTimeout(this.responseTimer);
     if (this.closed || this.muted) return;
-    this.responseTimer = setTimeout(() => this.failStalled("response timeout"), this.config?.responseTimeoutMs || 15_000);
+    this.responseTimer = setTimeout(() => this.failStalled("response timeout", "response"), this.config?.responseTimeoutMs || 15_000);
     this.responseTimer.unref?.();
   }
 
-  failStalled(reason) {
+  armTranscriptionTimeout() {
+    clearTimeout(this.transcriptionTimer);
+    if (this.closed || this.muted) return;
+    // Ask the provider to finish a stranded partial transcript. Continued
+    // deltas extend the inactivity deadline; very long speech gets a boundary.
+    const remaining = Math.max(1, (this.config?.maxUtteranceMs || 60_000) - (Date.now() - (this.transcriptionStartedAt || Date.now())));
+    this.transcriptionTimer = setTimeout(() => {
+      this.commit();
+      this.transcriptionTimer = setTimeout(() => this.failStalled("transcription timeout", "recognition"), this.config?.commitTimeoutMs || 8000);
+      this.transcriptionTimer.unref?.();
+    }, Math.min(remaining, this.config?.transcriptionIdleMs || 8000));
+    this.transcriptionTimer.unref?.();
+  }
+
+  failStalled(reason, stage = "connection") {
     if (this.closed) return;
     this.close();
     this.cancelOutput();
-    this.onError?.(new Error(`Seeduplex ${reason}`));
+    const error = new Error(`Seeduplex ${reason}`);
+    error.stage = stage;
+    this.onError?.(error);
   }
 
   sendAudio(pcm) {
@@ -444,7 +477,7 @@ export class SeeduplexSession {
 
   setMuted(muted) {
     this.muted = muted;
-    if (muted) clearTimeout(this.responseTimer);
+    if (muted) { clearTimeout(this.responseTimer); clearTimeout(this.transcriptionTimer); }
     if (!this.ready || this.socket?.readyState !== WebSocket.OPEN) return;
     this.socket.send(JSON.stringify(buildMute(muted)));
   }
@@ -495,6 +528,8 @@ export class SeeduplexSession {
     clearTimeout(this.readyTimer);
     clearTimeout(this.cancelTimer);
     clearTimeout(this.responseTimer);
+    clearTimeout(this.transcriptionTimer);
+    clearInterval(this.heartbeatTimer);
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(buildSessionClose()));
       const socket = this.socket;

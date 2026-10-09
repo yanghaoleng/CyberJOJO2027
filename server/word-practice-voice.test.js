@@ -16,9 +16,11 @@ async function waitFor(condition, timeout = 6000) {
 
 test("word practice sends microphone audio to unmuted ASR and DOMI uses prompt TTS for every spoken response", { timeout: 20000 }, async () => {
   const ttsRequests = [];
+  let failTts = false;
   const tts = http.createServer(async (request, response) => {
     const chunks = []; for await (const chunk of request) chunks.push(chunk);
     ttsRequests.push(JSON.parse(Buffer.concat(chunks)));
+    if (failTts) { response.writeHead(503); response.end("fixture temporarily unavailable"); return; }
     response.end(JSON.stringify({ code: 0, data: Buffer.from("fixture mp3").toString("base64") }));
   });
   tts.listen(0, "127.0.0.1"); await once(tts, "listening");
@@ -62,6 +64,8 @@ test("word practice sends microphone audio to unmuted ASR and DOMI uses prompt T
     const send = message => client.send(JSON.stringify(message));
     send({ type: "start", inputMode: "voice", character: "lvdou", resume: true });
     await waitFor(() => messages.some(m => m.type === "ready"));
+    send({ type: "ping", id: "health-fixture" });
+    await waitFor(() => messages.some(m => m.type === "pong" && m.id === "health-fixture"));
     send({ type: "interaction_mode", mode: "feed" });
     send({ type: "local_speech", text: "Can you say apple?" });
     await waitFor(() => messages.some(m => m.type === "speech" && m.local));
@@ -84,6 +88,15 @@ test("word practice sends microphone audio to unmuted ASR and DOMI uses prompt T
     assert.ok(ttsRequests.every(r => r.req_params.speaker === "zh_male_naiqimengwa_uranus_bigtts"));
     assert.deepEqual(ttsRequests[0].req_params.audio_params, ttsRequests[1].req_params.audio_params);
     assert.equal(messages.find(m => m.type === "speech" && !m.local).character, "lvdou");
+    failTts = true;
+    const beforeFailure = messages.length;
+    reply("The voice provider is temporarily unavailable.");
+    await waitFor(() => messages.slice(beforeFailure).some(m => m.type === "diagnostic" && m.stage === "synthesis" && m.code === "speech_failed"));
+    assert.equal(client.readyState, WebSocket.OPEN, "a TTS failure must not break a healthy microphone connection");
+    assert.ok(messages.slice(beforeFailure).some(m => m.type === "ai" && m.state === "idle"));
+    failTts = false;
+    reply("I am back and listening.");
+    await waitFor(() => messages.some(m => m.type === "speech" && m.text === "I am back and listening."));
   } finally {
     client?.terminate(); child.kill("SIGTERM");
     for (const socket of provider.clients) socket.terminate();

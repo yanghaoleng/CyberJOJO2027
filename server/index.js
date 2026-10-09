@@ -12,6 +12,7 @@ import { createSummaryRequestHandler } from "./summary-route.js";
 import { createGameplayRequestHandler } from "./gameplay-route.js";
 import { createMattingRequestHandler } from "./matting-route.js";
 import { getSeeduplexConfig, SeeduplexSession } from "./seeduplex-session.js";
+import { startSocketHeartbeat } from "./socket-heartbeat.js";
 
 const PORT = Number(process.env.PORT || 8787);
 const MAX_SESSION_MS = Number(process.env.JOCAM_MAX_SESSION_MS || 0);
@@ -189,6 +190,11 @@ websocketServer.on("connection", (client) => {
   const recentGameplayTranscripts = new Map();
   const acceptedTextMessages = new Map();
   const sessionId = randomUUID();
+  // Reclaim half-open browser connections, otherwise a network change can
+  // leave old sessions consuming both per-IP slots and block every retry.
+  const stopHeartbeat = startSocketHeartbeat(client, { onTimeout: () => {
+    console.info("Voice diagnostic", { sessionId, stage: "browser_connection", code: "heartbeat_timeout" });
+  } });
 
   const cancelPending = () => {
     epoch += 1;
@@ -242,7 +248,17 @@ websocketServer.on("connection", (client) => {
 
   const sendSpeech = async (text, { opening = false, character = activeCharacter, local = false, expectedEpoch = epoch, expectedLocalSequence = localSpeechSequence, signal } = {}) => {
     const speechCharacter = normalizeCharacter(character);
-    const audio = await synthesizeSpeech(text, speechCharacter, ttsConfig, fetch, signal);
+    let audio;
+    try { audio = await synthesizeSpeech(text, speechCharacter, ttsConfig, fetch, signal); }
+    catch (error) {
+      if (!closed && expectedEpoch === epoch && !signal?.aborted && (!local || expectedLocalSequence === localSpeechSequence)) {
+        console.error("Voice diagnostic", { sessionId, stage: "synthesis", code: "speech_failed", name: error.name });
+        sendJson(client, { type: "diagnostic", stage: "synthesis", code: "speech_failed" });
+        sendJson(client, { type: "ai", state: "idle" });
+      }
+      error.voiceStage = "synthesis";
+      throw error;
+    }
     if (closed || expectedEpoch !== epoch || (local && expectedLocalSequence !== localSpeechSequence)) return;
     if (!opening && !local) sendJson(client, { type: "ai", state: "speaking" });
     sendJson(client, {
@@ -284,8 +300,9 @@ websocketServer.on("connection", (client) => {
       await sendSpeech(response.text, { character: responseCharacter, expectedEpoch, signal: controller.signal });
       armLeaveNote();
     } catch (error) {
-      if (expectedEpoch !== epoch || closed || error.name === "AbortError") return;
+      if (expectedEpoch !== epoch || closed || controller.signal.aborted) return;
       console.error("Character response failed", { name: error.name });
+      if (error.voiceStage !== "synthesis") sendJson(client, { type: "diagnostic", stage: "response", code: error.name === "AbortError" ? "response_timeout" : "model_failed" });
       sendJson(client, { type: "ai", state: "unavailable" });
       sendJson(client, { type: "ai", state: "idle" });
     } finally {
@@ -351,8 +368,8 @@ websocketServer.on("connection", (client) => {
         if (voiceStream.character === "lvdou") return;
         sendJson(client, { type: "speech_start", streamId: voiceStream.id, character: voiceStream.character, sampleRate: 24_000 });
       },
-      onText: ({ text }) => {
-        if (seeduplex === session && activated && interactionMode === "none" && activeCharacter !== "lvdou") sendJson(client, { type: "speech_text", text, character: voiceStream?.character || activeCharacter });
+      onText: ({ text, final }) => {
+        if (seeduplex === session && activated && interactionMode === "none" && activeCharacter !== "lvdou") sendJson(client, { type: "speech_text", text, final, character: voiceStream?.character || activeCharacter });
       },
       onAudioDelta: ({ audio }) => {
         if (seeduplex === session && activated && !closed && interactionMode === "none" && voiceStream?.character !== "lvdou" && voiceStream?.generation === generation) {
@@ -392,7 +409,7 @@ websocketServer.on("connection", (client) => {
       onError: (error) => {
         if (seeduplex !== session || closed) return;
         console.error("Seeduplex session failed", { name: error.name, message: error.message, generation });
-        sendJson(client, { type: "error", code: "ASR_UNAVAILABLE", message: "语音连接中断，正在重连，请再说一次。" });
+        sendJson(client, { type: "error", code: "ASR_UNAVAILABLE", stage: error.stage || "connection", message: "语音连接中断，正在重连，请再说一次。" });
         // Close the bridge as well: an open browser socket must not hide a
         // dead upstream. The client reconnects with its saved conversation.
         client.close(1011, "voice upstream unavailable");
@@ -453,6 +470,7 @@ websocketServer.on("connection", (client) => {
   const endSession = () => {
     if (closed) return;
     closed = true;
+    stopHeartbeat();
     clearTimeout(warmupTimer);
     cancelPending();
     clearPendingSpeech();
@@ -500,6 +518,10 @@ websocketServer.on("connection", (client) => {
     }
     if (!message || typeof message !== "object" || Array.isArray(message)) {
       sendJson(client, { type: "error", code: "INVALID_MESSAGE", message: "这条消息没有识别成功，请再试一次。" });
+      return;
+    }
+    if (message.type === "ping") {
+      sendJson(client, { type: "pong", id: String(message.id || "").slice(0, 80) });
       return;
     }
     if (message.type === "activate") {

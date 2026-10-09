@@ -22,7 +22,7 @@
     "prebuild": "node scripts/generate-changelog.mjs && node scripts/generate-asset-manifest.mjs",
     "assets:models": "node scripts/generate-food-models.mjs",
     "assets:catalog": "node scripts/generate-asset-manifest.mjs",
-    "test": "node --test src/*.test.js src/activities/*.test.js src/gameplay/*.test.js src/friends/*.test.js src/journal/*.test.js src/changelog/*.test.js scripts/*.test.js server/*.test.js",
+    "test": "node --test src/*.test.js src/components/*.test.js src/activities/*.test.js src/gameplay/*.test.js src/friends/*.test.js src/journal/*.test.js src/changelog/*.test.js scripts/*.test.js server/*.test.js",
     "predev": "node scripts/generate-changelog.mjs",
     "history:generate": "node scripts/generate-changelog.mjs",
     "test:history": "node --test scripts/changelog-data.test.js src/changelog/history.test.js"

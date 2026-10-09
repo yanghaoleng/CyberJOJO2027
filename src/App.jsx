@@ -38,6 +38,7 @@ import { Calligraph } from "calligraph";
 import QRCode from "qrcode";
 import { PcmSpeechPlayer } from "./pcm-speech-player.js";
 import { createVoicePrewarm } from "./voice-prewarm.js";
+import { VoiceHealth, VOICE_ISSUES, appendVoiceLog } from "./voice-health.js";
 import { getStoryVisit } from "./story-progress.js";
 import { createUISFX } from "uisfx";
 import {
@@ -904,6 +905,9 @@ function App() {
   const voiceStreamEpochRef = useRef(0);
   const voiceReconnectTimerRef = useRef(null);
   const voiceReconnectAttemptsRef = useRef(0);
+  const voiceHealthCleanupRef = useRef(null);
+  const voiceRestartRef = useRef(null);
+  const voiceLogRef = useRef([]);
   const pendingTextRef = useRef(null);
   const textSendingRef = useRef(false);
   const lastTextAttemptRef = useRef(null);
@@ -1036,6 +1040,19 @@ function App() {
   const [pipVisible, setPipVisible] = useState(false);
   const [pipOpening, setPipOpening] = useState(false);
   const [voiceState, setVoiceState] = useState("idle");
+  const [voiceIssue, setVoiceIssue] = useState("");
+  const voiceIssueRef = useRef(voiceIssue);
+  voiceIssueRef.current = voiceIssue;
+  const [voiceDiagnosticsOpen, setVoiceDiagnosticsOpen] = useState(false);
+  const [voiceLog, setVoiceLog] = useState([]);
+  const reportVoiceEvent = useCallback((event, details = {}) => {
+    voiceLogRef.current = appendVoiceLog(voiceLogRef.current, event, details);
+    setVoiceLog(voiceLogRef.current);
+  }, []);
+  const reportVoiceIssue = useCallback((code, details = {}) => {
+    setVoiceIssue(code);
+    reportVoiceEvent("fault", { code, ...details });
+  }, [reportVoiceEvent]);
   const [aiState, setAiState] = useState("idle");
   const [speechText, setSpeechText] = useState("");
   const [characterBubble, setCharacterBubble] = useState(null);
@@ -1590,6 +1607,7 @@ function App() {
           window.queueMicrotask(() => nextSpeechRef.current?.());
         },
         onStall: ({ streamId, phase }) => {
+          reportVoiceIssue("response_timeout", { stage: `playback_${phase}` });
           const socket = voiceSocketRef.current;
           if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "cancel", streamId, reason: `pcm_${phase}` }));
           if (voiceStreamRef.current.id === streamId) clearCharacterSpeech();
@@ -1598,7 +1616,7 @@ function App() {
     }
     void pcmSpeechRef.current.context.resume().catch(() => {});
     return pcmSpeechRef.current;
-  }, [clearCharacterSpeech]);
+  }, [clearCharacterSpeech, reportVoiceIssue]);
   useEffect(() => () => {
     pcmSpeechRef.current?.stop();
     void pcmSpeechRef.current?.context.close();
@@ -1659,10 +1677,11 @@ function App() {
     const playback = audio.play();
     playback?.catch((error) => {
       console.warn("Synthesized speech could not start", error);
+      reportVoiceIssue(error.name === "NotAllowedError" ? "playback_blocked" : "speech_failed", { stage: "playback" });
       setAiState((current) => current === "thinking" ? current : "idle");
-      window.queueMicrotask(playNextSynthesizedSpeech);
+      if (error.name !== "NotAllowedError") window.queueMicrotask(playNextSynthesizedSpeech);
     });
-  }, [activeCharacter, replaceCharacterBubble]);
+  }, [activeCharacter, replaceCharacterBubble, reportVoiceIssue]);
   nextSpeechRef.current = playNextSynthesizedSpeech;
 
   const enqueueSynthesizedSpeech = useCallback((message) => {
@@ -1834,6 +1853,8 @@ function App() {
     if (change.reason) scheduleAutoCapture(change.reason, 900);
   }, [cameraState, contextualCaption, scheduleAutoCapture]);
   const stopVoiceSession = useCallback(() => {
+    voiceHealthCleanupRef.current?.();
+    voiceHealthCleanupRef.current = null;
     voiceStreamEpochRef.current += 1;
     voiceStreamRef.current = { id: "", character: "", epoch: voiceStreamEpochRef.current };
     pcmSpeechRef.current?.stop();
@@ -1881,6 +1902,7 @@ function App() {
     const generation = voiceSessionGenerationRef.current;
     voiceIntentionalCloseRef.current = false;
     setVoiceState("connecting");
+    reportVoiceEvent("connecting", { attempt: voiceReconnectAttemptsRef.current });
 
     try {
       let processor = null;
@@ -1931,17 +1953,14 @@ function App() {
         ) return;
         const attempt = voiceReconnectAttemptsRef.current + 1;
         voiceReconnectAttemptsRef.current = attempt;
-        if (attempt > 6) {
-          setVoiceState("unavailable");
-          showToast("语音连接没有恢复，可以稍后再试。");
-          return;
-        }
-        const delay = Math.min(4_000, 500 * (2 ** (attempt - 1)));
+        const delay = attempt > 6 ? 30_000 : Math.min(4_000, 500 * (2 ** (attempt - 1)));
+        reportVoiceEvent("retry_scheduled", { attempt, delayMs: delay });
         setVoiceState("connecting");
         voiceReconnectTimerRef.current = window.setTimeout(() => {
           voiceReconnectTimerRef.current = null;
           if (voiceIntentionalCloseRef.current || streamRef.current !== stream || audioTrack.readyState !== "live") return;
-          void startVoiceSession(stream);
+          if (document.hidden || !navigator.onLine) { scheduleVoiceReconnect(); return; }
+          void voiceRestartRef.current?.(stream);
         }, delay);
       };
       voiceReadyPromiseRef.current = readyPromise;
@@ -1949,27 +1968,99 @@ function App() {
         settleReady(null);
         if (voiceSocketRef.current === socket) {
           voiceReadyRef.current = false;
+          reportVoiceIssue("connection_timeout", { stage: "readiness" });
           setVoiceState("unavailable");
           socket.close(1000, "session readiness timeout");
         }
       }, 12_000);
+      const health = new VoiceHealth(performance.now());
+      let recovering = false;
+      let pausedAt = 0;
+      const recover = (code, details = {}) => {
+        if (recovering || voiceSocketRef.current !== socket) return;
+        recovering = true;
+        reportVoiceIssue(code, details);
+        clearCharacterSpeech();
+        voiceReadyRef.current = false;
+        settleReady(null);
+        if (socket.readyState < WebSocket.CLOSING) socket.close(4000, code);
+        scheduleVoiceReconnect();
+      };
+      const inspect = () => {
+        if (voiceSocketRef.current !== socket || recovering) return;
+        const now = performance.now();
+        const graph = voiceAudioGraphRef.current;
+        const code = health.check(now, { visible: !document.hidden, online: navigator.onLine, ready: voiceReadyRef.current,
+          capture: Boolean(audioTrack), trackLive: audioTrack?.readyState === "live", trackMuted: Boolean(audioTrack?.muted), contextState: graph?.context.state });
+        if (code === "network_offline") {
+          if (voiceIssueRef.current !== code) reportVoiceIssue(code, { stage: "network" });
+          return;
+        }
+        if (code === "microphone_interrupted") {
+          if (voiceIssueRef.current !== code) reportVoiceIssue(code, { stage: "microphone", trackState: audioTrack?.readyState });
+          return;
+        }
+        if (code === "microphone_paused") {
+          if (!pausedAt) { pausedAt = now; reportVoiceIssue(code, { stage: "microphone", contextState: graph?.context.state }); }
+          void graph?.context.resume().catch(() => {});
+          if (now - pausedAt > 6000) recover(code);
+          return;
+        }
+        if (code) { recover(code); return; }
+        pausedAt = 0;
+        if (socket.readyState === WebSocket.OPEN) {
+          if (socket.bufferedAmount > 128000) { recover("connection_timeout", { stage: "upload", bufferedBytes: socket.bufferedAmount }); return; }
+          const id = health.ping(now);
+          if (id) socket.send(JSON.stringify({ type: "ping", id }));
+        }
+        if (["network_offline", "microphone_paused", "microphone_interrupted"].includes(voiceIssueRef.current)) {
+          setVoiceIssue(""); reportVoiceEvent("capture_recovered");
+        }
+      };
+      const wake = () => {
+        if (document.hidden || voiceSocketRef.current !== socket) return;
+        // Browser timers and audio may both have been suspended in the background.
+        health.check(performance.now(), { visible: false });
+        void voiceAudioGraphRef.current?.context.resume().catch(() => {});
+        if (socket.readyState !== WebSocket.OPEN) recover("connection_closed");
+        else inspect();
+      };
+      const interval = window.setInterval(inspect, 2000);
+      document.addEventListener("visibilitychange", wake);
+      window.addEventListener("online", wake);
+      window.addEventListener("offline", inspect);
+      window.addEventListener("focus", wake);
+      voiceHealthCleanupRef.current = () => {
+        window.clearInterval(interval);
+        document.removeEventListener("visibilitychange", wake);
+        window.removeEventListener("online", wake);
+        window.removeEventListener("offline", inspect);
+        window.removeEventListener("focus", wake);
+      };
       if (processor) processor.onaudioprocess = (event) => {
         if (socket.readyState !== WebSocket.OPEN) return;
         // Keep the ASR transport alive while character speech is gated. Sending
         // silence, rather than pausing packets, prevents the provider's idle
         // timeout without letting the character's own audio become a transcript.
         const localAudioPlaying = guideAudioRef.current?.dataset.voiceKind === "synthesized" && !guideAudioRef.current?.paused;
-        const samples = (voiceTransportRef.current !== "seeduplex" || localAudioPlaying) && isCharacterEchoGateActive(characterEchoGateUntilRef.current, performance.now())
+        const gated = (voiceTransportRef.current !== "seeduplex" || localAudioPlaying) && isCharacterEchoGateActive(characterEchoGateUntilRef.current, performance.now());
+        const raw = event.inputBuffer.getChannelData(0);
+        let energy = 0;
+        for (let i = 0; i < raw.length; i++) energy += raw[i] * raw[i];
+        health.packet(performance.now(), Math.sqrt(energy / raw.length), gated || Boolean(pcmSpeechRef.current?.playing), raw.length / inputSampleRate * 1000);
+        if (socket.bufferedAmount > 128000) return;
+        const samples = gated
           ? new Float32Array(event.inputBuffer.length)
-          : event.inputBuffer.getChannelData(0);
+          : raw;
         const pcm = downsampleToPcm16(samples, inputSampleRate);
         if (pcm.byteLength) socket.send(pcm.buffer);
       };
 
       const beginSession = () => {
         if (voiceSocketRef.current !== socket) return;
-        voiceCharacterRef.current = activeCharacter;
-        const storyDay = getStoryVisit({ activate: activeCharacter === "jiaojiao" });
+        const character = activeCharacterRef.current;
+        voiceCharacterRef.current = character;
+        const storyDay = getStoryVisit({ activate: character === "jiaojiao" });
         socket.send(JSON.stringify({ type: "context", ...journalContextRef.current() }));
         if (!warm?.startSent) socket.send(JSON.stringify({
           type: "start",
@@ -1978,7 +2069,7 @@ function App() {
           inputMode: audioTrack ? "voice" : "text",
           sampleRate: 16_000,
           language: "zh-CN",
-          character: activeCharacter,
+          character,
         }));
         socket.send(JSON.stringify({ type: "interaction_mode", mode: gameplayModeRef.current === "words" ? "feed" : gameplayModeRef.current || "none" }));
         if (warm?.startSent) socket.send(JSON.stringify({ type: "activate", storyDay }));
@@ -1999,9 +2090,19 @@ function App() {
           voiceReconnectAttemptsRef.current = 0;
           settleReady(socket);
           setVoiceState("listening");
+          setVoiceIssue(textOnly && stream?.getAudioTracks?.().length ? "microphone_paused" : "");
+          reportVoiceEvent("ready", { transport: voiceTransportRef.current });
+          return;
+        }
+        if (message.type === "pong") { health.pong(performance.now(), message.id); return; }
+        if (message.type === "diagnostic") {
+          reportVoiceIssue(message.code in VOICE_ISSUES ? message.code : "model_failed", { stage: message.stage });
+          setAiState("idle");
           return;
         }
         if (message.type === "transcript") {
+          health.transcript(performance.now());
+          if (["speech_failed", "model_failed", "response_timeout"].includes(voiceIssueRef.current)) setVoiceIssue("");
           if (voiceTransportRef.current !== "seeduplex" && isCharacterEchoGateActive(characterEchoGateUntilRef.current, performance.now())) return;
           const text = String(message.text || "").trim().slice(0, 1000);
           if (!text) return;
@@ -2104,6 +2205,7 @@ function App() {
           return;
         }
         if (message.type === "speech") {
+          voiceHasReplyRef.current = true;
           if (gameplayModeRef.current && !message.local) return;
           const messageCharacter = CHARACTERS[message.character] ? message.character : voiceCharacterRef.current;
           if (!message.local && messageCharacter !== voiceCharacterRef.current) return;
@@ -2139,8 +2241,11 @@ function App() {
         }
         if (message.type === "speech_text") {
           const messageCharacter = CHARACTERS[message.character] ? message.character : voiceCharacterRef.current;
-          if (!gameplayModeRef.current && message.text && messageCharacter === voiceCharacterRef.current) {
-            setCharacterBubble((current) => ({ id: current?.tone === "speech" ? current.id : crypto.randomUUID(), text: message.text, tone: "speech", character: messageCharacter }));
+          const rawText = String(message.text || "");
+          const completeWords = message.final !== true && /[A-Za-z]/.test(rawText) && !/[\u3400-\u9fff]/.test(rawText) && !/[.!?]\s*$/.test(rawText)
+            ? rawText.replace(/\S+$/, "").trim() : rawText;
+          if (!gameplayModeRef.current && completeWords && messageCharacter === voiceCharacterRef.current) {
+            setCharacterBubble((current) => ({ id: current?.tone === "speech" ? current.id : crypto.randomUUID(), text: completeWords, tone: "speech", character: messageCharacter }));
           }
           return;
         }
@@ -2189,7 +2294,7 @@ function App() {
           if (message.clientMessageId && pendingTextRef.current?.id === message.clientMessageId) pendingTextRef.current.finish(false, message.message);
           if (!["TEXT_RATE_LIMIT", "TURN_QUEUE_FULL", "INVALID_TEXT", "LOCAL_SPEECH_RATE_LIMIT"].includes(message.code)) setVoiceState("unavailable");
           showToast(message.message || "语音识别暂时不可用");
-          if (message.code === "ASR_UNAVAILABLE") scheduleVoiceReconnect();
+          if (message.code === "ASR_UNAVAILABLE") recover(message.stage === "recognition" ? "recognition_stalled" : message.stage === "response" ? "response_timeout" : "connection_closed", { stage: message.stage || "recognition" });
         }
       };
       socket.addEventListener("message", handleMessage);
@@ -2203,24 +2308,54 @@ function App() {
         settleReady(null);
         pendingTextRef.current?.finish(false, "连接没有成功，文字还在，可以再试一次。");
         setVoiceState("unavailable");
-        scheduleVoiceReconnect();
+        recover("connection_closed", { stage: "transport" });
       });
-      socket.addEventListener("close", () => {
+      socket.addEventListener("close", (event) => {
         if (voiceSocketRef.current !== socket) return;
         voiceReadyRef.current = false;
         settleReady(null);
         pendingTextRef.current?.finish(false, "连接已断开，文字还在，可以再试一次。");
-        if (!voiceIntentionalCloseRef.current) scheduleVoiceReconnect();
+        if (!voiceIntentionalCloseRef.current) recover("connection_closed", { closeCode: event.code });
       });
       return readyPromise;
     } catch (error) {
       if (generation !== voiceSessionGenerationRef.current) return null;
       console.warn("Voice session unavailable", error);
       setVoiceState("unavailable");
+      reportVoiceIssue("microphone_paused", { stage: "capture_setup" });
       if (audioTrack) return startVoiceSession(stream, { textOnly: true });
       return null;
     }
-  }, [activeCharacter, clearCharacterSpeech, dismissCollection, enqueueSynthesizedSpeech, prepareStreamingSpeech, recordConversationMessage, scheduleAutoCapture, setHiddenStoryFocus, showToast, stopVoiceSession]);
+  }, [activeCharacter, clearCharacterSpeech, dismissCollection, enqueueSynthesizedSpeech, prepareStreamingSpeech, recordConversationMessage, reportVoiceEvent, reportVoiceIssue, scheduleAutoCapture, setHiddenStoryFocus, showToast, stopVoiceSession]);
+  voiceRestartRef.current = startVoiceSession;
+  const retryVoice = useCallback(async () => {
+    const stream = streamRef.current;
+    if (!stream) return;
+    reportVoiceEvent("manual_retry");
+    voiceReconnectAttemptsRef.current = 0;
+    try {
+      if (voiceIssueRef.current === "playback_blocked") {
+        await pcmSpeechRef.current?.context.resume();
+        await guideAudioRef.current?.play();
+        setVoiceIssue("");
+        return;
+      }
+      if (!stream.getAudioTracks().some(track => track.readyState === "live")) {
+        const replacement = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+        if (streamRef.current !== stream) { replacement.getTracks().forEach(track => track.stop()); return; }
+        stream.getAudioTracks().forEach(track => { stream.removeTrack(track); track.stop(); });
+        replacement.getAudioTracks().forEach(track => stream.addTrack(track));
+      }
+      await startVoiceSession(stream);
+    } catch { reportVoiceIssue("microphone_interrupted", { stage: "permission" }); }
+  }, [reportVoiceEvent, reportVoiceIssue, startVoiceSession]);
+  const downloadVoiceLog = useCallback(() => {
+    const report = { createdAt: new Date().toISOString(), browser: navigator.userAgent, online: navigator.onLine,
+      visibility: document.visibilityState, voiceState, issue: voiceIssue, events: voiceLogRef.current };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], { type: "application/json" }));
+    const link = document.createElement("a"); link.href = url; link.download = `cyberjojo-voice-${Date.now()}.json`; link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, [voiceIssue, voiceState]);
 
   useEffect(() => {
     if (cameraState !== "idle" && cameraState !== "error") return;
@@ -4724,6 +4859,20 @@ function App() {
             characterRect={gameplayCharacterRect} onTarget={handleGameplayTarget} onGuide={text => handleGameplayReaction({ text, action: "curious" })}
             onProgress={report => { wordReportRef.current = report; }} onFinish={finishActivity} />}
           {!gameplayMode && <CharacterCaptionBubble reaction={characterBubble} canvasRendered={recording} />}
+          {cameraState === "ready" && voiceIssue && (
+            <button className="voice-health-hint" type="button" onClick={() => void retryVoice()} aria-label={`${VOICE_ISSUES[voiceIssue]}，点击恢复语音`}>
+              <Refresh width={14} height={14} aria-hidden="true" /><span>{VOICE_ISSUES[voiceIssue]}</span>
+            </button>
+          )}
+          {cameraState === "ready" && voiceDiagnosticsOpen && (
+            <section className="voice-diagnostics" role="dialog" aria-modal="false" aria-label="语音连接记录">
+              <header><strong>语音连接记录</strong><button type="button" aria-label="关闭语音连接记录" onClick={() => setVoiceDiagnosticsOpen(false)}><Xmark width={20} height={20} /></button></header>
+              <p>{VOICE_ISSUES[voiceIssue] || (voiceState === "listening" ? "正在听你说话" : voiceState === "connecting" ? "正在连接" : "等待语音连接")}</p>
+              <small>只记录连接状态，不记录声音或对话内容。关闭页面后清空。</small>
+              <ol>{voiceLog.slice(-25).map((entry, index) => <li key={`${entry.at}-${index}`}><time>{new Date(entry.at).toLocaleTimeString("zh-CN", { hour12: false })}</time><span>{VOICE_ISSUES[entry.code] || ({ connecting: "开始连接", ready: "连接成功", retry_scheduled: "准备重新连接", manual_retry: "手动恢复", capture_recovered: "收音已恢复" }[entry.event] || entry.event)}{entry.attempt ? ` · 第 ${entry.attempt} 次` : ""}</span></li>)}</ol>
+              <footer><button type="button" onClick={() => void retryVoice()}><Refresh width={16} height={16} />恢复语音</button><button type="button" onClick={downloadVoiceLog}><Download width={16} height={16} />下载记录</button></footer>
+            </section>
+          )}
           {cameraState === "ready" && gameplayMode && gameplayMode !== "words" && (
             <GamePlayOverlay
               mode={gameplayMode}
@@ -4885,6 +5034,9 @@ function App() {
                   </button>
                   {cameraMenuOpen && (
                     <div className="camera-menu-popover" role="menu" aria-label="相机设置">
+                      <button type="button" role="menuitem" onClick={() => { setCameraMenuOpen(false); setVoiceDiagnosticsOpen(true); }}>
+                        <OpenBook width={19} height={19} aria-hidden="true" /><span>语音连接记录</span>
+                      </button>
                       <button
                         type="button"
                         role="menuitem"

@@ -257,3 +257,42 @@ test("buildWavHeader matches RIFF spec sizes", () => {
   assert.equal(header.length, 44);
   assert.equal(header.readUInt32LE(4), 36 + 8000);
 });
+
+test("a stranded partial is committed once, then fails with a recognition stage", async () => {
+  const sent = [], errors = [];
+  const session = new SeeduplexSession({ config: { transcriptionIdleMs: 15, commitTimeoutMs: 15 }, onError: error => errors.push(error) });
+  session.ready = true; session.socket = { readyState: 1, send: data => sent.push(JSON.parse(data)), close() {} };
+  session._dispatch({ type: "conversation.item.input_audio_transcription.started" });
+  session._dispatch({ type: "conversation.item.input_audio_transcription.delta", text: "apple" });
+  await new Promise(resolve => setTimeout(resolve, 60));
+  assert.equal(sent.filter(message => message.type === "input_audio_buffer.commit").length, 1);
+  assert.equal(errors.length, 1); assert.equal(errors[0].stage, "recognition"); assert.equal(session.closed, true);
+});
+
+test("transcript completion cancels the partial watchdog and ongoing deltas extend it", async () => {
+  const sent = [];
+  const session = new SeeduplexSession({ config: { transcriptionIdleMs: 50, commitTimeoutMs: 10 }, onError: error => assert.fail(error.message) });
+  session.ready = true; session.socket = { readyState: 1, send: data => sent.push(JSON.parse(data)), close() {} };
+  session._dispatch({ type: "conversation.item.input_audio_transcription.started" });
+  await new Promise(resolve => setTimeout(resolve, 25));
+  session._dispatch({ type: "conversation.item.input_audio_transcription.delta", text: "I like" });
+  await new Promise(resolve => setTimeout(resolve, 30));
+  assert.equal(sent.length, 0);
+  session._dispatch({ type: "conversation.item.input_audio_transcription.completed", text: "I like apples" });
+  await new Promise(resolve => setTimeout(resolve, 65));
+  assert.equal(sent.length, 0); session.close();
+});
+
+test("quiet provider connection exchanges native heartbeat without model speech", async t => {
+  const provider = new WebSocketServer({ port: 0, host: "127.0.0.1" }); await once(provider, "listening");
+  let pings = 0; const sent = [];
+  provider.on("connection", socket => {
+    socket.on("ping", () => pings++);
+    socket.on("message", data => { const message = JSON.parse(data); sent.push(message); if (message.type === "session.create") socket.send(JSON.stringify({ type: "session.created" })); });
+  });
+  const session = new SeeduplexSession({ config: { endpoint: `ws://127.0.0.1:${provider.address().port}`, apiKey: "test", heartbeatMs: 25 }, onError: error => assert.fail(error.message) });
+  t.after(() => { session.close(); for (const socket of provider.clients) socket.terminate(); provider.close(); });
+  await session.connect(); await new Promise(resolve => setTimeout(resolve, 110));
+  assert.ok(pings >= 2); assert.equal(session.closed, false);
+  assert.equal(sent.some(message => message.type === "speech_text_buffer.commit"), false);
+});

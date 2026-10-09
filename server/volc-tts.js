@@ -95,7 +95,7 @@ export async function synthesizeSpeech(text, character, config, fetchImpl = fetc
         },
       },
     }),
-    signal,
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(config.timeoutMs || 15_000)]) : AbortSignal.timeout(config.timeoutMs || 15_000),
   });
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 240);

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { splitCharacterBubbleText } from "./character-caption-bubble.jsx";
+import { splitCharacterBubbleText } from "../character-caption-layout.js";
 
 test("character bubble keeps at most two compact lines and prefers punctuation breaks", () => {
   assert.deepEqual(splitCharacterBubbleText("我正在认真想一想，马上告诉你答案", 10), ["我正在认真想一想，", "马上告诉你答案"]);
