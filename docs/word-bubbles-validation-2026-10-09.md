@@ -11,3 +11,5 @@ Browser checks use fake camera and ASR fixtures. They verify actual Rive and foo
 The retained JMA model source builds banana/bread assets. Original procedural geometry builds orange/strawberry/milk. Regenerate with `node scripts/generate-word-foods.mjs`.
 
 Browser fixture checks passed for automatic feeding after eight seconds, tap/Enter feeding, dragging held longer than eight seconds, mouth drop, re-entry by English wake phrase, all ten actual food models, early-exit groups and complete reports. DOMI uses verified mouth timeline poses; its fallback mouth point was calibrated against the camera canvas. Run `scripts/qa/word-bubbles.mjs` with Playwright and a 4173 build preview.
+
+A delayed initial Rive fixture verifies that word practice waits for the real DOMI character before entering. Browser checks confirm full audio and streaming PCM both use 1.5x. The final regression suite has 216 passing tests.

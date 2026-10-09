@@ -1109,6 +1109,7 @@ function App() {
   const [wordUtterance, setWordUtterance] = useState(null);
   const wordReportRef = useRef(null);
   const wordLinkStartedRef = useRef(false);
+  const wordEntryRequestedRef = useRef(false);
   const [wordPracticeSession, setWordPracticeSession] = useState(null);
   const [activityReports, setActivityReports] = useState(loadActivityReports);
   const [textComposerOpen, setTextComposerOpen] = useState(false);
@@ -4505,15 +4506,18 @@ function App() {
   startGameplayRef.current = startGameplay;
   const offerActivity = useCallback(async () => {
     if (recordingRef.current || gameplayModeRef.current || wordPracticeSessionRef.current) return;
+    if (!riveReady) { wordEntryRequestedRef.current = true; return; }
     setHiddenStoryFocus(null); setGameplayMenuOpen(false); setTextComposerOpen(false);
     clearCharacterSpeech();
     if (activeCharacter !== "lvdou") await switchCharacterTo("lvdou");
+    if (activeCharacterRef.current !== "lvdou" || !streamRef.current || gameplayModeRef.current || recordingRef.current) return;
+    wordEntryRequestedRef.current = false;
     const session = { id: crypto.randomUUID(), activityId: "words", createdAt: Date.now() };
     wordPracticeSessionRef.current = session; wordReportRef.current = null;
     gameplayModeRef.current = "words"; setGameplayMode("words"); setWordUtterance(null); setWordPracticeSession(session);
     const socket = voiceSocketRef.current;
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "interaction_mode", mode: "feed" }));
-  }, [activeCharacter, clearCharacterSpeech, setHiddenStoryFocus, switchCharacterTo]);
+  }, [activeCharacter, riveReady, clearCharacterSpeech, setHiddenStoryFocus, switchCharacterTo]);
   offerActivityRef.current = offerActivity;
   const finishActivity = useCallback(record => {
     if (!wordPracticeSessionRef.current || record.id !== wordPracticeSessionRef.current.id) return;
@@ -4526,10 +4530,10 @@ function App() {
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "interaction_mode", mode: "none" }));
   }, [showToast, clearCharacterSpeech]);
   useEffect(() => {
-    if (cameraState === "ready" && /^\/words\/?$/.test(location.pathname) && !wordLinkStartedRef.current && !characterSwitching) {
+    if (cameraState === "ready" && riveReady && !characterSwitching && ((/^\/words\/?$/.test(location.pathname) && !wordLinkStartedRef.current) || wordEntryRequestedRef.current)) {
       wordLinkStartedRef.current = true; void offerActivity();
     }
-  }, [cameraState, characterSwitching, offerActivity]);
+  }, [cameraState, riveReady, characterSwitching, offerActivity]);
   const removeActivityReport = useCallback(id => {
     try { setActivityReports(deleteActivityReport(id)); } catch { showToast("暂时没有删除成功，请再试一次"); }
   }, [showToast]);
