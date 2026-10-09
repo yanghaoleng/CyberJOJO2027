@@ -76,6 +76,7 @@ test("late sentence starts cannot resurrect a reply while cancellation is pendin
   const session = new SeeduplexSession({ onAudioStart: () => starts++ });
   session.ready = true;
   session.socket = { readyState: 1, send() {} };
+  session.armResponseTimeout();
   session.interrupt();
   session._dispatch({ type: "response.output_audio.started" });
   assert.equal(starts, 0);
@@ -109,6 +110,7 @@ test("missing cancellation ack fails closed instead of permanently swallowing fu
   const errors = [], sent = [];
   const session = new SeeduplexSession({ config: { cancelTimeoutMs: 15 }, onError: error => errors.push(error.message) });
   session.ready = true; session.socket = { readyState: 1, send: data => sent.push(JSON.parse(data)), close() {} };
+  session.armResponseTimeout();
   session.interrupt(); session.interrupt();
   assert.equal(sent.filter(e => e.type === "response.cancel").length, 1);
   await new Promise(resolve => setTimeout(resolve, 35));
@@ -295,4 +297,18 @@ test("quiet provider connection exchanges native heartbeat without model speech"
   await session.connect(); await new Promise(resolve => setTimeout(resolve, 110));
   assert.ok(pings >= 2); assert.equal(session.closed, false);
   assert.equal(sent.some(message => message.type === "speech_text_buffer.commit"), false);
+});
+
+test("interrupting an idle session never waits for a nonexistent cancellation acknowledgement", async () => {
+  const sent = [], errors = [];
+  const session = new SeeduplexSession({ config: { cancelTimeoutMs: 15 }, onError: error => errors.push(error) });
+  session.ready = true; session.socket = { readyState: 1, send: data => sent.push(JSON.parse(data)), close() {} };
+  session.interrupt(); session.interrupt();
+  await new Promise(resolve => setTimeout(resolve, 40));
+  assert.equal(session.awaitingCancelAck, false); assert.equal(session.closed, false); assert.equal(errors.length, 0);
+  assert.equal(sent.some(message => message.type === 'response.cancel'), false);
+  session.armResponseTimeout();
+  session._dispatch({ type: 'response.done' });
+  session.interrupt();
+  assert.equal(session.awaitingCancelAck, false); session.close();
 });

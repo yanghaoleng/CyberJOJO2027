@@ -275,6 +275,7 @@ export class SeeduplexSession {
     this.acceptAudio = false;
     this.outputActive = false;
     this.awaitingCancelAck = false;
+    this.responsePending = false;
   }
 
   connect() {
@@ -342,6 +343,7 @@ export class SeeduplexSession {
   }
 
   _dispatch(event) {
+    if (this.closed) return;
     switch (event.type) {
       case "session.created":
         this.sessionId = event.sessionId;
@@ -352,6 +354,7 @@ export class SeeduplexSession {
         break;
       case "conversation.item.input_audio_transcription.started":
         clearTimeout(this.responseTimer);
+        this.responsePending = false;
         this.transcriptionStartedAt = Date.now();
         this.armTranscriptionTimeout();
         this.textBuffer = "";
@@ -400,6 +403,7 @@ export class SeeduplexSession {
       case "response.output_audio.done":
         if (!this.acceptAudio) break;
         clearTimeout(this.responseTimer);
+        this.responsePending = false;
         this.onAudioDone?.({
           audio: this.onAudioDelta ? "" : assembleWavBase64(this.audioChunks),
           text: this.replyText,
@@ -413,6 +417,7 @@ export class SeeduplexSession {
         break;
       case "response.canceled":
         clearTimeout(this.cancelTimer);
+        this.responsePending = false;
         this.awaitingCancelAck = false;
         this.cancelOutput({ notify: false });
         this.onCancelAcknowledged?.();
@@ -425,6 +430,8 @@ export class SeeduplexSession {
         }));
         break;
       case "response.done":
+        this.responsePending = false;
+        if (!this.outputActive) clearTimeout(this.responseTimer);
         this.onDone?.();
         break;
       case "error":
@@ -438,6 +445,7 @@ export class SeeduplexSession {
   armResponseTimeout() {
     clearTimeout(this.responseTimer);
     if (this.closed || this.muted) return;
+    this.responsePending = true;
     this.responseTimer = setTimeout(() => this.failStalled("response timeout", "response"), this.config?.responseTimeoutMs || 15_000);
     this.responseTimer.unref?.();
   }
@@ -489,9 +497,13 @@ export class SeeduplexSession {
   }
 
   interrupt() {
+    const hasPendingResponse = this.responsePending || this.outputActive || this.acceptAudio || Boolean(this.replyText);
     clearTimeout(this.responseTimer);
+    this.responsePending = false;
     this.cancelOutput({ notify: true });
-    if (this.awaitingCancelAck || !this.ready || this.socket?.readyState !== WebSocket.OPEN) return;
+    // An idle provider need not acknowledge a cancellation when no response
+    // exists. Waiting for that nonexistent acknowledgement breaks quiet input.
+    if (!hasPendingResponse || this.awaitingCancelAck || !this.ready || this.socket?.readyState !== WebSocket.OPEN) return;
     this.awaitingCancelAck = true;
     this.cancelTimer = setTimeout(() => this.failStalled("cancel acknowledgement timeout"), this.config?.cancelTimeoutMs || 2000);
     this.cancelTimer.unref?.();
