@@ -3,7 +3,7 @@ import { PauseSolid, PlaySolid, Undo } from 'iconoir-react';
 import { assetUrl, useInViewport } from './asset-utils.js';
 import './food-model.css';
 
-const foodNames = { apple: '红苹果', cake: '草莓奶油蛋糕', noodles: '暖暖面条', drink: '果汁饮料', candy: '彩色糖果' };
+const foodNames = { banana: '香蕉', orange: '橙子', strawberry: '草莓', bread: '面包', milk: '牛奶', apple: '红苹果', cake: '草莓奶油蛋糕', noodles: '暖暖面条', drink: '果汁饮料', candy: '彩色糖果' };
 function disposeObject(object) {
   const geometries = new Set(); const materials = new Set(); const textures = new Set();
   object?.traverse((child) => {

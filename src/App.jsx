@@ -78,7 +78,8 @@ import { createStickerFromCapture } from "./sticker-matting.js";
 import CollectionFlight from "./friends/CollectionFlight.jsx";
 import { requestGameplay } from "./gameplay/gameplay-api.js";
 import GamePlayOverlay from "./gameplay/GamePlayOverlay.jsx";
-import ActivityExperience, { ActivityReports } from "./activities/ActivityExperience.jsx";
+import WordBubbles from "./activities/word-bubbles/WordBubbles.jsx";
+import { ActivityReports } from "./activities/ActivityExperience.jsx";
 import { loadActivityReports, saveActivityReport, deleteActivityReport } from "./activities/activity-contract.js";
 import { getLocalDayKey } from "./daily-timeline.js";
 import { createCharacterInteraction } from "./character-interaction.js";
@@ -949,7 +950,7 @@ function App() {
   const libraryDemoRef = useRef(false);
   const gameplayModeRef = useRef("");
   const offerActivityRef = useRef(null);
-  const activitySessionRef = useRef(null);
+  const wordPracticeSessionRef = useRef(null);
   const feedFoodCursorRef = useRef(0);
   const lastFeedTriggerAtRef = useRef(-Infinity);
   const storyFocusRef = useRef(null);
@@ -1105,8 +1106,10 @@ function App() {
   const [gameplayTranscript, setGameplayTranscript] = useState(null);
   const [gameplayCharacterRect, setGameplayCharacterRect] = useState(null);
   const [libraryTab, setLibraryTab] = useState("all");
-  const [activityCard, setActivityCard] = useState(false);
-  const [activitySession, setActivitySession] = useState(null);
+  const [wordUtterance, setWordUtterance] = useState(null);
+  const wordReportRef = useRef(null);
+  const wordLinkStartedRef = useRef(false);
+  const [wordPracticeSession, setWordPracticeSession] = useState(null);
   const [activityReports, setActivityReports] = useState(loadActivityReports);
   const [textComposerOpen, setTextComposerOpen] = useState(false);
   const [textDraft, setTextDraft] = useState("");
@@ -1254,7 +1257,7 @@ function App() {
     characterEchoGateUntilRef.current = startCharacterEchoGate();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = /[\u3400-\u9fff]/.test(text) ? "zh-CN" : "en-US";
-    utterance.rate = 1;
+    utterance.rate = activeCharacterRef.current === "lvdou" ? 1.5 : 1;
     const releaseGate = () => {
       characterEchoGateUntilRef.current = endCharacterEchoGate(performance.now());
     };
@@ -1511,7 +1514,7 @@ function App() {
         recordingRef.current
         || mediaPreviewRef.current
         || mediaLibraryOpenRef.current
-        || activitySessionRef.current
+        || wordPracticeSessionRef.current
         || now - lastAutoCaptureAtRef.current < AUTO_CAPTURE_COOLDOWN_MS
       ) return;
       lastAutoCaptureAtRef.current = now;
@@ -1643,6 +1646,8 @@ function App() {
     audio.muted = false;
     audio.dataset.voiceKind = "synthesized";
     audio.dataset.character = message.character || "jiaojiao";
+    audio.playbackRate = message.character === "lvdou" ? 1.5 : 1;
+    audio.preservesPitch = true;
     audio.dataset.opening = message.opening ? "true" : "false";
     audio.dataset.speechText = String(message.text || "");
     if (!message.local && message.text) replaceCharacterBubble(message.text, message.character || activeCharacter);
@@ -1702,7 +1707,7 @@ function App() {
       || mediaLibraryOpenRef.current
       || characterSwitchingRef.current
       || gameplayModeRef.current
-      || activitySessionRef.current
+      || wordPracticeSessionRef.current
     ) return false;
     const action = VOICE_ACTIONS.heart;
     const characterPlayed = rivePlayAnimationRef.current?.(action.animation);
@@ -1733,7 +1738,7 @@ function App() {
       || mediaLibraryOpenRef.current
       || characterSwitchingRef.current
       || gameplayModeRef.current
-      || activitySessionRef.current
+      || wordPracticeSessionRef.current
     ) return false;
     if (!triggerPropEffect("wreath")) return false;
     showToast("爱心花圈来啦");
@@ -1751,7 +1756,7 @@ function App() {
       || mediaLibraryOpenRef.current
       || characterSwitchingRef.current
       || gameplayModeRef.current
-      || activitySessionRef.current
+      || wordPracticeSessionRef.current
     ) return;
 
     const action = GESTURE_ACTIONS[update.trigger];
@@ -1799,7 +1804,7 @@ function App() {
   }, [activeCharacter, enqueueSynthesizedSpeech, recordConversationMessage, replaceCharacterBubble]);
 
   const { visionState: sceneVisionState, sceneReaction } = useCameraSceneAnalysis({
-    enabled: cameraState === "ready" && !recording && !mediaPreview && !mediaLibraryOpen && !gameplayMode && !storyFocus && !activitySession,
+    enabled: cameraState === "ready" && !recording && !mediaPreview && !mediaLibraryOpen && !gameplayMode && !storyFocus && !wordPracticeSession,
     videoRef,
     activeCharacter,
     onReaction: handleSceneReaction,
@@ -1971,7 +1976,7 @@ function App() {
           language: "zh-CN",
           character: activeCharacter,
         }));
-        socket.send(JSON.stringify({ type: "interaction_mode", mode: gameplayModeRef.current || "none" }));
+        socket.send(JSON.stringify({ type: "interaction_mode", mode: gameplayModeRef.current === "words" ? "feed" : gameplayModeRef.current || "none" }));
         if (warm?.startSent) socket.send(JSON.stringify({ type: "activate", storyDay }));
       };
       socket.addEventListener("open", beginSession);
@@ -2009,6 +2014,12 @@ function App() {
           }
           if (message.final) {
             if (message.clientMessageId && pendingTextRef.current?.id === message.clientMessageId) pendingTextRef.current.finish(true);
+            if (gameplayModeRef.current === "words") {
+              setWordUtterance({ id: message.id || crypto.randomUUID(), text });
+              recordConversationMessage({ ...message, role: "user", text, source: "gameplay", character: activeCharacter });
+              setSpeechText(text.slice(0, 42));
+              return;
+            }
             const voiceIntent = parseVoiceIntent(text);
             if (voiceIntent?.type === "activity") {
               recordConversationMessage({ ...message, role: "user", text, source: "child_speech", character: activeCharacter });
@@ -2113,7 +2124,7 @@ function App() {
           voiceStreamRef.current = { id: message.streamId, character: streamCharacter, epoch: streamEpoch };
           synthesizedSpeechQueueRef.current = [];
           guideAudioRef.current?.pause();
-          prepareStreamingSpeech()?.start(message.streamId, message.sampleRate);
+          prepareStreamingSpeech()?.start(message.streamId, message.sampleRate, streamCharacter === "lvdou" ? 1.5 : 1);
           return;
         }
         if (message.type === "speech_chunk") {
@@ -2574,8 +2585,8 @@ function App() {
       const cropDisplayX = 0; // The camera canvas uses object-position: left bottom.
       const cropDisplayY = targetHeight * displayScale - displayHeight;
       const anchor = characterInteractionRef.current?.getMouthAnchor?.();
-      const mouthSourceX = anchor ? anchor.x * RIVE_SOURCE_SIZE.width : (riveCropXRef.current + RIVE_VISIBLE_SOURCE.width * 0.53);
-      const mouthSourceY = anchor ? anchor.y * RIVE_SOURCE_SIZE.height : (RIVE_VISIBLE_SOURCE.y + RIVE_VISIBLE_SOURCE.height * 0.44);
+      const mouthSourceX = anchor ? anchor.x * RIVE_SOURCE_SIZE.width : (riveCropXRef.current + RIVE_VISIBLE_SOURCE.width * (activeCharacterRef.current === "lvdou" ? .38 : .53));
+      const mouthSourceY = anchor ? anchor.y * RIVE_SOURCE_SIZE.height : (RIVE_VISIBLE_SOURCE.y + RIVE_VISIBLE_SOURCE.height * (activeCharacterRef.current === "lvdou" ? .68 : .44));
       characterDrawRectRef.current = {
         x: riveX * displayScale - cropDisplayX, y: riveY * displayScale - cropDisplayY,
         width: riveWidth * displayScale, height: riveHeight * displayScale,
@@ -2979,7 +2990,7 @@ function App() {
                   && !guideAudioRef.current.paused
                   && guideAudioRef.current.dataset.voiceKind === "synthesized");
                 const playbackAnimations = [RIVE_POSITION_ANIMATION, nextAnimation];
-                if (speaking && gameplayModeRef.current !== "feed") playbackAnimations.push(RIVE_MOUTH_ANIMATION);
+                if (speaking && gameplayModeRef.current !== "feed" && !gameplayTargetRef.current?.chewing) playbackAnimations.push(RIVE_MOUTH_ANIMATION);
                 switchingAnimation = true;
                 try {
                   instance.stop();
@@ -3018,7 +3029,7 @@ function App() {
                   || completionQueued
                   || !activeAnimationName
                   || gameplayModeRef.current
-                  || activitySessionRef.current
+                  || wordPracticeSessionRef.current
                 ) return;
                 const completedAnimation = event.type === RiveEventType.Loop
                   ? event.data?.animation
@@ -3042,7 +3053,7 @@ function App() {
               };
 
               riveMouthPlaybackRef.current = (speaking) => {
-                if (gameplayModeRef.current === "feed") speaking = false;
+                if (gameplayModeRef.current === "feed" || gameplayTargetRef.current?.chewing) speaking = false;
                 const mouthAnimation = getActiveAnimation(RIVE_MOUTH_ANIMATION);
                 if (speaking && !mouthAnimation) {
                   instance.play(RIVE_MOUTH_ANIMATION);
@@ -4043,7 +4054,7 @@ function App() {
         !isVolumeKey
         || event.repeat
         || cameraState !== "ready"
-        || activitySessionRef.current
+        || wordPracticeSessionRef.current
         || recordingRef.current
         || mediaPreviewRef.current
         || mediaLibraryOpenRef.current
@@ -4493,36 +4504,41 @@ function App() {
   }, [activeCharacter, cameraState, clearCharacterSpeech, setHiddenStoryFocus, switchCharacterTo]);
   startGameplayRef.current = startGameplay;
   const offerActivity = useCallback(async () => {
-    if (recordingRef.current || gameplayModeRef.current || activitySessionRef.current) return;
+    if (recordingRef.current || gameplayModeRef.current || wordPracticeSessionRef.current) return;
     setHiddenStoryFocus(null); setGameplayMenuOpen(false); setTextComposerOpen(false);
     clearCharacterSpeech();
     if (activeCharacter !== "lvdou") await switchCharacterTo("lvdou");
-    setActivityCard(true);
+    const session = { id: crypto.randomUUID(), activityId: "words", createdAt: Date.now() };
+    wordPracticeSessionRef.current = session; wordReportRef.current = null;
+    gameplayModeRef.current = "words"; setGameplayMode("words"); setWordUtterance(null); setWordPracticeSession(session);
+    const socket = voiceSocketRef.current;
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "interaction_mode", mode: "feed" }));
   }, [activeCharacter, clearCharacterSpeech, setHiddenStoryFocus, switchCharacterTo]);
   offerActivityRef.current = offerActivity;
-  const openActivity = useCallback(() => {
-    if (recordingRef.current || gameplayModeRef.current || characterSwitchingRef.current || activitySessionRef.current) return;
-    const session = { id: crypto.randomUUID(), activityId: "words", createdAt: Date.now() };
-    activitySessionRef.current = session;
-    stopVoiceSession(); clearCharacterSpeech(); setHiddenStoryFocus(null);
-    streamRef.current?.getAudioTracks().forEach(track => { track.enabled = false; });
-    setActivityCard(false); setActivitySession(session);
-  }, [clearCharacterSpeech, setHiddenStoryFocus, stopVoiceSession]);
   const finishActivity = useCallback(record => {
-    if (!activitySessionRef.current || record.id !== activitySessionRef.current.id) return;
+    if (!wordPracticeSessionRef.current || record.id !== wordPracticeSessionRef.current.id) return;
     try { setActivityReports(saveActivityReport(record)); showToast("练习记录已收进相册"); }
     catch { setActivityReports(current => [record, ...current.filter(r => r.id !== record.id)]); showToast("本机存储已满，记录暂留本次页面"); }
-    activitySessionRef.current = null; setActivitySession(null);
-    const stream = streamRef.current;
-    stream?.getAudioTracks().forEach(track => { track.enabled = true; });
-    if (stream) void startVoiceSession(stream, { textOnly: !stream.getAudioTracks().length });
-  }, [showToast, startVoiceSession]);
+    wordPracticeSessionRef.current = null; setWordPracticeSession(null); gameplayModeRef.current = ""; setGameplayMode("");
+    clearCharacterSpeech(); characterInteractionRef.current?.reset();
+    rivePlayAnimationRef.current?.("TalkingEmotion_Normal");
+    const socket = voiceSocketRef.current;
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "interaction_mode", mode: "none" }));
+  }, [showToast, clearCharacterSpeech]);
+  useEffect(() => {
+    if (cameraState === "ready" && /^\/words\/?$/.test(location.pathname) && !wordLinkStartedRef.current && !characterSwitching) {
+      wordLinkStartedRef.current = true; void offerActivity();
+    }
+  }, [cameraState, characterSwitching, offerActivity]);
   const removeActivityReport = useCallback(id => {
     try { setActivityReports(deleteActivityReport(id)); } catch { showToast("暂时没有删除成功，请再试一次"); }
   }, [showToast]);
   useEffect(() => {
-    if (cameraState !== "ready") { gameplayModeRef.current = ""; setGameplayMode(""); setGameplayMenuOpen(false); }
-  }, [cameraState]);
+    if (cameraState !== "ready") {
+      const session = wordPracticeSessionRef.current;
+      if (session) finishActivity({ ...session, report: wordReportRef.current || { status: "exited", voiceAttempts: 0, menuAttempts: 0, completedLessons: 0, totalLessons: 10, durationSeconds: 0, words: [], chapter: "多米的单词泡泡" } });
+      gameplayModeRef.current = ""; setGameplayMode(""); setGameplayMenuOpen(false); }
+  }, [cameraState, finishActivity]);
   useEffect(() => {
     if (!gameplayMode) return undefined;
     const sync = () => {
@@ -4620,11 +4636,12 @@ function App() {
 
   return (
     <IconoirProvider iconProps={{ strokeWidth: 2.5 }}>
-    <main inert={activitySession ? true : undefined} className={`app-shell is-${frameOrientation} ${isMobileDevice ? "is-mobile-device" : "is-desktop-device"} ${isTabletDevice ? "is-tablet-device" : ""}`}>
+    <main className={`app-shell is-${frameOrientation} ${isMobileDevice ? "is-mobile-device" : "is-desktop-device"} ${isTabletDevice ? "is-tablet-device" : ""}`}>
       <section
         className={`camera-stage is-${frameOrientation} ${cameraState === "ready" ? "is-live" : ""} ${riveReady ? "is-rive-ready" : ""} ${characterSwitching ? "is-character-switching" : ""}`}
         data-frame-orientation={frameOrientation}
         data-gameplay-mode={gameplayMode || "none"}
+        data-word-bubble-mouth={gameplayMode === "words" ? (characterInteractionRef.current?.capabilities.chewing ? "rive-poses" : "unavailable") : undefined}
         data-rive-animation={riveAnimationName}
         data-rive-playback-rate={activeRivePlaybackRate}
         data-rive-renderer={riveRendererMode}
@@ -4696,13 +4713,11 @@ function App() {
               {speechText}
             </Calligraph>
           </div>
-          {activityCard && cameraState === "ready" && <article className="activity-link-card" aria-label="开口造世界链接卡片">
-            <small>绿豆邀请你 · 英语跟读</small><h3>开口造世界</h3><p>和 DOMI 一起吃点心、开车、交朋友。十关单词冒险结束后，记录会收进相册。</p>
-            <button type="button" onClick={openActivity} disabled={characterSwitching}>进入小世界 <ArrowSeparate aria-hidden="true"/></button><button type="button" className="activity-card-dismiss" onClick={() => setActivityCard(false)}>下次再玩</button>
-          </article>}
-          {activitySession && <ActivityExperience session={activitySession} onFinish={finishActivity} />}
+          {wordPracticeSession && gameplayMode === "words" && <WordBubbles session={wordPracticeSession} transcript={wordUtterance}
+            characterRect={gameplayCharacterRect} onTarget={handleGameplayTarget} onGuide={text => handleGameplayReaction({ text, action: "curious" })}
+            onProgress={report => { wordReportRef.current = report; }} onFinish={finishActivity} />}
           {!gameplayMode && <CharacterCaptionBubble reaction={characterBubble} canvasRendered={recording} />}
-          {cameraState === "ready" && gameplayMode && (
+          {cameraState === "ready" && gameplayMode && gameplayMode !== "words" && (
             <GamePlayOverlay
               mode={gameplayMode}
               initialFoodId={gameplayFoodId}

@@ -86,6 +86,91 @@
       ],
       "format": "GLB",
       "license": "CC0-1.0"
+    },
+    {
+      "id": "banana",
+      "name": "香蕉",
+      "description": "单词泡泡里的独立食物模型",
+      "path": "models/food/banana.glb",
+      "bytes": 10972,
+      "triangles": 2464,
+      "meshes": 7,
+      "materials": 1,
+      "dimensions": [
+        1.42,
+        0.77,
+        0.36
+      ],
+      "format": "GLB",
+      "license": "Source owner authorized migration; PolyForm Noncommercial"
+    },
+    {
+      "id": "bread",
+      "name": "面包",
+      "description": "单词泡泡里的独立食物模型",
+      "path": "models/food/bread.glb",
+      "bytes": 12532,
+      "triangles": 388,
+      "meshes": 4,
+      "materials": 2,
+      "dimensions": [
+        1.8,
+        0.7,
+        0.9
+      ],
+      "format": "GLB",
+      "license": "Source owner authorized migration; PolyForm Noncommercial"
+    },
+    {
+      "id": "orange",
+      "name": "橙子",
+      "description": "单词泡泡里的独立食物模型",
+      "path": "models/food/orange.glb",
+      "bytes": 15492,
+      "triangles": 768,
+      "meshes": 3,
+      "materials": 3,
+      "dimensions": [
+        0.96,
+        1.06,
+        0.96
+      ],
+      "format": "GLB",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "strawberry",
+      "name": "草莓",
+      "description": "单词泡泡里的独立食物模型",
+      "path": "models/food/strawberry.glb",
+      "bytes": 17932,
+      "triangles": 11992,
+      "meshes": 35,
+      "materials": 3,
+      "dimensions": [
+        0.8600000000000001,
+        0.9400000000000001,
+        0.86
+      ],
+      "format": "GLB",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "milk",
+      "name": "牛奶",
+      "description": "单词泡泡里的独立食物模型",
+      "path": "models/food/milk.glb",
+      "bytes": 7472,
+      "triangles": 204,
+      "meshes": 4,
+      "materials": 4,
+      "dimensions": [
+        0.6,
+        0.935,
+        0.6125
+      ],
+      "format": "GLB",
+      "license": "CC0-1.0"
     }
   ]
 }

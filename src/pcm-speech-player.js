@@ -21,10 +21,11 @@ export class PcmSpeechPlayer {
     this.watchdog = null;
   }
 
-  start(streamId, sampleRate = 24000) {
+  start(streamId, sampleRate = 24000, playbackRate = 1) {
     this.stop();
     this.streamId = streamId;
     this.sampleRate = sampleRate;
+    this.playbackRate = Number.isFinite(playbackRate) ? Math.max(.5, Math.min(2, playbackRate)) : 1;
     this.nextTime = 0;
     this.finished = false;
     this.armWatchdog(this.startTimeoutMs, streamId, "first_chunk");
@@ -49,6 +50,7 @@ export class PcmSpeechPlayer {
     }
     const source = this.context.createBufferSource();
     source.buffer = buffer;
+    if (source.playbackRate) source.playbackRate.value = this.playbackRate;
     source.connect(this.context.destination);
     this.sources.add(source);
     source.onended = () => {
@@ -58,7 +60,7 @@ export class PcmSpeechPlayer {
     };
     const at = Math.max(this.context.currentTime + 0.035, this.nextTime);
     source.start(at);
-    this.nextTime = at + frames / this.sampleRate;
+    this.nextTime = at + frames / this.sampleRate / this.playbackRate;
     if (!this.playing) { this.playing = true; this.onStart(); }
   }
 

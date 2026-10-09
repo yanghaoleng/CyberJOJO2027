@@ -81,3 +81,5 @@ test("ZHc feeding samples a closed first frame without starting the speech timel
   assert.equal(applied.at(-1), 0);
   controller.dispose();
 });
+
+ test("compact DOMI exports chew through real mouth poses without named editor nodes",()=>{const weights=[];class Pose{apply(w){weights.push(w)}delete(){}}const instance={runtime:{LinearAnimationInstance:Pose},artboard:{node(){return null},animationByName(){return{}},advance(){}},advanceAndReportChanges(){}};const c=createCharacterInteraction(instance);assert.equal(c.capabilities.chewing,true);c.update({chewing:true},1);c.afterAdvance(66);assert.ok(weights.some(w=>w>0&&w<1));c.reset();c.dispose();});

@@ -8,7 +8,7 @@ function harness() {
   const context = {
     currentTime: 10, destination: {}, resume: async () => {},
     createBuffer: (_, size, rate) => ({ samples: new Float32Array(size), getChannelData() { return this.samples; }, sampleRate: rate }),
-    createBufferSource: () => ({ connect() {}, disconnect() {}, start(at) { this.at = at; scheduled.push(this); }, stop() { this.stopped = true; } }),
+    createBufferSource: () => ({ playbackRate: { value: 1 }, connect() {}, disconnect() {}, start(at) { this.at = at; scheduled.push(this); }, stop() { this.stopped = true; } }),
   };
   return { scheduled, events, player: new PcmSpeechPlayer(context, { onStart: () => events.push("start"), onEnd: () => events.push("end") }) };
 }
@@ -98,3 +98,5 @@ test("a stream with a gap after audio is released instead of blocking the queue"
   assert.deepEqual(stalled, [{ streamId: "stream-2", phase: "chunk" }]);
   assert.equal(player.streamId, "");
 });
+
+ test("150 percent speech schedules every PCM chunk with its shortened duration", () => {const {player,scheduled}=harness();player.start('fast',24000,1.5);player.append('fast',pcm(.1,.2,.3).toString('base64'));player.append('fast',pcm(.4,.5,.6).toString('base64'));assert.equal(scheduled[0].playbackRate.value,1.5);assert.equal(scheduled[1].at,scheduled[0].at+3/24000/1.5);player.start('normal');player.append('normal',pcm(.2).toString('base64'));assert.equal(scheduled[2].playbackRate.value,1);});

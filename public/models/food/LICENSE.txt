@@ -3,3 +3,9 @@ CC0 1.0 Universal
 These original procedural food models were created for CyberJOJO2027.
 To the extent possible under law, the authors waive all copyright and related rights to these models under CC0 1.0 Universal.
 https://creativecommons.org/publicdomain/zero/1.0/
+
+Word-bubble additions (2026-10-09): orange, strawberry and milk are original
+procedural geometry dedicated to CC0-1.0. Banana and bread are same-owner
+migrations from JOJO-Mysterious-Album a14dae2, authorized by the project owner;
+the original PolyForm Noncommercial and content/owner license terms remain in
+src/activities/domi-world/vendor/. Their source is retained for reproducibility.

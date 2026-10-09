@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-09T02:31:38.526Z",
-  "publicFileCount": 110,
-  "totalBytes": 104515346,
+  "generatedAt": "2026-10-09T02:51:12.673Z",
+  "publicFileCount": 115,
+  "totalBytes": 104582114,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -1015,6 +1015,46 @@
       "license": "CC0-1.0"
     },
     {
+      "id": "models/food/banana.glb",
+      "path": "models/food/banana.glb",
+      "name": "香蕉",
+      "category": "model",
+      "format": "GLB",
+      "bytes": 10972,
+      "sha256": "6b9b1b8e0a0ab171daa49969440afb5cbd74919419bf9d8352962fd45aa3063b",
+      "foodId": "banana",
+      "description": "单词泡泡里的独立食物模型",
+      "triangles": 2464,
+      "meshes": 7,
+      "materials": 1,
+      "dimensions": [
+        1.42,
+        0.77,
+        0.36
+      ],
+      "license": "Source owner authorized migration; PolyForm Noncommercial"
+    },
+    {
+      "id": "models/food/bread.glb",
+      "path": "models/food/bread.glb",
+      "name": "面包",
+      "category": "model",
+      "format": "GLB",
+      "bytes": 12532,
+      "sha256": "fc50339299cd473e04a41cdd9ab05115ce6c8743e14038c4aa95b5380dec34dc",
+      "foodId": "bread",
+      "description": "单词泡泡里的独立食物模型",
+      "triangles": 388,
+      "meshes": 4,
+      "materials": 2,
+      "dimensions": [
+        1.8,
+        0.7,
+        0.9
+      ],
+      "license": "Source owner authorized migration; PolyForm Noncommercial"
+    },
+    {
       "id": "models/food/cake.glb",
       "path": "models/food/cake.glb",
       "name": "草莓奶油蛋糕",
@@ -1080,8 +1120,8 @@
       "name": "LICENSE.txt",
       "category": "other",
       "format": "TXT",
-      "bytes": 266,
-      "sha256": "b09671246c0ec86774138a49f1f2e03829c367ece7eb16548e99aebf29c5a1f8"
+      "bytes": 657,
+      "sha256": "851e28a7d1f5ccca9f17109f885df735b8c203be956c3593bd37a290aa6b078b"
     },
     {
       "id": "models/food/manifest.json",
@@ -1089,8 +1129,28 @@
       "name": "manifest.json",
       "category": "other",
       "format": "JSON",
-      "bytes": 2065,
-      "sha256": "7fc617a20c6db3c48a0af5d97efaca2ea0c15bec60d42d6046dc7d53af97d284"
+      "bytes": 4042,
+      "sha256": "89e0d304e88845e24f96116550ec57854471796d91ebc9c1f4815a7ec64698bb"
+    },
+    {
+      "id": "models/food/milk.glb",
+      "path": "models/food/milk.glb",
+      "name": "牛奶",
+      "category": "model",
+      "format": "GLB",
+      "bytes": 7472,
+      "sha256": "5b6421c6a7768055b9a8e59f4ba2af842f8654ee25662efe69116a752679ce32",
+      "foodId": "milk",
+      "description": "单词泡泡里的独立食物模型",
+      "triangles": 204,
+      "meshes": 4,
+      "materials": 4,
+      "dimensions": [
+        0.6,
+        0.935,
+        0.6125
+      ],
+      "license": "CC0-1.0"
     },
     {
       "id": "models/food/noodles.glb",
@@ -1109,6 +1169,46 @@
         0.221,
         0.109,
         0.221
+      ],
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "models/food/orange.glb",
+      "path": "models/food/orange.glb",
+      "name": "橙子",
+      "category": "model",
+      "format": "GLB",
+      "bytes": 15492,
+      "sha256": "1b091b7d1105b69b45601d3eb5db12e50bed03bcb310aa1d5c44500c806ffe82",
+      "foodId": "orange",
+      "description": "单词泡泡里的独立食物模型",
+      "triangles": 768,
+      "meshes": 3,
+      "materials": 3,
+      "dimensions": [
+        0.96,
+        1.06,
+        0.96
+      ],
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "models/food/strawberry.glb",
+      "path": "models/food/strawberry.glb",
+      "name": "草莓",
+      "category": "model",
+      "format": "GLB",
+      "bytes": 17932,
+      "sha256": "5d3ac432e77fc36c7bf9086bbd762d0d099a6f0fbfd4f31daeb2e17b1c8d37e0",
+      "foodId": "strawberry",
+      "description": "单词泡泡里的独立食物模型",
+      "triangles": 11992,
+      "meshes": 35,
+      "materials": 3,
+      "dimensions": [
+        0.8600000000000001,
+        0.9400000000000001,
+        0.86
       ],
       "license": "CC0-1.0"
     },
@@ -1149,20 +1249,6 @@
       "sha256": "dcc8ab8b251fd8dce795243074f6a16613f5ab86a5a87815e260be350dfa8445"
     },
     {
-      "id": "iconoir:ArrowRight",
-      "name": "ArrowRight",
-      "iconName": "ArrowRight",
-      "category": "interface",
-      "format": "SVG",
-      "weights": [
-        "2.5"
-      ],
-      "usedIn": [
-        "src/activities/domi-world/DomiWorld.jsx"
-      ],
-      "license": "MIT"
-    },
-    {
       "id": "iconoir:ArrowSeparate",
       "name": "切换镜头",
       "iconName": "ArrowSeparate",
@@ -1187,7 +1273,7 @@
       ],
       "usedIn": [
         "src/App.jsx",
-        "src/activities/domi-world/DomiWorld.jsx"
+        "src/activities/word-bubbles/WordBubbles.jsx"
       ],
       "license": "MIT"
     },
@@ -1248,20 +1334,6 @@
       "license": "MIT"
     },
     {
-      "id": "iconoir:MusicNote",
-      "name": "MusicNote",
-      "iconName": "MusicNote",
-      "category": "interface",
-      "format": "SVG",
-      "weights": [
-        "2.5"
-      ],
-      "usedIn": [
-        "src/activities/domi-world/DomiWorld.jsx"
-      ],
-      "license": "MIT"
-    },
-    {
       "id": "iconoir:NavArrowDown",
       "name": "展开",
       "iconName": "NavArrowDown",
@@ -1272,21 +1344,6 @@
       ],
       "usedIn": [
         "src/App.jsx"
-      ],
-      "license": "MIT"
-    },
-    {
-      "id": "iconoir:NavArrowLeft",
-      "name": "NavArrowLeft",
-      "iconName": "NavArrowLeft",
-      "category": "interface",
-      "format": "SVG",
-      "weights": [
-        "2.5"
-      ],
-      "usedIn": [
-        "src/activities/ActivityExperience.jsx",
-        "src/activities/domi-world/DomiWorld.jsx"
       ],
       "license": "MIT"
     },
@@ -1343,8 +1400,7 @@
         "2.5"
       ],
       "usedIn": [
-        "src/App.jsx",
-        "src/activities/domi-world/DomiWorld.jsx"
+        "src/App.jsx"
       ],
       "license": "MIT"
     },
@@ -1372,21 +1428,7 @@
         "2.5"
       ],
       "usedIn": [
-        "src/activities/domi-world/DomiWorld.jsx"
-      ],
-      "license": "MIT"
-    },
-    {
-      "id": "iconoir:SoundOff",
-      "name": "SoundOff",
-      "iconName": "SoundOff",
-      "category": "interface",
-      "format": "SVG",
-      "weights": [
-        "2.5"
-      ],
-      "usedIn": [
-        "src/activities/domi-world/DomiWorld.jsx"
+        "src/activities/word-bubbles/WordBubbles.jsx"
       ],
       "license": "MIT"
     },
@@ -1415,8 +1457,7 @@
         "2.5"
       ],
       "usedIn": [
-        "src/App.jsx",
-        "src/activities/domi-world/DomiWorld.jsx"
+        "src/App.jsx"
       ],
       "license": "MIT"
     },
@@ -1431,6 +1472,7 @@
       ],
       "usedIn": [
         "src/App.jsx",
+        "src/activities/word-bubbles/WordBubbles.jsx",
         "src/friends/FriendCollection.jsx"
       ],
       "license": "MIT"

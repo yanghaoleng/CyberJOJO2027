@@ -73,7 +73,7 @@ export function createCharacterInteraction(instance) {
   const closedPose = makePose("Talking_Normal_close", 0) || makePose("Talking_Normal", 0);
   const capabilities = Object.freeze({
     eyes: Boolean(eyes || pupils.length === 2), head: Boolean(head), mouth: Boolean(mouth && openPose && closedPose),
-    chewing: Boolean(mouth && openPose && closedPose), anchor: Boolean(mouthAnchor),
+    chewing: Boolean(openPose && closedPose), anchor: Boolean(mouthAnchor),
     method: "verified-rive-control-nodes", chewingMethod: "procedural-jaw",
   });
   let target = null, baseline = null, lastTime = 0, chewStarted = 0, disposed = false;
@@ -121,6 +121,10 @@ export function createCharacterInteraction(instance) {
         (target.mouthOpen || target.chewing ? openPose : closedPose).apply(1);
         mouth.scaleY = baseline.mouth.scaleY * (chewing ? chewing.scaleY : target.mouthOpen ? 1.8 : 1);
         mouth.scaleX = baseline.mouth.scaleX * (chewing ? chewing.scaleX : target.mouthOpen ? 1.04 : 1);
+      }
+      if (!mouth && openPose && closedPose) {
+        closedPose.apply(1);
+        openPose.apply(chewing ? clamp((chewing.scaleY - .24) / .85, 0, 1) : target.mouthOpen ? 1 : 0);
       }
       if (eyes) { eyes.x = baseline.eyes.x + eyeX * 110; eyes.y = baseline.eyes.y + eyeY * 80; }
       pupils.forEach((node, index) => {
