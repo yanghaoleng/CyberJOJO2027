@@ -31,8 +31,12 @@ try{
  const report=await page.evaluate(()=>JSON.parse(localStorage.getItem('cyberjojo.activity-reports.v1'))[0].report);assert.equal(report.completedLessons,3);assert.ok(report.independentWords.includes('blue'));assert.ok(report.guidedWords.includes('red'));assert.ok(report.spokenPhrases.includes('two blue bananas'));
  const before=messages.length;
  await page.evaluate(()=>qaVoiceSockets.at(-1).send(JSON.stringify({type:'text',clientMessageId:crypto.randomUUID(),text:'Hello Domi, what is your favourite fruit?'})));
- await page.waitForFunction(()=>document.querySelector('audio.guide-audio').dataset.speechText.toLowerCase().includes('fruit')||document.querySelector('.camera-stage').dataset.aiState==='speaking',{},{timeout:45000});
- assert.ok(messages.slice(before).some(m=>m.type==='speech'&&!m.local&&m.character==='lvdou'&&m.voiceSource==='domi-word-tts-v1'));
+ // Provider "speaking" can arrive before the canonical TTS audio is ready.
+ // Wait for the actual audio packet and its playback element, not that state.
+ const responseDeadline=Date.now()+45000;
+ const actualReply=()=>messages.slice(before).find(m=>m.type==='speech'&&!m.local&&m.character==='lvdou'&&m.voiceSource==='domi-word-tts-v1');
+ while(!actualReply()){assert.ok(Date.now()<responseDeadline,'full conversation returns canonical TTS');await page.waitForTimeout(100);}
+ await page.waitForFunction(text=>document.querySelector('audio.guide-audio').dataset.speechText===text,actualReply().text,{timeout:10000});
  assert.equal(messages.slice(before).some(m=>m.type==='speech_start'&&m.character==='lvdou'),false);
  assert.equal(await page.locator('audio.guide-audio').evaluate(a=>a.playbackRate),1.5);assert.deepEqual(errors,[]);
  console.log('PASS: production microphone -> actual ASR -> apple, 2 blue bananas, 3 red oranges -> feeding/report; real full conversation shares prompt voice and 1.5x playback');
