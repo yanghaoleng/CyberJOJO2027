@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
+import { DOMI_WORD_VOICE_ID } from "./character-voice-policy.js";
 
 const DEFAULT_ENDPOINT = "https://openspeech.bytedance.com/api/v3/tts/unidirectional";
 const DEFAULT_RESOURCE_ID = "seed-tts-2.0";
 const DEFAULT_VOICES = Object.freeze({
   jiaojiao: "zh_male_tiancaitongsheng_uranus_bigtts",
-  lvdou: "zh_male_naiqimengwa_uranus_bigtts",
+  lvdou: DOMI_WORD_VOICE_ID,
 });
 const DEFAULT_VOICE_PROFILES = Object.freeze({
   jiaojiao: Object.freeze({ speechRate: 4, pitchRate: 0 }),

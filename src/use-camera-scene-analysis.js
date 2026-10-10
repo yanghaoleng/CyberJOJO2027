@@ -107,11 +107,13 @@ export function useCameraSceneAnalysis({
       requestController = new AbortController();
       const requestTimeout = window.setTimeout(() => requestController?.abort(), 11_000);
       setVisionState("analyzing");
+      const requestCharacter = activeCharacterRef.current;
       try {
-        const result = await requestScene(getVisionApiUrl(), { image, character: activeCharacterRef.current }, { signal: requestController.signal });
+        const result = await requestScene(getVisionApiUrl(), { image, character: requestCharacter }, { signal: requestController.signal });
         if (cancelled) return;
         gateRef.current = finishSceneRequest(gateRef.current, fingerprint, true);
         setVisionState("idle");
+        if (requestCharacter !== activeCharacterRef.current) return;
         if (pendingRequestRef.current) return;
 
         if (!result.evaluable || !result.text) {
@@ -132,6 +134,7 @@ export function useCameraSceneAnalysis({
           confidence: result.confidence,
           character: activeCharacterRef.current,
           audio: result.audio || "",
+          voiceSource: result.voiceSource,
           mime: result.mime || "audio/mpeg",
         };
         setSceneReaction(reaction);

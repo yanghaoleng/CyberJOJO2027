@@ -13,6 +13,8 @@ import { createGameplayRequestHandler } from "./gameplay-route.js";
 import { createMattingRequestHandler } from "./matting-route.js";
 import { getSeeduplexConfig, SeeduplexSession } from "./seeduplex-session.js";
 import { startSocketHeartbeat } from "./socket-heartbeat.js";
+import { DOMI_WORD_VOICE_SOURCE } from "./character-voice-policy.js";
+import { createSpeechRequestHandler } from "./speech-route.js";
 
 const PORT = Number(process.env.PORT || 8787);
 const MAX_SESSION_MS = Number(process.env.JOCAM_MAX_SESSION_MS || 0);
@@ -53,6 +55,7 @@ const handleVisionRequest = createVisionRequestHandler({
       const audio = await synthesizeSpeech(assessment.text, character, ttsConfig);
       return {
         character,
+        voiceSource: character === "lvdou" ? DOMI_WORD_VOICE_SOURCE : undefined,
         mime: "audio/mpeg",
         audio: audio.toString("base64"),
       };
@@ -65,7 +68,9 @@ const handleVisionRequest = createVisionRequestHandler({
 const handleSummaryRequest = createSummaryRequestHandler({ allowedOrigins, arkConfig });
 const handleGameplayRequest = createGameplayRequestHandler({ allowedOrigins, arkConfig });
 const handleMattingRequest = createMattingRequestHandler({ allowedOrigins });
+const handleSpeechRequest = createSpeechRequestHandler({ allowedOrigins, ttsConfig });
 const server = http.createServer(async (request, response) => {
+  if (await handleSpeechRequest(request, response)) return;
   if (await handleMattingRequest(request, response)) return;
   if (await handleGameplayRequest(request, response)) return;
   if (await handleVisionRequest(request, response)) return;
@@ -184,6 +189,8 @@ websocketServer.on("connection", (client) => {
   let inferenceController = null;
   let lastLocalSpeechAt = 0;
   let localSpeechSequence = 0;
+  let pendingLocalSpeechTimer = null;
+  let localSpeechController = null;
   let lastTextAt = 0;
   let pendingSpeechParts = [];
   let pendingSpeechTimer = null;
@@ -198,6 +205,9 @@ websocketServer.on("connection", (client) => {
 
   const cancelPending = () => {
     epoch += 1;
+    clearTimeout(pendingLocalSpeechTimer); pendingLocalSpeechTimer = null;
+    localSpeechController?.abort(); localSpeechController = null;
+    localSpeechSequence += 1;
     inferenceController?.abort();
     seeduplex?.interrupt();
     sendJson(client, { type: "ai", state: "idle" });
@@ -239,7 +249,7 @@ websocketServer.on("connection", (client) => {
       const audio = await synthesizeSpeech(text, noteCharacter, ttsConfig, fetch);
       if (closed) return;
       context.entries = [...context.entries, { role: "assistant", text: String(text).slice(0, 1000) }].slice(-16);
-      sendJson(client, { type: "leave_note", text, character: noteCharacter, sessionId, mime: "audio/mpeg", audio: audio.toString("base64") });
+      sendJson(client, { type: "leave_note", text, character: noteCharacter, voiceSource: noteCharacter === "lvdou" ? DOMI_WORD_VOICE_SOURCE : undefined, sessionId, mime: "audio/mpeg", audio: audio.toString("base64") });
     } catch (error) {
       if (closed || error.name === "AbortError") return;
       console.error("Leave note generation failed", { name: error.name, message: error.message });
@@ -265,6 +275,7 @@ websocketServer.on("connection", (client) => {
       type: "speech",
       text,
       character: speechCharacter,
+      voiceSource: speechCharacter === "lvdou" ? DOMI_WORD_VOICE_SOURCE : undefined,
       opening,
       local,
       sessionId,
@@ -626,11 +637,30 @@ websocketServer.on("connection", (client) => {
       return;
     }
     if (message.type === "local_speech" || message.type === "scene_speech") {
-      if (!started || Date.now() - lastLocalSpeechAt < 700) return;
+      if (!started) return;
+      if (message.character && message.character !== activeCharacter) return;
       const originalText = String(message.text || "").replace(/\s+/g, " ").trim().slice(0, 80);
       const text = activeCharacter === "lvdou" && /[\u3400-\u9fff]/.test(originalText)
         ? "Let's look closely. What do you notice?" : originalText;
       if (!text) return;
+      if (message.replace === true && interactionMode === "feed") {
+        // Rapidly changing suggestions must read the final selection. Keep the
+        // synthesis rate limit, coalesce pending prompts, and cancel stale TTS.
+        clearTimeout(pendingLocalSpeechTimer); pendingLocalSpeechTimer = null;
+        localSpeechController?.abort();
+        const sequence = ++localSpeechSequence, expectedEpoch = epoch, character = activeCharacter;
+        const say = () => {
+          pendingLocalSpeechTimer = null;
+          if (closed || epoch !== expectedEpoch || localSpeechSequence !== sequence || activeCharacter !== character) return;
+          lastLocalSpeechAt = Date.now(); localSpeechController = new AbortController();
+          void sendSpeech(text, { local: true, character, expectedEpoch, expectedLocalSequence: sequence, signal: localSpeechController.signal })
+            .catch(error => { if (error.name !== "AbortError") console.error("Interaction speech failed", { name: error.name }); });
+        };
+        const wait = Math.max(0, 700 - (Date.now() - lastLocalSpeechAt));
+        if (wait) pendingLocalSpeechTimer = setTimeout(say, wait); else say();
+        return;
+      }
+      if (Date.now() - lastLocalSpeechAt < 700) return;
       lastLocalSpeechAt = Date.now();
       localSpeechSequence += 1;
       if (message.type === "scene_speech" && interactionMode === "none") {

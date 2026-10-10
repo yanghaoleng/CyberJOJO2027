@@ -77,7 +77,7 @@ function readStaleEntryIds(store, limit) {
   });
 }
 
-export function createConversationEntry({ id, role, text, character, source, audioBlob, sessionId = "", createdAt = Date.now() }) {
+export function createConversationEntry({ id, role, text, character, source, audioBlob, voiceSource, sessionId = "", createdAt = Date.now() }) {
   const normalizedRole = role === "assistant" ? "assistant" : "user";
   const normalizedText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 1000);
   if (!normalizedText) return null;
@@ -91,6 +91,7 @@ export function createConversationEntry({ id, role, text, character, source, aud
     source: ["child_speech", "character_reply", "scene_comment", "gameplay", "leave_note"].includes(source)
       ? source : normalizedRole === "user" ? "child_speech" : "character_reply",
     ...(source === "leave_note" && audioBlob instanceof Blob && audioBlob.size <= 2_000_000 && audioBlob.type.startsWith("audio/") ? { audioBlob } : {}),
+    ...(source === "leave_note" && voiceSource === "domi-word-tts-v1" ? { voiceSource } : {}),
     sessionId: String(sessionId).slice(0, 100),
     createdAt: Number(createdAt) || Date.now(),
   };

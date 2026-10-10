@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PauseSolid, PlaySolid } from "iconoir-react";
+import { createDomiSpeechPlayback } from "../domi-speech.js";
+import { isDomiWordVoice } from "../../server/character-voice-policy.js";
 
 function formatDuration(totalSeconds) {
   const seconds = Math.max(0, Math.round(totalSeconds));
@@ -11,13 +13,16 @@ function formatDuration(totalSeconds) {
 /**
  * 叫叫语音留言卡片：独立于「当天小记」展示的语音消息。
  * 优先播放真实音频资源（note.audioUrl，由 TTS 生成的叫叫音色 mp3）；
- * 无音频资源时降级用浏览器 speechSynthesis 朗读留言文本。
+ * Domi 的旧留言或缺失音频重新生成跟读音色，不能降级为系统声音。
  */
 export function LeaveNoteCard({ note, onFinished }) {
   const [playing, setPlaying] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [gone, setGone] = useState(false);
   const [blobUrl, setBlobUrl] = useState("");
+  const [voiceError, setVoiceError] = useState(false);
+  const [actualDuration, setActualDuration] = useState(0);
+  const domiPlayerRef = useRef(null);
   const audioElementRef = useRef(null);
   const utteranceRef = useRef(null);
   const timerRef = useRef(null);
@@ -29,7 +34,7 @@ export function LeaveNoteCard({ note, onFinished }) {
     return () => URL.revokeObjectURL(url);
   }, [note?.audioBlob]);
   const audioUrl = blobUrl || note?.audioUrl || "";
-  const durationSec = Math.max(1, Number(note?.durationSec) || 8);
+  const durationSec = Math.max(1, actualDuration || Number(note?.durationSec) || 8);
 
   const clearTimers = () => {
     if (timerRef.current) window.clearInterval(timerRef.current);
@@ -37,6 +42,7 @@ export function LeaveNoteCard({ note, onFinished }) {
   };
 
   const stop = () => {
+    domiPlayerRef.current?.stop();
     if (audioElementRef.current) {
       audioElementRef.current.pause();
       audioElementRef.current = null;
@@ -59,6 +65,18 @@ export function LeaveNoteCard({ note, onFinished }) {
     if (!text) return;
     setPlaying(true);
     setElapsed(0);
+    setVoiceError(false);
+
+    if (note?.character === "lvdou") {
+      domiPlayerRef.current?.stop();
+      domiPlayerRef.current = createDomiSpeechPlayback({
+        onProgress: (seconds, duration) => { setElapsed(seconds); if (Number.isFinite(duration)) setActualDuration(duration); },
+        onEnded: () => { stop(); onFinished?.(); },
+        onError: () => { stop(); setVoiceError(true); },
+      });
+      void domiPlayerRef.current.play(text, isDomiWordVoice(note) ? note.audioBlob : null);
+      return;
+    }
 
     if (audioUrl) {
       // 真实音频资源：用 <audio> 播放叫叫音色，进度跟随真实播放时长。
@@ -140,6 +158,7 @@ export function LeaveNoteCard({ note, onFinished }) {
       </button>
       <div className="leave-note-body">
         <div className="leave-note-meta"><span className="leave-note-badge">{note?.character === "lvdou" ? "Domi 录音" : "叫叫录音"}</span><span className="leave-note-time">{formatDuration(elapsed)}</span></div>
+        {voiceError && <small role="status">声音暂时没准备好，再点一下试试</small>}
         <div className="leave-note-wave" aria-hidden="true">
           {Array.from({ length: 24 }, (_, index) => {
             const height = 30 + ((index * 17) % 70);

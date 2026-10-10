@@ -38,6 +38,8 @@ import { Calligraph } from "calligraph";
 import QRCode from "qrcode";
 import { PcmSpeechPlayer } from "./pcm-speech-player.js";
 import { createVoicePrewarm } from "./voice-prewarm.js";
+import { configureCharacterPlayback, isDomiWordVoice } from "../server/character-voice-policy.js";
+import { requestDomiSpeech } from "./domi-speech.js";
 import { VoiceHealth, VOICE_ISSUES, appendVoiceLog } from "./voice-health.js";
 import { getStoryVisit } from "./story-progress.js";
 import { createUISFX } from "uisfx";
@@ -1266,7 +1268,7 @@ function App() {
       const text = lines[Math.floor(Math.random() * lines.length)];
       replaceCharacterBubble(text, activeCharacter, "thinking");
       const socket = voiceSocketRef.current;
-      if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", text }));
+      if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", character: voiceCharacterRef.current, text }));
     }, THINKING_VOICE_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [activeCharacter, aiState, replaceCharacterBubble]);
@@ -1649,6 +1651,10 @@ function App() {
       setAiState((current) => current === "thinking" ? current : "idle");
       return;
     }
+    if (message.character && message.character !== voiceCharacterRef.current) {
+      window.queueMicrotask(playNextSynthesizedSpeech);
+      return;
+    }
 
     if (synthesizedAudioUrlRef.current) URL.revokeObjectURL(synthesizedAudioUrlRef.current);
     let bytes;
@@ -1668,8 +1674,7 @@ function App() {
     audio.muted = false;
     audio.dataset.voiceKind = "synthesized";
     audio.dataset.character = message.character || "jiaojiao";
-    audio.playbackRate = message.character === "lvdou" ? 1.5 : 1;
-    audio.preservesPitch = true;
+    configureCharacterPlayback(audio, message.character);
     audio.dataset.opening = message.opening ? "true" : "false";
     audio.dataset.speechText = String(message.text || "");
     if (!message.local && message.text) replaceCharacterBubble(message.text, message.character || activeCharacter);
@@ -1686,9 +1691,21 @@ function App() {
 
   const enqueueSynthesizedSpeech = useCallback((message) => {
     if (!message?.audio) return;
+    const character = message.character || activeCharacterRef.current;
+    // Never play legacy/model audio under DOMI. Regenerate its text through
+    // the exact TTS service used by the word prompt instead.
+    if (character === "lvdou" && !isDomiWordVoice(message)) {
+      const epoch = voiceStreamEpochRef.current;
+      void requestDomiSpeech(message.text).then(canonical => {
+        if (voiceStreamEpochRef.current !== epoch || activeCharacterRef.current !== "lvdou") return;
+        synthesizedSpeechQueueRef.current.push({ ...message, ...canonical });
+        playNextSynthesizedSpeech();
+      }).catch(() => { if (voiceStreamEpochRef.current === epoch && activeCharacterRef.current === "lvdou") reportVoiceIssue("speech_failed", { stage: "voice_identity" }); });
+      return;
+    }
     synthesizedSpeechQueueRef.current.push(message);
     playNextSynthesizedSpeech();
-  }, [playNextSynthesizedSpeech]);
+  }, [playNextSynthesizedSpeech, reportVoiceIssue]);
 
   const notifyVoiceInteraction = useCallback((gesture) => {
     const socket = voiceSocketRef.current;
@@ -1804,6 +1821,7 @@ function App() {
   }, [activeCharacter, notifyVoiceInteraction, showToast]);
 
   const handleSceneReaction = useCallback((reaction) => {
+    if (reaction.character && reaction.character !== voiceCharacterRef.current) return;
     const action = VOICE_ACTIONS[reaction.action];
     if (action) rivePlayAnimationRef.current?.(action.animation);
     recordConversationMessage({
@@ -1821,7 +1839,7 @@ function App() {
     } else {
       const socket = voiceSocketRef.current;
       if (socket?.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: "scene_speech", text: reaction.text }));
+        socket.send(JSON.stringify({ type: "scene_speech", character: voiceCharacterRef.current, text: reaction.text }));
       }
     }
   }, [activeCharacter, enqueueSynthesizedSpeech, recordConversationMessage, replaceCharacterBubble]);
@@ -2072,7 +2090,10 @@ function App() {
           character,
         }));
         socket.send(JSON.stringify({ type: "interaction_mode", mode: gameplayModeRef.current === "words" ? "feed" : gameplayModeRef.current || "none" }));
-        if (warm?.startSent) socket.send(JSON.stringify({ type: "activate", storyDay }));
+        if (warm?.startSent) {
+          socket.send(JSON.stringify({ type: "character", character }));
+          socket.send(JSON.stringify({ type: "activate", storyDay }));
+        }
       };
       socket.addEventListener("open", beginSession);
       const handleMessage = (event) => {
@@ -2208,7 +2229,7 @@ function App() {
           voiceHasReplyRef.current = true;
           if (gameplayModeRef.current && !message.local) return;
           const messageCharacter = CHARACTERS[message.character] ? message.character : voiceCharacterRef.current;
-          if (!message.local && messageCharacter !== voiceCharacterRef.current) return;
+          if (messageCharacter !== voiceCharacterRef.current) return;
           if (!message.opening && !message.local) {
             recordConversationMessage({
               role: "assistant",
@@ -2226,6 +2247,7 @@ function App() {
           if (!message.streamId) return;
           const streamCharacter = CHARACTERS[message.character] ? message.character : voiceCharacterRef.current;
           if (streamCharacter !== voiceCharacterRef.current) return;
+          if (streamCharacter === "lvdou") return;
           const streamEpoch = voiceStreamEpochRef.current;
           voiceStreamRef.current = { id: message.streamId, character: streamCharacter, epoch: streamEpoch };
           synthesizedSpeechQueueRef.current = [];
@@ -2280,6 +2302,7 @@ function App() {
             character: messageCharacter,
             source: "leave_note",
             audioBlob,
+            voiceSource: message.voiceSource,
           });
           enqueueSynthesizedSpeech({
             ...message,
@@ -4377,7 +4400,7 @@ function App() {
     if (!text) return;
     replaceCharacterBubble(text, activeCharacter);
     const socket = voiceSocketRef.current;
-    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", text }));
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", character: voiceCharacterRef.current, text }));
     else speakCharacterFallback(text);
   }, [activeCharacter, replaceCharacterBubble, speakCharacterFallback]);
 
@@ -4551,7 +4574,7 @@ function App() {
         setGameplayReaction({ action: "curious", text, id: crypto.randomUUID(), character: activeCharacter });
         replaceCharacterBubble(text);
         const socket = voiceSocketRef.current;
-        if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", text }));
+        if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", character: voiceCharacterRef.current, text }));
         else speakCharacterFallback(text);
       }
       if (storyFrameTimerRef.current) window.clearTimeout(storyFrameTimerRef.current);
@@ -4718,15 +4741,16 @@ function App() {
   const handleGameplayReaction = useCallback((value, actionName) => {
     const reaction = typeof value === "string" ? { text: value, action: actionName || "happy" } : value;
     if (!reaction?.text) return;
+    if (reaction.replace) clearCharacterSpeech();
     if (activeCharacter === "lvdou" && /[\u3400-\u9fff]/.test(reaction.text)) reaction.text = "Let's look closely. What do you notice?";
     const action = VOICE_ACTIONS[reaction.action];
     if (action && !gameplayTargetRef.current?.chewing) rivePlayAnimationRef.current?.(action.animation);
     setGameplayReaction({ ...reaction, id: crypto.randomUUID(), character: activeCharacter });
     replaceCharacterBubble(reaction.text);
     const socket = voiceSocketRef.current;
-    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", text: reaction.text }));
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "local_speech", character: voiceCharacterRef.current, text: reaction.text, replace: reaction.replace === true }));
     else speakCharacterFallback(reaction.text);
-  }, [activeCharacter, replaceCharacterBubble, speakCharacterFallback]);
+  }, [activeCharacter, replaceCharacterBubble, speakCharacterFallback, clearCharacterSpeech]);
   const handleGameplayFound = useCallback(() => scheduleAutoCapture("event:find-success", 420), [scheduleAutoCapture]);
   const analyzeToy = useCallback((image, { signal } = {}) => requestGameplay({ source: "toy", image,
     roundId: crypto.randomUUID(), frameId: crypto.randomUUID(), character: activeCharacter }, { signal }), [activeCharacter]);
@@ -4856,7 +4880,7 @@ function App() {
             </Calligraph>
           </div>
           {wordPracticeSession && gameplayMode === "words" && <WordBubbles session={wordPracticeSession} transcript={wordUtterance}
-            characterRect={gameplayCharacterRect} onTarget={handleGameplayTarget} onGuide={text => handleGameplayReaction({ text, action: "curious" })}
+            characterRect={gameplayCharacterRect} onTarget={handleGameplayTarget} onGuide={text => handleGameplayReaction({ text, action: "curious", replace: true })}
             onProgress={report => { wordReportRef.current = report; }} onFinish={finishActivity} />}
           {!gameplayMode && <CharacterCaptionBubble reaction={characterBubble} canvasRendered={recording} />}
           {cameraState === "ready" && voiceIssue && (

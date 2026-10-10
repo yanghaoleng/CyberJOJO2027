@@ -10,7 +10,8 @@ export function ActivityReports({ records, onDelete }) {
       <section className="activity-word-group" aria-label="自主念出的词"><h4>自主念出的词 <small>当轮默认题干里没有</small></h4><p>{record.report.independentWords.join(' · ') || '这次还没有自主念出的新词'}</p></section>
       <section className="activity-word-group" aria-label="跟着引导念出的词"><h4>跟着引导念出的词</h4><p>{record.report.guidedWords.join(' · ') || '这次还没有跟着引导念出的词'}</p></section>
     </> : <section className="activity-word-group"><h4>已记录的词 · 未分组</h4><p>{record.report.words.join(' · ') || '这次还没有用到英语单词'}</p><small>这条记录未保留逐题词汇来源，新练习会分组记录。</small></section>}
-    <small>{Math.floor(record.report.durationSeconds / 60)} 分 {record.report.durationSeconds % 60} 秒 · 点词 {record.report.menuAttempts} 次 · {record.report.status === 'completed' ? '完成体验' : '提前退出'} · 目标词完成记录</small>
+    {record.report.spokenPhrases?.length>0&&<section className="activity-word-group" aria-label="念出的词组"><h4>念出的词组</h4><p>{record.report.spokenPhrases.slice(0,20).join(' · ')}</p>{record.report.spokenPhrases.length>20&&<small>共记录 {record.report.spokenPhrases.length} 个词组</small>}</section>}
+    <small>{Math.floor(record.report.durationSeconds / 60)} 分 {record.report.durationSeconds % 60} 秒 · 换词 {record.report.menuAttempts} 次 · {record.report.status === 'completed' ? '完成体验' : '提前退出'} · 目标词完成记录</small>
     <button className="activity-delete" type="button" onClick={() => onDelete(record.id)}>删除这条记录</button>
   </article>)}</div>;
 }

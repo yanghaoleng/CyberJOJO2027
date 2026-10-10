@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { PauseSolid, PlaySolid, Undo } from 'iconoir-react';
 import { assetUrl, useInViewport } from './asset-utils.js';
 import './food-model.css';
+import { foodInstanceLayout, tintFoodMaterial } from './food-appearance.js';
 
 const foodNames = { banana: '香蕉', orange: '橙子', strawberry: '草莓', bread: '面包', milk: '牛奶', apple: '红苹果', cake: '草莓奶油蛋糕', noodles: '暖暖面条', drink: '果汁饮料', candy: '彩色糖果' };
 function disposeObject(object) {
@@ -17,7 +18,7 @@ function disposeObject(object) {
 }
 
 /** Genuine GLB viewer. Noninteractive mode never consumes pointer events from feeding cards. */
-export default function FoodModel({ foodId = 'apple', className = '', interactive = false, autoRotate = true, transparent = false }) {
+export default function FoodModel({ foodId = 'apple', className = '', interactive = false, autoRotate = true, transparent = false, count, color }) {
   const containerRef = useRef(null);
   const canvasHostRef = useRef(null);
   const actionsRef = useRef(null);
@@ -46,12 +47,31 @@ export default function FoodModel({ foodId = 'apple', className = '', interactiv
         if (cancelled) { disposeObject(gltf.scene); return; }
         scene = new THREE.Scene();
         const object = gltf.scene;
+        // The original banana asset is a bunch. Practice counts single bananas.
+        if (count !== undefined && foodId === 'banana') {
+          let kept = false; const extra = [];
+          object.traverse(child => { if (child.isMesh) { if (kept) extra.push(child); kept = true; } });
+          extra.forEach(child => child.removeFromParent());
+        }
+        const tinted = new Set();
+        object.traverse(child => {
+          for (const material of Array.isArray(child.material) ? child.material : child.material ? [child.material] : []) {
+            if (!tinted.has(material)) { tintFoodMaterial(material, foodId, color); tinted.add(material); }
+          }
+        });
         const bounds = new THREE.Box3().setFromObject(object); const center = bounds.getCenter(new THREE.Vector3()); const size = bounds.getSize(new THREE.Vector3());
         const scale = 1.8 / Math.max(size.x, size.y, size.z);
         object.position.copy(center).multiplyScalar(-scale); object.scale.setScalar(scale);
-        const pivot = new THREE.Group(); pivot.add(object); scene.add(pivot);
+        const pivot = new THREE.Group();
+        const instances = foodInstanceLayout(count);
+        for (const [index, layout] of instances.entries()) {
+          const serving = new THREE.Group(); serving.add(index === 0 ? object : object.clone(true));
+          serving.position.set(layout.x, layout.y, 0); serving.scale.setScalar(layout.scale); pivot.add(serving);
+        }
+        scene.add(pivot);
         const camera = new THREE.PerspectiveCamera(33, 1, 0.1, 50);
         camera.position.set(2.9, foodId === 'noodles' ? 2.65 : 1.8, 3.45);
+        if (instances.length > 1) camera.position.set(0, .65, 5.3);
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: transparent, powerPreference: 'low-power' });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
         renderer.setClearColor('#f5f4ef', transparent ? 0 : 1);
@@ -95,7 +115,10 @@ export default function FoodModel({ foodId = 'apple', className = '', interactiv
           frame = requestAnimationFrame(animate);
           if (time - last < 32 || document.hidden) return;
           const delta = Math.min((time - last) / 1000, 0.1); last = time;
-          if (!interactive && rotatingRef.current && !reducedMotion) pivot.rotation.y += delta * 0.22;
+          if (!interactive && rotatingRef.current && !reducedMotion) {
+            if (instances.length === 1) pivot.rotation.y += delta * 0.22;
+            else for (const serving of pivot.children) serving.rotation.y += delta * 0.22;
+          }
           controls.autoRotate = interactive && rotatingRef.current && !reducedMotion; controls.update(delta); renderer.render(scene, camera);
         }
         frame = requestAnimationFrame(animate); setStatus('ready');
@@ -108,9 +131,9 @@ export default function FoodModel({ foodId = 'apple', className = '', interactiv
       cancelled = true; request.abort(); cancelAnimationFrame(frame); resize?.disconnect(); controls?.dispose(); actionsRef.current = null;
       disposeObject(scene); environment?.dispose(); renderer?.dispose(); renderer?.forceContextLoss(); renderer?.domElement.remove();
     };
-  }, [foodId, interactive, transparent, visible, retry]);
+  }, [foodId, interactive, transparent, visible, retry, count, color]);
 
-  return <div ref={containerRef} className={`food-model ${transparent ? 'food-model--transparent' : ''} ${interactive ? 'food-model--interactive' : ''} ${className}`} data-food-id={foodId} data-model-status={visible ? status : 'offscreen'}>
+  return <div ref={containerRef} className={`food-model ${transparent ? 'food-model--transparent' : ''} ${interactive ? 'food-model--interactive' : ''} ${className}`} data-food-id={foodId} data-food-count={count} data-food-color={color} data-model-status={visible ? status : 'offscreen'}>
     <div ref={canvasHostRef} className="food-model__canvas" />
     {visible && status === 'loading' && <span className="food-model__status" role="status">正在端上来…</span>}
     {visible && status === 'error' && <div className="food-model__status" role="status">模型暂时无法显示{interactive && <button type="button" onClick={() => setRetry((n) => n + 1)}>重新加载</button>}</div>}

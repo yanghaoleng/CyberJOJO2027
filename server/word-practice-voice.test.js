@@ -88,6 +88,7 @@ test("word practice sends microphone audio to unmuted ASR and DOMI uses prompt T
     assert.ok(ttsRequests.every(r => r.req_params.speaker === "zh_male_naiqimengwa_uranus_bigtts"));
     assert.deepEqual(ttsRequests[0].req_params.audio_params, ttsRequests[1].req_params.audio_params);
     assert.equal(messages.find(m => m.type === "speech" && !m.local).character, "lvdou");
+    assert.ok(messages.filter(m => m.type === "speech").every(m => m.voiceSource === "domi-word-tts-v1"));
     failTts = true;
     const beforeFailure = messages.length;
     reply("The voice provider is temporarily unavailable.");
@@ -97,6 +98,18 @@ test("word practice sends microphone audio to unmuted ASR and DOMI uses prompt T
     failTts = false;
     reply("I am back and listening.");
     await waitFor(() => messages.some(m => m.type === "speech" && m.text === "I am back and listening."));
+    send({ type: "interaction_mode", mode: "feed" });
+    send({ type: "local_speech", character: "lvdou", replace: true, text: "two bananas" });
+    await waitFor(() => messages.some(m => m.type === "speech" && m.text === "two bananas"));
+    const afterFirstPrompt = messages.length;
+    send({ type: "local_speech", character: "lvdou", replace: true, text: "three bananas" });
+    send({ type: "local_speech", character: "lvdou", replace: true, text: "five purple oranges" });
+    await waitFor(() => messages.some(m => m.type === "speech" && m.text === "five purple oranges"));
+    assert.equal(messages.slice(afterFirstPrompt).some(m => m.type === "speech" && m.text === "three bananas"), false, "rapid suggestions read only the final prompt");
+    send({ type: "local_speech", character: "lvdou", replace: true, text: "one pink apple" });
+    send({ type: "interaction_mode", mode: "none" });
+    await new Promise(resolve => setTimeout(resolve, 750));
+    assert.equal(messages.some(m => m.type === "speech" && m.text === "one pink apple"), false, "leaving practice cancels pending prompt TTS");
   } finally {
     client?.terminate(); child.kill("SIGTERM");
     for (const socket of provider.clients) socket.terminate();

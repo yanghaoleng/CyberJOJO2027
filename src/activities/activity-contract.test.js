@@ -24,3 +24,8 @@ test('keeps validated word groups and supports earlier ungrouped reports', () =>
  assert.equal(readActivityMessage(event(),frame,session).report.wordGroupsVersion,undefined);
  for (const patch of [{guidedWords:['blue']},{independentWords:['dragon']},{wordGroupsVersion:2},{guidedWords:null}]) assert.equal(readActivityMessage(event({data:{...event().data,report:{...grouped,...patch}}}),frame,session),null);
 });
+test('phrase records round trip without changing earlier report compatibility',()=>{
+ const phrases={...report,spokenPhrases:['two blue apples','two blue apples']};
+ assert.deepEqual(readActivityMessage(event({data:{...event().data,report:phrases}}),frame,session).report.spokenPhrases,['two blue apples']);
+ for(const spokenPhrases of [[7],['x'.repeat(81)],Array(201).fill('apple'),null])assert.equal(readActivityMessage(event({data:{...event().data,report:{...report,spokenPhrases}}}),frame,session),null);
+});

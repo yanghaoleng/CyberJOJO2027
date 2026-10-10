@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createDomiSpeechPlayback } from "../domi-speech.js";
 export function usePortraitUrl(source) {
   const [url, setUrl] = useState("");
   useEffect(() => {
@@ -8,30 +9,16 @@ export function usePortraitUrl(source) {
   }, [source]);
   return url;
 }
-function speakWord(english) {
-  if (!english || typeof window === "undefined" || !("speechSynthesis" in window)) return;
-  const synthesis = window.speechSynthesis;
-  synthesis.cancel();
-  const u = new SpeechSynthesisUtterance(english);
-  u.lang = "en-US";
-  u.rate = 0.8;
-  const pickEnglishVoice = () => {
-    const voices = synthesis.getVoices();
-    const preferred = voices.find((voice) => /en-US/i.test(voice.lang) && /Samantha|Google US|Zira|Aria|Jenny|Daniel/i.test(voice.name))
-      || voices.find((voice) => /^en(-|_)/i.test(voice.lang));
-    if (preferred) u.voice = preferred;
-    else u.lang = "en-US";
-  };
-  pickEnglishVoice();
-  // macOS 上语音列表可能尚未加载，监听 voiceschanged 后再发声。
-  if (!synthesis.getVoices().length) {
-    synthesis.addEventListener("voiceschanged", pickEnglishVoice, { once: true });
-  }
-  synthesis.speak(u);
-  // 部分浏览器 speak 后处于 paused 状态，主动 resume 确保出声。
-  if (synthesis.paused) synthesis.resume();
-}
 function DetailWords({ friend, word }) {
+  const playerRef = useRef(null);
+  const [voiceError, setVoiceError] = useState(false);
+  useEffect(() => () => playerRef.current?.stop(), []);
+  const speakWord = () => {
+    setVoiceError(false);
+    playerRef.current?.stop();
+    playerRef.current = createDomiSpeechPlayback({ onError: () => setVoiceError(true) });
+    void playerRef.current.play(word);
+  };
   if (friend.character === "jiaojiao") return <>
     <p className="friend-card-kind">绘本角色贴纸</p>
     {friend.sourceIdiom && <div className="friend-card-idiom"><strong>{friend.sourceIdiom}</strong><span>原成语</span></div>}
@@ -44,8 +31,9 @@ function DetailWords({ friend, word }) {
     <>
       <div className="friend-card-word-row">
         <p className="friend-card-word-big">{word || friend.kind || "一个特别的发现"}</p>
-        {word ? <button type="button" className="friend-speak-button" aria-label="读单词" onClick={(e) => { e.stopPropagation(); speakWord(word); }}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /></svg></button> : null}
+        {word ? <button type="button" className="friend-speak-button" aria-label="读单词" onClick={(e) => { e.stopPropagation(); speakWord(); }}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /></svg></button> : null}
       </div>
+      {voiceError && <small role="status">声音暂时没准备好，再点一下试试</small>}
       <p className="friend-card-kind">{friend.kind || "一个特别的发现"}</p>
       <p className="friend-card-story">{friend.learning || friend.childDescription || "我们刚刚在镜头里认识它。"}</p>
       <div className="friend-card-date">收录于 {new Date(friend.createdAt || Date.now()).toLocaleDateString("zh-CN")}<span>✦</span></div>

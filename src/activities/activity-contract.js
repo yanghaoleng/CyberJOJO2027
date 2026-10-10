@@ -20,12 +20,17 @@ export function readActivityMessage(event, frameWindow, sessionId, id = 'words')
   if (!integer(report.voiceAttempts, 10000) || !integer(report.menuAttempts, 10000) || !integer(report.completedLessons, 1000) || !integer(report.totalLessons, 1000) || report.completedLessons > report.totalLessons || !integer(report.durationSeconds, 86400)) return null;
   if (!Array.isArray(report.words) || report.words.length > 200 || report.words.some(word => typeof word !== 'string' || word.length > 40)) return null;
   let groups = {};
+  let phrases = {};
+  if (report.spokenPhrases !== undefined) {
+    if (!Array.isArray(report.spokenPhrases) || report.spokenPhrases.length > 200 || report.spokenPhrases.some(phrase => typeof phrase !== 'string' || !phrase.trim() || phrase.length > 80)) return null;
+    phrases = { spokenPhrases: [...new Set(report.spokenPhrases)] };
+  }
   if (report.wordGroupsVersion !== undefined) {
     const validWords = value => Array.isArray(value) && value.length <= 200 && value.every(word => typeof word === 'string' && word.length <= 40 && report.words.includes(word));
     if (report.wordGroupsVersion !== 1 || !validWords(report.independentWords) || !validWords(report.guidedWords) || report.independentWords.some(word => report.guidedWords.includes(word))) return null;
     groups = { wordGroupsVersion: 1, independentWords: [...new Set(report.independentWords)], guidedWords: [...new Set(report.guidedWords)] };
   }
-  return { type: data.type, report: { status: report.status, voiceAttempts: report.voiceAttempts, menuAttempts: report.menuAttempts, completedLessons: report.completedLessons, totalLessons: report.totalLessons, durationSeconds: report.durationSeconds, words: [...new Set(report.words)], chapter: String(report.chapter || '').slice(0, 80), ...groups } };
+  return { type: data.type, report: { status: report.status, voiceAttempts: report.voiceAttempts, menuAttempts: report.menuAttempts, completedLessons: report.completedLessons, totalLessons: report.totalLessons, durationSeconds: report.durationSeconds, words: [...new Set(report.words)], chapter: String(report.chapter || '').slice(0, 80), ...groups, ...phrases } };
 }
 const KEY = 'cyberjojo.activity-reports.v1';
 export function loadActivityReports() {
