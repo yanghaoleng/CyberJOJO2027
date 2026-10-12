@@ -7,6 +7,7 @@
 .exploration-heading,
 .exploration-manifesto,
 .exploration-layers,
+.exploration-outlook,
 .exploration-status {
   max-width: 1220px;
   margin-inline: auto;
@@ -138,6 +139,48 @@
   font-size: 13px;
 }
 
+.exploration-outlook {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(28px, 5vw, 72px);
+  margin-block: 48px 0;
+}
+
+.exploration-outlook article {
+  min-width: 0;
+  padding-top: 24px;
+  border-top: 1px solid rgba(80, 66, 137, .18);
+}
+
+.exploration-outlook h3 {
+  margin: 14px 0 18px;
+  font-size: clamp(21px, 2vw, 27px);
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: -.025em;
+  text-wrap: balance;
+}
+
+.exploration-outlook p {
+  margin: 0 0 12px;
+  color: #655971;
+  font-size: 14px;
+  line-height: 1.9;
+  text-wrap: pretty;
+}
+
+.exploration-outlook .exploration-outlook-label {
+  color: #735b9a;
+  font-size: 12px;
+  letter-spacing: .06em;
+}
+
+.exploration-outlook .exploration-standard {
+  color: #514460;
+  font-size: clamp(17px, 1.5vw, 20px);
+  line-height: 1.85;
+}
+
 .exploration-status {
   margin-block: 40px 0;
   padding-top: 22px;
@@ -170,6 +213,16 @@
 }
 
 @media (max-width: 1000px) {
+  .exploration-outlook {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .exploration-outlook article {
+    max-width: 760px;
+    --reveal-delay: 0ms !important;
+  }
+
   .exploration-manifesto {
     grid-template-columns: 1fr;
     gap: 24px;
