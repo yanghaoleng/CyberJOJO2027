@@ -74,6 +74,7 @@
     .shot-pop.show{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
   </style>
   <link rel="stylesheet" href="learning-paths.css" />
+  <link rel="stylesheet" href="future-exploration.css" />
 </head>
 <body>
   <header class="hero">
@@ -170,7 +171,41 @@
       <div class="policy-line" id="policyLine" data-reveal hidden><button class="policy-trigger" id="policyTrigger" type="button" aria-haspopup="dialog" aria-controls="policyModal"><span>政策依据（更新至 2026.09）：中国拟人化互动办法、美国 COPPA 与加州 SB 243、欧盟 AI Act 与 GDPR</span><b>查看法规摘要</b></button></div>
       <div class="cards" id="cards"></div>
     </section>
-    <section class="section" style="background:#eee9ff"><div class="quote" data-reveal><p>真正的问题不是“儿童能不能拥有情感型 AI”，而是我们能否尽早把它应该遵守的关系原则设计清楚。</p><small>赛博叫叫 2027 · 黑客松探索命题</small></div></section>
+    <section class="section future-exploration" id="future-exploration" aria-labelledby="exploration-title" aria-describedby="exploration-status">
+      <div class="exploration-heading" data-reveal>
+        <div class="exploration-label">未来探索<span>一个长期命题，而非已实现的能力</span></div>
+        <h2 id="exploration-title">当 AI 成为一种新的关系媒介</h2>
+        <p class="exploration-subtitle">好的陪伴，不只是让你感觉更好，而是让你更好地成为自己。</p>
+      </div>
+      <div class="exploration-manifesto" data-reveal>
+        <div class="exploration-companion"><img src="assets/intro-logo.webp" alt="" width="56" height="56" loading="lazy" decoding="async" /><span>赛博叫叫 2027<br /><small>关于陪伴，我们继续追问</small></span></div>
+        <div class="exploration-manifesto-copy">
+          <p class="exploration-question">数字情绪伴侣能否从功能性 AI，发展为支持人成长的新型关系媒介？</p>
+          <p class="exploration-belief">我们希望探索的最高价值，不是让用户永远感觉良好，而是帮助用户在关系中形成<span>更稳定、更完整、更自主的自我。</span></p>
+        </div>
+      </div>
+      <ol class="exploration-layers" aria-label="未来探索的三个递进层次">
+        <li data-reveal>
+          <span class="exploration-number" aria-hidden="true">01</span>
+          <h3>从功能到关系</h3>
+          <p class="exploration-principle">不止完成一次回应</p>
+          <p>在聊天、安慰、记忆与辅导之外，探索长期互动的价值：一次次相处，能否让人更愿意表达、更理解自己？</p>
+        </li>
+        <li data-reveal style="--reveal-delay:80ms">
+          <span class="exploration-number" aria-hidden="true">02</span>
+          <h3>从情绪满足到主体成长</h3>
+          <p class="exploration-principle">把选择与行动留给自己</p>
+          <p>理解但不迎合，帮助但不替代，陪伴但不制造依赖。我们希望陪伴支持人的判断与行动，而不是接管生活。</p>
+        </li>
+        <li data-reveal style="--reveal-delay:160ms">
+          <span class="exploration-number" aria-hidden="true">03</span>
+          <h3>从被理解到成为自己</h3>
+          <p class="exploration-principle">被看见，也能走向真实生活</p>
+          <p>通过关怀、尊重和看见，探索如何支持自信、自尊、自我价值感与自主性，让成长回到真实的人与关系中。</p>
+        </li>
+      </ol>
+      <p class="exploration-status" id="exploration-status" data-reveal><span>探索边界</span>以上是长期方向，相关能力尚未实现或验证，不代表现有产品能力或效果承诺。现阶段，赛博叫叫仍以「情绪陪伴」与「学习辅导」为两项核心功能价值。</p>
+    </section>
   </main>
   <footer data-reveal><span>赛博叫叫 2027</span><span>AI 管能力与边界，人类关系仍然属于真实世界。</span></footer>
   <div class="policy-modal" id="policyModal" hidden>

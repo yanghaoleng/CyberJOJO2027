@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-09T02:51:12.673Z",
-  "publicFileCount": 115,
-  "totalBytes": 104582114,
+  "generatedAt": "2026-10-12T01:37:34.075Z",
+  "publicFileCount": 116,
+  "totalBytes": 104588295,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -848,13 +848,22 @@
       "sha256": "4ff4c8324147593138bb92e7b0108c2f4ba9356acbae3e3188941921111ba564"
     },
     {
+      "id": "intro/future-exploration.css",
+      "path": "intro/future-exploration.css",
+      "name": "future-exploration.css",
+      "category": "other",
+      "format": "CSS",
+      "bytes": 3529,
+      "sha256": "e9917cdefa715373153acaeb318f07e6a517ff8b8961732c72da73af590a19bd"
+    },
+    {
       "id": "intro/index.html",
       "path": "intro/index.html",
       "name": "index.html",
       "category": "other",
       "format": "HTML",
-      "bytes": 51828,
-      "sha256": "f4d85ada0425443ee56da92218f2df71fa4dd8cf9511cf7ed5197293819eda56"
+      "bytes": 54480,
+      "sha256": "2e58ba39b9bdcb37963e6d8a2c9daf019cc723dddaffe00cb38ca84fa7b32f16"
     },
     {
       "id": "intro/learning-paths.css",
