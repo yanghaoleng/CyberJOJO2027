@@ -166,6 +166,12 @@ test("text-only voice sessions preserve gameplay transcripts and let a newer tur
     await waitFor(() => messages.some((message) => message.type === "speech"));
     assert.equal(messages.find((message) => message.type === "speech").local, true);
     await new Promise((resolve) => setTimeout(resolve, 710));
+    send({ type: "interaction_mode", mode: "follow" });
+    send({ type: "text", text: "你跟我学", clientMessageId: "motion-follow-transcript" });
+    await waitFor(() => messages.some(message => message.clientMessageId === "motion-follow-transcript"));
+    assert.equal(messages.find(message => message.clientMessageId === "motion-follow-transcript").source, "gameplay");
+    assert.equal(calls.length, 0, "following keeps ASR/text input but suppresses free-chat inference");
+    await new Promise((resolve) => setTimeout(resolve, 710));
     responseDelay = 350;
     send({ type: "interaction_mode", mode: "none" });
     send({ type: "context", moments: [{ dayKey: "2026-09-08", event: "看见了小猫" }], entries: [] });

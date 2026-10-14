@@ -627,7 +627,7 @@ websocketServer.on("connection", (client) => {
     }
     if (message.type === "cancel") { cancelPending(); return; }
     if (message.type === "interaction_mode") {
-      if (!["none", "toy", "find", "feed"].includes(message.mode)) return;
+      if (!["none", "toy", "find", "feed", "follow"].includes(message.mode)) return;
       if (interactionMode === message.mode) return;
       cancelPending();
       interactionMode = message.mode;

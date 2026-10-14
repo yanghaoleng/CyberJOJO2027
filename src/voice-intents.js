@@ -26,6 +26,9 @@ function cleanSubject(value) {
 export function parseVoiceIntent(value) {
   const text = String(value || "").trim();
   if (!text) return null;
+  const motionText = text.replace(/[\s，,。.!?！？、]/g, "");
+  if (/(?:结束|退出|停止|不要|不玩|别再)(?:动作跟随|跟随|模仿|跟我学|木头人)|(?:别|不要)跟(?:着)?我学/.test(motionText)) return { type: "motion-follow", enabled: false };
+  if (/(?:一二三|123|１２３)木头人|我做什么你(?:就)?做什么|你跟我学|跟着我做|模仿我的动作|动作跟随/.test(motionText) && !/(?:不想|不要|不玩|别)/.test(motionText)) return { type: "motion-follow", enabled: true };
   const activityText = text.replace(/[，,。.!?！？、]/g, " ");
   if ((/(?:开口[，,、\s]*造世界|跟读(?:练习)?)/.test(text) || ENGLISH_WORD_ACTIVITY.test(activityText)) && !WORD_ACTIVITY_DECLINED.test(text)) return { type: "activity", activityId: "words" };
   if (WREATH_INTENT.test(text)) return { type: "wreath" };

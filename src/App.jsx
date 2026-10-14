@@ -122,6 +122,8 @@ import {
   isTabletViewport,
 } from "./device-layout.js";
 import { useCameraSceneAnalysis } from "./use-camera-scene-analysis.js";
+import { useMotionFollow } from "./use-motion-follow.js";
+import MotionFollowOverlay from "./components/MotionFollowOverlay.jsx";
 import { createSceneFingerprint } from "./scene-analysis.js";
 import { AUTO_CAPTURE_COOLDOWN_MS, getTopicCaptureChange } from "./auto-capture-policy.js";
 import { advancePresentationGate, createPresentationGate, finishPresentationRequest, PRESENTATION_SAMPLE_MS } from "./presentation-gate.js";
@@ -2147,6 +2149,17 @@ function App() {
               return;
             }
             const voiceIntent = parseVoiceIntent(text);
+            if (voiceIntent?.type === "motion-follow") {
+              recordConversationMessage({ ...message, role: "user", text, source: "gameplay", character: activeCharacter });
+              if (voiceIntent.enabled) void startGameplayRef.current?.("follow");
+              else if (gameplayModeRef.current === "follow") void startGameplayRef.current?.("");
+              return;
+            }
+            if (gameplayModeRef.current === "follow") {
+              recordConversationMessage({ ...message, role: "user", text, source: "gameplay", character: activeCharacter });
+              if (/^(?:不玩了|结束|退出|停|停下来|停止|算了|聊聊天)[。！!，, ]*$/.test(text)) void startGameplayRef.current?.("");
+              return;
+            }
             if (voiceIntent?.type === "activity") {
               recordConversationMessage({ ...message, role: "user", text, source: "child_speech", character: activeCharacter });
               clearCharacterSpeech();
@@ -2740,9 +2753,12 @@ function App() {
       const scale = isDesktopLandscape
         ? Math.min(preferredScale, desktopSafeScale)
         : preferredScale;
-      const riveWidth = RIVE_VISIBLE_SOURCE.width * scale;
-      const riveHeight = RIVE_VISIBLE_SOURCE.height * scale;
-      const riveX = -visibleTargetWidth * CHARACTER_LEFT_OVERFLOW_RATIO + characterOffsetXRef.current;
+      const following = gameplayModeRef.current === "follow";
+      const source = following ? { x: 0, y: 0, width: RIVE_SOURCE_SIZE.width, height: RIVE_SOURCE_SIZE.height } : { x: riveCropXRef.current, ...RIVE_VISIBLE_SOURCE };
+      const drawScale = following ? Math.min(targetHeight * .48 / source.height, visibleTargetWidth * .94 / source.width) : scale;
+      const riveWidth = source.width * drawScale;
+      const riveHeight = source.height * drawScale;
+      const riveX = (following ? (visibleTargetWidth - riveWidth) / 2 : -visibleTargetWidth * CHARACTER_LEFT_OVERFLOW_RATIO) + characterOffsetXRef.current;
       const riveY = targetHeight - riveHeight - (isPortraitWelcome ? targetHeight * 0.12 : 0);
       const cropDisplayX = 0; // The camera canvas uses object-position: left bottom.
       const cropDisplayY = targetHeight * displayScale - displayHeight;
@@ -2752,15 +2768,15 @@ function App() {
       characterDrawRectRef.current = {
         x: riveX * displayScale - cropDisplayX, y: riveY * displayScale - cropDisplayY,
         width: riveWidth * displayScale, height: riveHeight * displayScale,
-        mouthX: (riveX + (mouthSourceX - riveCropXRef.current) * scale) * displayScale - cropDisplayX,
-        mouthY: (riveY + (mouthSourceY - RIVE_VISIBLE_SOURCE.y) * scale) * displayScale - cropDisplayY,
+        mouthX: (riveX + (mouthSourceX - source.x) * drawScale) * displayScale - cropDisplayX,
+        mouthY: (riveY + (mouthSourceY - source.y) * drawScale) * displayScale - cropDisplayY,
       };
       outputContext.drawImage(
         riveCanvas,
-        riveCropXRef.current,
-        RIVE_VISIBLE_SOURCE.y,
-        RIVE_VISIBLE_SOURCE.width,
-        RIVE_VISIBLE_SOURCE.height,
+        source.x,
+        source.y,
+        source.width,
+        source.height,
         riveX,
         riveY,
         riveWidth,
@@ -3561,10 +3577,13 @@ function App() {
         const personSegmentationDue = segmenterRef.current
           && timestamp - lastSegmentAtRef.current >= getThrottledInterval(SEGMENT_INTERVAL_MS, visionThrottle);
         const faceTrackingDue = faceLandmarkerRef.current
+          && gameplayModeRef.current !== "follow"
           && timestamp - lastFaceAtRef.current >= getThrottledInterval(FACE_INTERVAL_MS, visionThrottle);
         const gestureTrackingDue = gestureRecognizerRef.current
+          && gameplayModeRef.current !== "follow"
           && timestamp - lastGestureAtRef.current >= getThrottledInterval(GESTURE_INTERVAL_MS, visionThrottle);
         const subjectSegmentationDue = subjectSegmenterRef.current
+          && gameplayModeRef.current !== "follow"
           && !personPresentRef.current
           && personMissingFramesRef.current >= PERSON_MISSING_FRAME_LIMIT
           && personAbsentSinceRef.current > 0
@@ -3848,6 +3867,12 @@ function App() {
     if (nextCharacter === activeCharacter) {
       showToast(`${CHARACTERS[nextCharacter].label}已经在这里啦`);
       return;
+    }
+    if (gameplayModeRef.current === "follow" && nextCharacter !== "jiaojiao") {
+      gameplayModeRef.current = "";
+      setGameplayMode("");
+      const socket = voiceSocketRef.current;
+      if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "interaction_mode", mode: "none" }));
     }
     playInterfaceSound("select");
     let nextBuffer;
@@ -4648,6 +4673,7 @@ function App() {
     gameplayModeRef.current = mode;
     clearCharacterSpeech();
     setGameplayMenuOpen(false); setTextComposerOpen(false); setGameplayTranscript(null); setGameplayReaction(null);
+    if (mode === "follow") setHiddenStoryFocus(null);
     if (mode === "feed") {
       const nextFoodId = FEED_FOOD_IDS[feedFoodCursorRef.current % FEED_FOOD_IDS.length];
       feedFoodCursorRef.current += 1;
@@ -4658,13 +4684,28 @@ function App() {
     characterInteractionRef.current?.reset();
     const socket = voiceSocketRef.current;
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "interaction_mode", mode: mode || "none" }));
-    if (mode === "feed" && activeCharacter !== "jiaojiao") await switchCharacterTo("jiaojiao");
+    if (["feed", "follow"].includes(mode) && activeCharacter !== "jiaojiao") await switchCharacterTo("jiaojiao");
     if (gameplayModeRef.current !== mode) return;
+    // Persona handover resets the server's interaction mode. Sync again on
+    // the current transport so following still suppresses free-chat replies.
+    const activeSocket = voiceSocketRef.current;
+    if (activeSocket?.readyState === WebSocket.OPEN) activeSocket.send(JSON.stringify({ type: "interaction_mode", mode: mode || "none" }));
     setGameplayMode(mode);
-    if (mode) rivePlayAnimationRef.current?.("TalkingEmotion_Expectation");
+    if (mode === "follow") {
+      rivePlayAnimationRef.current?.("TalkingEmotion_Normal");
+      // Sample a neutral frame before freezing idle timelines; mouth playback
+      // remains independent when the short entry invitation is spoken.
+      riveRef.current?.pause();
+      const text = "好呀，你做什么我就做什么！让我看见你的头和两只手。";
+      if (activeSocket?.readyState === WebSocket.OPEN) activeSocket.send(JSON.stringify({ type: "local_speech", character: "jiaojiao", text }));
+    } else if (mode) rivePlayAnimationRef.current?.("TalkingEmotion_Expectation");
     else rivePlayAnimationRef.current?.("TalkingEmotion_Normal");
   }, [activeCharacter, cameraState, clearCharacterSpeech, setHiddenStoryFocus, switchCharacterTo]);
   startGameplayRef.current = startGameplay;
+  const motionFollow = useMotionFollow({
+    enabled: gameplayMode === "follow" && cameraState === "ready" && riveReady && activeCharacter === "jiaojiao" && !characterSwitching && !mediaLibraryOpen && !mediaPreview,
+    videoRef, riveRef, mirrored: shouldMirrorCamera(facingMode),
+  });
   const offerActivity = useCallback(async () => {
     if (recordingRef.current || gameplayModeRef.current || wordPracticeSessionRef.current) return;
     if (!riveReady) { wordEntryRequestedRef.current = true; return; }
@@ -4897,7 +4938,8 @@ function App() {
               <footer><button type="button" onClick={() => void retryVoice()}><Refresh width={16} height={16} />恢复语音</button><button type="button" onClick={downloadVoiceLog}><Download width={16} height={16} />下载记录</button></footer>
             </section>
           )}
-          {cameraState === "ready" && gameplayMode && gameplayMode !== "words" && (
+          {cameraState === "ready" && gameplayMode === "follow" && <MotionFollowOverlay status={motionFollow.status} landmarksRef={motionFollow.landmarksRef} capabilitiesRef={motionFollow.capabilitiesRef} videoRef={videoRef} mirrored={shouldMirrorCamera(facingMode)} onClose={() => void startGameplay("")} />}
+          {cameraState === "ready" && gameplayMode && !["words", "follow"].includes(gameplayMode) && (
             <GamePlayOverlay
               mode={gameplayMode}
               initialFoodId={gameplayFoodId}

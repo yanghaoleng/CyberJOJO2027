@@ -12,6 +12,7 @@ const labels = {
   'intro/assets/intro-hero.webp': '介绍页主视觉',
   'mediapipe/deeplab_v3.tflite': '场景分割模型', 'mediapipe/face_landmarker.task': '面部关键点模型',
   'mediapipe/gesture_recognizer.task': '手势识别模型', 'mediapipe/selfie_segmenter.tflite': '人像分割模型',
+  'mediapipe/pose_landmarker_lite.task': '动作跟随 · 人体姿势模型',
 };
 const audioNames = { curious: '好奇', frighten: '害怕', happy: '开心', praise: '表扬', surprised: '惊讶', think: '思考', heart: '比心', ok: 'OK 手势', encourage: '鼓励', enter: '进入相机', smile: '微笑', surprise: '惊喜' };
 const iconNames = { ArrowSeparate: '切换镜头', Check: '确认', Download: '下载', Lock: '锁定', MediaImageList: '相册', MultiWindow: '画中画', NavArrowDown: '展开', OpenBook: '日志', PlaySolid: '播放', Refresh: '重新开始', Search: '搜索', Sparks: '灵感', ViewGrid: '全部', Xmark: '关闭' };
