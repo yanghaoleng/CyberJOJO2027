@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-19T06:11:41.853Z",
+  "generatedAt": "2026-10-19T06:21:37.308Z",
   "publicFileCount": 120,
-  "totalBytes": 110528066,
+  "totalBytes": 110529046,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -862,8 +862,8 @@
       "name": "index.html",
       "category": "other",
       "format": "HTML",
-      "bytes": 58426,
-      "sha256": "a9afa89149cd6d98b9e2fa5b7a2ecd19984cc76eff44b11ac1ae913b2c48d3e4"
+      "bytes": 59406,
+      "sha256": "dd50bd3b2ddcfc1d42e29dfc86d2df011a3df5e95cd4ab3e84776650e009499d"
     },
     {
       "id": "intro/learning-paths.css",

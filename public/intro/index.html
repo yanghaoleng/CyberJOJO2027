@@ -68,11 +68,15 @@
     .shot-row .shot{margin-top:0;flex:0 0 auto;min-width:0}
     .shot img{width:100%;height:auto;display:block;border-radius:10px;box-shadow:0 10px 26px rgba(16,10,44,.25);transition:transform .25s ease,box-shadow .25s ease;background:#151230}
     .shot:hover img,.shot:focus-visible img{transform:translateY(-3px) scale(1.03);box-shadow:0 14px 34px rgba(16,10,44,.34)}
-    .shot-pop{position:fixed;z-index:130;left:50%;top:50%;width:300px;max-width:88vw;transform:translate(-50%,-50%) scale(.94);opacity:0;visibility:hidden;pointer-events:none;background:#0d0b1a;border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:8px;box-shadow:0 26px 80px rgba(0,0,0,.55);transition:opacity .26s ease,transform .26s ease,visibility .26s}
-    .shot-pop img{width:100%;height:auto;display:block;border-radius:12px}
-    .shot-pop .shot-pop-cap{color:#b9b2d8;font-size:11.5px;letter-spacing:.02em;padding:9px 4px 3px;text-align:center}
-    .shot-pop-nav{position:absolute;top:45%;width:36px;height:44px;border:1px solid rgba(255,255,255,.3);border-radius:22px;background:rgba(13,11,26,.85);color:white;font-size:27px;cursor:pointer;display:grid;place-items:center}.shot-pop-nav[hidden]{display:none}.shot-pop-prev{left:-18px}.shot-pop-next{right:-18px}.shot-pop-nav:hover{background:#514080}.shot-pop button:focus-visible{outline:2px solid #9eefff;outline-offset:3px}.shot-pop-close{position:absolute;right:12px;top:12px;width:32px;height:32px;border:1px solid rgba(255,255,255,.3);border-radius:50%;background:rgba(13,11,26,.85);color:white;font-size:22px;cursor:pointer}.shot-pop-count{display:block;margin-top:4px;color:#9eefff;font-size:11px}
-    .shot-pop.show{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
+    body.shot-open{overflow:hidden}
+    .shot-pop{position:fixed;z-index:130;inset:0;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:10px;padding:24px 64px 18px;background:rgba(255,255,255,.85);backdrop-filter:blur(12px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s ease,visibility .2s}
+    .shot-pop img{width:100%;height:100%;min-height:0;object-fit:contain;display:block}
+    .shot-pop .shot-pop-cap{color:#403850;font-size:13px;line-height:1.5;letter-spacing:.02em;text-align:center}
+    .shot-pop-nav,.shot-pop-close{position:absolute;width:44px;height:44px;border:1px solid rgba(45,34,65,.15);border-radius:50%;background:rgba(255,255,255,.94);color:#30243f;cursor:pointer;display:grid;place-items:center;box-shadow:0 4px 18px rgba(35,23,55,.12)}
+    .shot-pop-nav{top:50%;transform:translateY(-50%);font-size:30px}.shot-pop-nav[hidden]{display:none}.shot-pop-prev{left:12px}.shot-pop-next{right:12px}.shot-pop-close{right:12px;top:12px;font-size:26px}.shot-pop-nav:hover,.shot-pop-close:hover{background:#eee8f8}.shot-pop button:focus-visible{outline:2px solid #765dc0;outline-offset:3px}.shot-pop-count{display:block;margin-top:2px;color:#756588;font-size:12px}
+    .shot-pop.show{opacity:1;visibility:visible;pointer-events:auto}
+    @media(max-width:600px){.shot-pop{padding:60px 8px 76px;gap:8px;padding-top:max(60px,env(safe-area-inset-top));padding-bottom:max(76px,env(safe-area-inset-bottom))}.shot-pop-nav{top:auto;bottom:max(12px,env(safe-area-inset-bottom));transform:none}.shot-pop-prev{left:calc(50% - 54px)}.shot-pop-next{right:calc(50% - 54px)}}
+    @media(prefers-reduced-motion:reduce){.shot-pop{transition:none}}
   </style>
   <link rel="stylesheet" href="learning-paths.css" />
   <link rel="stylesheet" href="future-exploration.css?v=20261012-relations" />
@@ -261,10 +265,12 @@
           pop.className = 'shot-pop';
           pop.setAttribute('role', 'dialog');
           pop.setAttribute('aria-label', '图片详情');
+          pop.setAttribute('aria-modal', 'true');
           pop.innerHTML = '<img alt="" /><button type="button" class="shot-pop-close" aria-label="关闭图片详情">×</button><button type="button" class="shot-pop-nav shot-pop-prev" aria-label="上一张图片">‹</button><button type="button" class="shot-pop-nav shot-pop-next" aria-label="下一张图片">›</button><div class="shot-pop-cap" aria-live="polite"><span class="shot-pop-title"></span><span class="shot-pop-count"></span></div>';
           pop.querySelector('.shot-pop-prev').addEventListener('click', function () { move(-1); });
           pop.querySelector('.shot-pop-next').addEventListener('click', function () { move(1); });
           pop.querySelector('.shot-pop-close').addEventListener('click', hide);
+          pop.addEventListener('click', function (event) { if (event.target === pop) hide(); });
           document.body.appendChild(pop);
         }
         return pop;
@@ -286,6 +292,7 @@
         current = group.indexOf(el);
         render();
         pop.classList.add('show');
+        document.body.classList.add('shot-open');
         pop.querySelector('.shot-pop-close').focus({ preventScroll: true });
       }
       function move(delta) {
@@ -295,6 +302,7 @@
       }
       function hide() {
         if (pop) pop.classList.remove('show');
+        document.body.classList.remove('shot-open');
         if (opener) opener.focus({ preventScroll: true });
       }
       function visible() { return pop && pop.classList.contains('show'); }
@@ -313,7 +321,13 @@
       });
       document.addEventListener('keydown', function (e) {
         if (!visible()) return;
-        if (e.key === 'Escape') { e.preventDefault(); hide(); }
+        if (e.key === 'Tab') {
+          var buttons = Array.from(pop.querySelectorAll('button')).filter(function (button) { return !button.hidden; });
+          var first = buttons[0], last = buttons[buttons.length - 1];
+          if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+        else if (e.key === 'Escape') { e.preventDefault(); hide(); }
         else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
           e.preventDefault(); move(e.key === 'ArrowLeft' ? -1 : 1);
         }
