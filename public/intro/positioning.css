@@ -7,7 +7,7 @@
 .positioning-field{height:760px}
 .positioning-axis-label.is-left,.positioning-axis-label.is-right{width:40px;max-width:none;white-space:nowrap;font-size:9px}.positioning-axis-label.is-left{left:0}.positioning-axis-label.is-right{right:0}
 .positioning-point.is-cyber{left:79%;top:14%}.positioning-point.is-cyber small{display:none}
-.positioning-point.is-learning{left:68%;top:33%;width:94px}
+.positioning-point.is-learning{left:20%;top:20%;width:94px}
 .positioning-point.is-doubao{left:25%;top:44%}
 .positioning-point.is-chatgpt{left:20%;top:58%}
 .positioning-point.is-manus{left:20%;top:70%}

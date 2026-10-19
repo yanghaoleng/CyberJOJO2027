@@ -39,7 +39,7 @@
 
 ## 学习机与角色互动产品
 
-- 第一象限新增「学习机 · 学而思」，靠近纵轴，示意面向孩子的学习成长设备。官方介绍 https://xpad.xueersi.com/touch/ ，图标取该官网 favicon（实际格式 PNG），原样保存。
+- 「学习机 · 学而思」放在左上方，示意聚焦孩子、侧重学习效率的工具。官方介绍 https://xpad.xueersi.com/touch/ ，图标取该官网 favicon（实际格式 PNG），原样保存。
 - 第四象限新增 Emochi、猫箱、星野，表示更偏角色互动与陪伴体验；位置仍为定性示意。
 - Emochi：https://www.emochi.ai/ ，FlowGPT 官方 Google Play 应用 https://play.google.com/store/apps/details?id=com.flow.mobile ，图标取该商店页 og:image。
 - 猫箱：https://maoxiangai.com/ ，官方 App Store https://apps.apple.com/cn/app/id6475000292 ，图标取 Apple lookup 的 artworkUrl512。
