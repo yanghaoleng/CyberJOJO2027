@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-19T07:20:57.095Z",
-  "publicFileCount": 127,
-  "totalBytes": 113263919,
+  "generatedAt": "2026-10-19T07:26:20.785Z",
+  "publicFileCount": 132,
+  "totalBytes": 113355111,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -779,6 +779,54 @@
       ]
     },
     {
+      "id": "intro/assets/positioning/chatgpt.jpg",
+      "path": "intro/assets/positioning/chatgpt.jpg",
+      "name": "chatgpt.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 40870,
+      "sha256": "a85fb843c81d840cc29875c3450a025fe5ce2c71c935f990a5a783e5a8b752b8"
+    },
+    {
+      "id": "intro/assets/positioning/doubao.png",
+      "path": "intro/assets/positioning/doubao.png",
+      "name": "doubao.png",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 34367,
+      "sha256": "dabb2abd94e3a6c11e7f1a42c9343839b6ef643c086751b71afbc68f615aec38",
+      "dimensions": [
+        192,
+        192
+      ]
+    },
+    {
+      "id": "intro/assets/positioning/grok.png",
+      "path": "intro/assets/positioning/grok.png",
+      "name": "grok.png",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 1622,
+      "sha256": "a2596c54bd97a7d11e0df1b3f4b2e3e229bfea31c84c9b05e62edefd846673cf",
+      "dimensions": [
+        180,
+        180
+      ]
+    },
+    {
+      "id": "intro/assets/positioning/muse.svg",
+      "path": "intro/assets/positioning/muse.svg",
+      "name": "muse.svg",
+      "category": "icon",
+      "format": "SVG",
+      "bytes": 2660,
+      "sha256": "6373d89d274258a38432f3c3729cd716498b8ded849b174a7998683dcf4aaba5",
+      "dimensions": [
+        100,
+        100
+      ]
+    },
+    {
       "id": "intro/assets/shots/02-together-blocks-full.jpg",
       "path": "intro/assets/shots/02-together-blocks-full.jpg",
       "name": "02-together-blocks-full.jpg",
@@ -919,8 +967,8 @@
       "name": "health-icon-options.html",
       "category": "other",
       "format": "HTML",
-      "bytes": 6490,
-      "sha256": "67c99aeba8aca7d0cc6351315a5a571d688d52563f1ae3d11077b9db2f31ce77"
+      "bytes": 6499,
+      "sha256": "ea691fb9196093d356a89aab47d63192022204dc8162af93a1795521132adc5c"
     },
     {
       "id": "intro/health-monitoring.css",
@@ -928,8 +976,8 @@
       "name": "health-monitoring.css",
       "category": "other",
       "format": "CSS",
-      "bytes": 6376,
-      "sha256": "338a102c984c6973fcbd51bdda190cea0214f40b79b32da0956dd599cbc24a2a"
+      "bytes": 6948,
+      "sha256": "59562ff3f12a55388b0c3b58b2d64ba7abe76b08e2cd3df17792a3da017c21fd"
     },
     {
       "id": "intro/index.html",
@@ -937,8 +985,8 @@
       "name": "index.html",
       "category": "other",
       "format": "HTML",
-      "bytes": 72584,
-      "sha256": "53ce105e0104721519c79610b740e34f4a371b0a1161b09cea3e62746a4b71c2"
+      "bytes": 77394,
+      "sha256": "a7593cbb4371d64e308a47d1a047639b23cd1d4d195d3bf469f156c31b6cbcec"
     },
     {
       "id": "intro/learning-paths.css",
@@ -948,6 +996,15 @@
       "format": "CSS",
       "bytes": 2050,
       "sha256": "d89de8a801200e5ef73b2d231e149b5661693af72575a3c78ef1687f79873618"
+    },
+    {
+      "id": "intro/positioning.css",
+      "path": "intro/positioning.css",
+      "name": "positioning.css",
+      "category": "other",
+      "format": "CSS",
+      "bytes": 6282,
+      "sha256": "af6bcee0dec84d99e8c71c391e43ced583c2722aebbe948eefaee51b67ae5e6b"
     },
     {
       "id": "media/heart-balloon.riv",

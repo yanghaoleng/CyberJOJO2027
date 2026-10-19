@@ -17,7 +17,7 @@ export function HealthDemoCard({ record }) {
   const stop = () => { generation.current++; audioRef.current?.pause(); setVoiceState("idle"); };
 
   return <article className="health-demo-card" aria-label="健康监护模拟指标卡">
-    <header className="health-demo-heading"><span className="health-demo-symbol" aria-hidden="true">♡</span><div><span className="health-demo-eyebrow">HEALTH COMPANION · 健康监护</span><h3>特殊场景 · 及时照顾身体不适</h3></div><span className="health-demo-badge">模拟</span></header>
+    <header className="health-demo-heading"><span className="health-demo-app-icon" aria-hidden="true"><img src="/intro/assets/health-icons/a.png" alt="" /></span><div><span className="health-demo-eyebrow">HEALTH COMPANION · 健康监护</span><h3>特殊场景 · 及时照顾身体不适</h3></div><span className="health-demo-badge">模拟</span></header>
     <p className="health-demo-source">{record.child} · {record.age}<span>{record.time} · {record.source}</span></p>
     <dl className="health-demo-metrics">{record.metrics.map(metric => <div key={metric.label}><dt>{metric.label}</dt><dd>{metric.value}<small>{metric.unit}</small></dd><span>{metric.source}</span></div>)}</dl>
     <div className="health-demo-insight"><span className="health-demo-meal">{record.mealStatus}</span><h4>{record.insight}</h4><strong className="health-demo-symptoms">{record.symptoms}</strong><p>{record.explanation}</p></div>
