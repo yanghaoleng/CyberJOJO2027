@@ -71,6 +71,7 @@
     .shot-pop{position:fixed;z-index:130;left:50%;top:50%;width:300px;max-width:88vw;transform:translate(-50%,-50%) scale(.94);opacity:0;visibility:hidden;pointer-events:none;background:#0d0b1a;border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:8px;box-shadow:0 26px 80px rgba(0,0,0,.55);transition:opacity .26s ease,transform .26s ease,visibility .26s}
     .shot-pop img{width:100%;height:auto;display:block;border-radius:12px}
     .shot-pop .shot-pop-cap{color:#b9b2d8;font-size:11.5px;letter-spacing:.02em;padding:9px 4px 3px;text-align:center}
+    .shot-pop-nav{position:absolute;top:45%;width:36px;height:44px;border:1px solid rgba(255,255,255,.3);border-radius:22px;background:rgba(13,11,26,.85);color:white;font-size:27px;cursor:pointer;display:grid;place-items:center}.shot-pop-nav[hidden]{display:none}.shot-pop-prev{left:-18px}.shot-pop-next{right:-18px}.shot-pop-nav:hover{background:#514080}.shot-pop button:focus-visible{outline:2px solid #9eefff;outline-offset:3px}.shot-pop-close{position:absolute;right:12px;top:12px;width:32px;height:32px;border:1px solid rgba(255,255,255,.3);border-radius:50%;background:rgba(13,11,26,.85);color:white;font-size:22px;cursor:pointer}.shot-pop-count{display:block;margin-top:4px;color:#9eefff;font-size:11px}
     .shot-pop.show{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
   </style>
   <link rel="stylesheet" href="learning-paths.css" />
@@ -253,38 +254,70 @@
   </script>
   <script>
     (function () {
-      var pop = null;
+      var pop = null, group = [], current = 0, opener = null;
       function ensurePop() {
         if (!pop) {
           pop = document.createElement('div');
           pop.className = 'shot-pop';
           pop.setAttribute('role', 'dialog');
-          pop.innerHTML = '<img alt="" /><div class="shot-pop-cap"></div>';
+          pop.setAttribute('aria-label', '图片详情');
+          pop.innerHTML = '<img alt="" /><button type="button" class="shot-pop-close" aria-label="关闭图片详情">×</button><button type="button" class="shot-pop-nav shot-pop-prev" aria-label="上一张图片">‹</button><button type="button" class="shot-pop-nav shot-pop-next" aria-label="下一张图片">›</button><div class="shot-pop-cap" aria-live="polite"><span class="shot-pop-title"></span><span class="shot-pop-count"></span></div>';
+          pop.querySelector('.shot-pop-prev').addEventListener('click', function () { move(-1); });
+          pop.querySelector('.shot-pop-next').addEventListener('click', function () { move(1); });
+          pop.querySelector('.shot-pop-close').addEventListener('click', hide);
           document.body.appendChild(pop);
         }
         return pop;
       }
-      function show(el) {
-        var p = ensurePop();
+      function render() {
+        var el = group[current], p = ensurePop();
+        var caption = el.getAttribute('aria-label') || el.querySelector('img').alt || '';
         p.querySelector('img').src = el.dataset.shot;
-        p.querySelector('.shot-pop-cap').textContent = el.getAttribute('aria-label') || '';
-        p.classList.add('show');
+        p.querySelector('img').alt = caption;
+        p.querySelector('.shot-pop-title').textContent = caption;
+        p.querySelector('.shot-pop-count').textContent = (current + 1) + ' / ' + group.length;
+        p.querySelectorAll('.shot-pop-nav').forEach(function (button) { button.hidden = group.length < 2; });
       }
-      function hide() { if (pop) pop.classList.remove('show'); }
+      function show(el) {
+        opener = el;
+        // Each card is a column; never navigate into a neighbouring card.
+        var scope = el.closest('article') || el.closest('.shot-row') || el;
+        group = scope === el ? [el] : Array.from(scope.querySelectorAll('[data-shot]'));
+        current = group.indexOf(el);
+        render();
+        pop.classList.add('show');
+        pop.querySelector('.shot-pop-close').focus({ preventScroll: true });
+      }
+      function move(delta) {
+        if (group.length < 2) return;
+        current = (current + delta + group.length) % group.length;
+        render();
+      }
+      function hide() {
+        if (pop) pop.classList.remove('show');
+        if (opener) opener.focus({ preventScroll: true });
+      }
       function visible() { return pop && pop.classList.contains('show'); }
       document.querySelectorAll('[data-shot]').forEach(function (el) {
+        el.setAttribute('aria-haspopup', 'dialog');
         el.addEventListener('click', function (e) {
           e.preventDefault(); e.stopPropagation();
-          if (visible()) hide(); else show(el);
+          if (visible() && group[current] === el) hide(); else show(el);
         });
         el.addEventListener('keydown', function (e) {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (visible()) hide(); else show(el); }
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); show(el); }
         });
       });
       document.addEventListener('click', function (e) {
         if (visible() && !e.target.closest('[data-shot]') && !pop.contains(e.target)) hide();
       });
-      document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && visible()) hide(); });
+      document.addEventListener('keydown', function (e) {
+        if (!visible()) return;
+        if (e.key === 'Escape') { e.preventDefault(); hide(); }
+        else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+          e.preventDefault(); move(e.key === 'ArrowLeft' ? -1 : 1);
+        }
+      });
     })();
   </script>
 </body>
