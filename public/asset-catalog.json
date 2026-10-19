@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-19T07:13:05.787Z",
-  "publicFileCount": 123,
-  "totalBytes": 110697683,
+  "generatedAt": "2026-10-19T07:20:57.095Z",
+  "publicFileCount": 127,
+  "totalBytes": 113263919,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -644,6 +644,45 @@
       ]
     },
     {
+      "id": "intro/assets/health-icons/a.png",
+      "path": "intro/assets/health-icons/a.png",
+      "name": "a.png",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 854515,
+      "sha256": "6dfdb0323ff5800a5c574ba6993241f8819489b3073d620e2e3504287f1b1fdb",
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "id": "intro/assets/health-icons/b.png",
+      "path": "intro/assets/health-icons/b.png",
+      "name": "b.png",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 953611,
+      "sha256": "92e0f35f1fb27b1a7e5014c0978a5906bf11808840cf6303644ae57c5aa2cac8",
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "id": "intro/assets/health-icons/c.png",
+      "path": "intro/assets/health-icons/c.png",
+      "name": "c.png",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 751621,
+      "sha256": "37132a18c5ab8344f80bc32b39c8a1e421868101b2957a246c7b8f0d25e84be4",
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
       "id": "intro/assets/intro-entrance.mp4",
       "path": "intro/assets/intro-entrance.mp4",
       "name": "intro-entrance.mp4",
@@ -875,13 +914,22 @@
       "sha256": "7911ebba13ab15f9b2d4ae4f25d3039f9858e34c0154ff737f92c981c5a674e8"
     },
     {
+      "id": "intro/health-icon-options.html",
+      "path": "intro/health-icon-options.html",
+      "name": "health-icon-options.html",
+      "category": "other",
+      "format": "HTML",
+      "bytes": 6490,
+      "sha256": "67c99aeba8aca7d0cc6351315a5a571d688d52563f1ae3d11077b9db2f31ce77"
+    },
+    {
       "id": "intro/health-monitoring.css",
       "path": "intro/health-monitoring.css",
       "name": "health-monitoring.css",
       "category": "other",
       "format": "CSS",
       "bytes": 6376,
-      "sha256": "3914cd2e7d15b8bbc1604f7077867778c916f8faf1a89d48104cdfe9d63c8d4b"
+      "sha256": "338a102c984c6973fcbd51bdda190cea0214f40b79b32da0956dd599cbc24a2a"
     },
     {
       "id": "intro/index.html",
@@ -889,8 +937,8 @@
       "name": "index.html",
       "category": "other",
       "format": "HTML",
-      "bytes": 72585,
-      "sha256": "1c2e35b9584e0e21fab0d82d6f924780e1c2bcce731490a95810aeea6194c8f5"
+      "bytes": 72584,
+      "sha256": "53ce105e0104721519c79610b740e34f4a371b0a1161b09cea3e62746a4b71c2"
     },
     {
       "id": "intro/learning-paths.css",
