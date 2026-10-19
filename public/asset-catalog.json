@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-19T07:26:20.785Z",
-  "publicFileCount": 132,
-  "totalBytes": 113355111,
+  "generatedAt": "2026-10-19T07:34:01.080Z",
+  "publicFileCount": 138,
+  "totalBytes": 113464842,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -801,6 +801,28 @@
       ]
     },
     {
+      "id": "intro/assets/positioning/emochi.png",
+      "path": "intro/assets/positioning/emochi.png",
+      "name": "emochi.png",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 13565,
+      "sha256": "060f25df4a598dd55273deabc24eac05f9261dfd53cc3c60ff54d186d9246f64",
+      "dimensions": [
+        512,
+        512
+      ]
+    },
+    {
+      "id": "intro/assets/positioning/grok-bot.jpg",
+      "path": "intro/assets/positioning/grok-bot.jpg",
+      "name": "grok-bot.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 24900,
+      "sha256": "8b952af12e04f0f9286da09c08949216019fa918edef9747f359960b482d1aa8"
+    },
+    {
       "id": "intro/assets/positioning/grok.png",
       "path": "intro/assets/positioning/grok.png",
       "name": "grok.png",
@@ -814,6 +836,24 @@
       ]
     },
     {
+      "id": "intro/assets/positioning/manus.jpg",
+      "path": "intro/assets/positioning/manus.jpg",
+      "name": "manus.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 27907,
+      "sha256": "810ec8759e3c92ac54adb8fbd8a4728308dccdc766bf3d97802b67795a2e6351"
+    },
+    {
+      "id": "intro/assets/positioning/maoxiang.jpg",
+      "path": "intro/assets/positioning/maoxiang.jpg",
+      "name": "maoxiang.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 20111,
+      "sha256": "a09e00c041c4241a67de16d5d163dd8a1b378e74bb5ae0d0f03b1e59f5e7514c"
+    },
+    {
       "id": "intro/assets/positioning/muse.svg",
       "path": "intro/assets/positioning/muse.svg",
       "name": "muse.svg",
@@ -824,6 +864,28 @@
       "dimensions": [
         100,
         100
+      ]
+    },
+    {
+      "id": "intro/assets/positioning/xingye.jpg",
+      "path": "intro/assets/positioning/xingye.jpg",
+      "name": "xingye.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 13571,
+      "sha256": "704ff1e0c61444479ca95c74c946240b00cc2d1b6b2afc9ab2fe191e32f3492b"
+    },
+    {
+      "id": "intro/assets/positioning/xueersi.png",
+      "path": "intro/assets/positioning/xueersi.png",
+      "name": "xueersi.png",
+      "category": "icon",
+      "format": "PNG",
+      "bytes": 6351,
+      "sha256": "d38dcf14cdef46a64a82d9643ed685a917f232e6215c3b37301ad936a3d3a9bd",
+      "dimensions": [
+        360,
+        360
       ]
     },
     {
@@ -985,8 +1047,8 @@
       "name": "index.html",
       "category": "other",
       "format": "HTML",
-      "bytes": 77394,
-      "sha256": "a7593cbb4371d64e308a47d1a047639b23cd1d4d195d3bf469f156c31b6cbcec"
+      "bytes": 80258,
+      "sha256": "914e8060d44fd11fc70a1ae77152ad3ef2251f1ce185ece8a2c83531d3065194"
     },
     {
       "id": "intro/learning-paths.css",
@@ -1003,8 +1065,8 @@
       "name": "positioning.css",
       "category": "other",
       "format": "CSS",
-      "bytes": 6282,
-      "sha256": "af6bcee0dec84d99e8c71c391e43ced583c2722aebbe948eefaee51b67ae5e6b"
+      "bytes": 6744,
+      "sha256": "83f96353b4a58cb5a0bb851b69435c582cc830587cfc03fdbb051c95a75eb82a"
     },
     {
       "id": "media/heart-balloon.riv",
