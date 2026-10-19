@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-19T06:21:37.308Z",
-  "publicFileCount": 120,
-  "totalBytes": 110529046,
+  "generatedAt": "2026-10-19T07:06:48.422Z",
+  "publicFileCount": 122,
+  "totalBytes": 110616500,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -196,6 +196,15 @@
       "format": "MP3",
       "bytes": 33017,
       "sha256": "b45e5230040c3c1cde3137900bb502eb9bd033f2d72adea122bd3b74758db91b"
+    },
+    {
+      "id": "demo-audio/health-morning-reminder.mp3",
+      "path": "demo-audio/health-morning-reminder.mp3",
+      "name": "相机引导 · health-morning-reminder.mp3",
+      "category": "audio",
+      "format": "MP3",
+      "bytes": 82221,
+      "sha256": "062300359521d11cb008c283d9d329f4551c19c80cbcc713ea7ec29983486df5"
     },
     {
       "id": "demo-audio/leave-note-2026-08-24.mp3",
@@ -857,13 +866,22 @@
       "sha256": "7911ebba13ab15f9b2d4ae4f25d3039f9858e34c0154ff737f92c981c5a674e8"
     },
     {
+      "id": "intro/health-monitoring.css",
+      "path": "intro/health-monitoring.css",
+      "name": "health-monitoring.css",
+      "category": "other",
+      "format": "CSS",
+      "bytes": 2772,
+      "sha256": "c76a5cde9be1ea06f76d2a0792dc5430ebc92c744129609b061d4f38c5d5b06e"
+    },
+    {
       "id": "intro/index.html",
       "path": "intro/index.html",
       "name": "index.html",
       "category": "other",
       "format": "HTML",
-      "bytes": 59406,
-      "sha256": "dd50bd3b2ddcfc1d42e29dfc86d2df011a3df5e95cd4ab3e84776650e009499d"
+      "bytes": 61867,
+      "sha256": "b3e7e9870f63112c832ffadda88332a0672c7b69197576e6ec28434c8b339962"
     },
     {
       "id": "intro/learning-paths.css",

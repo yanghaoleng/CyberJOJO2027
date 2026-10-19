@@ -1,3 +1,5 @@
+import { DEMO_HEALTH } from "./health-demo-data.js";
+
 // 相册「模拟数据体验」演示数据
 // 说明：这是产品演示用的虚构数据（孩子：小雨，6 岁），与真实本地数据完全隔离。
 // 打开相册面板里的「模拟数据」开关后，展示的是下面这套内容；关闭后回到本机真实数据。
@@ -160,6 +162,12 @@ export const DEMO_COUNT = DEMO_CAPTURES.length;
 
 // —— 小雨的当天小记（模拟；每一天都有 AI 总结风格的生动小记）——
 export const DEMO_RECORDS = {
+  [DEMO_HEALTH.dayKey]: {
+    dayKey: DEMO_HEALTH.dayKey,
+    source: "demo-health",
+    summary: "今天早晨的健康监护演示：把手环活动数据、家长填写的身体资料与待确认的早餐记录放在一起，先确认是否吃过早餐，再给出休息、补水和补充营养的生活提醒。",
+    moments: [],
+  },
   "2026-08-20": {
     dayKey: "2026-08-20",
     source: "dialogue",
@@ -654,7 +662,7 @@ export const DEMO_FRIENDS = [
 // —— 相册时间线（按天分组，与 useDailyJournal 输出结构一致）——
 // 有照片的日子按照片分组；2026-09-10 只有对话小记没有照片（体现「不拍照也能留下小记」）
 // 贴纸按收集日期（createdAt）归入当天，不置顶；只有「收集」筛选视图才是宫格。
-// 照片日 + 对话日 + 贴纸日合并，按日期升序（与相册浏览顺序一致）。
+// 照片日、对话日、贴纸日与健康演示合并，最新记录在前，与本机相册一致。
 export const DEMO_TIMELINE = (() => {
   const days = new Map();
   const ensure = (dayKey) => {
@@ -668,7 +676,8 @@ export const DEMO_TIMELINE = (() => {
   ensure("2026-09-10");
   for (const record of Object.values(DEMO_RECORDS)) if (record.summary || record.moments?.length) ensure(record.dayKey);
   for (const friend of DEMO_FRIENDS) ensure(dayKeyOf(friend.createdAt)).friends.push(friend);
+  ensure(DEMO_HEALTH.dayKey).health = DEMO_HEALTH;
   return [...days.values()]
     .map((day) => ({ ...day, items: [...day.items].sort((a, b) => Number(a.createdAt || 0) - Number(b.createdAt || 0)) }))
-    .sort((a, b) => a.dayKey.localeCompare(b.dayKey));
+    .sort((a, b) => b.dayKey.localeCompare(a.dayKey));
 })();

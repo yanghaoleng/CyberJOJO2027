@@ -39,6 +39,7 @@ import QRCode from "qrcode";
 import { PcmSpeechPlayer } from "./pcm-speech-player.js";
 import { createVoicePrewarm } from "./voice-prewarm.js";
 import { configureCharacterPlayback, isDomiWordVoice } from "../server/character-voice-policy.js";
+import { HealthDemoCard } from "./components/health-demo-card.jsx";
 import { requestDomiSpeech } from "./domi-speech.js";
 import { VoiceHealth, VOICE_ISSUES, appendVoiceLog } from "./voice-health.js";
 import { getStoryVisit } from "./story-progress.js";
@@ -5251,7 +5252,7 @@ function App() {
             </nav>
             {libraryTab === "activities" ? <div className="media-library-timeline" ref={mediaLibraryGridRef}><ActivityReports records={activityReports} onDelete={removeActivityReport} /></div> : libraryTab === "friends" ? <div className="media-library-timeline" ref={mediaLibraryGridRef}><Suspense fallback={<p>收集正在打开…</p>}><FriendCollection friends={visibleFriends} onSeen={onCollectionsSeen} onRetry={retryCollection} /></Suspense></div> : (visibleTimeline.length || libraryTab === "all") ? (
               <div className="media-library-timeline" ref={mediaLibraryGridRef}>
-                {visibleTimeline.map(({ dayKey, items, friends: dayFriends = [], activities: dayActivities = [] }, dayIndex) => {
+                {visibleTimeline.map(({ dayKey, items, friends: dayFriends = [], activities: dayActivities = [], health }, dayIndex) => {
                   const entries = libraryDemo ? [] : (conversationEntriesByDay.get(dayKey) || []);
                   const summaryRecord = libraryDemo ? demoRecords[dayKey] : conversationSummaries[dayKey];
                   const summaryState = libraryDemo ? "ready" : (conversationSummaryStates[dayKey] || "idle");
@@ -5267,9 +5268,10 @@ function App() {
                         <span className="media-timeline-marker" aria-hidden="true" />
                         <div>
                           <strong>{formatTimelineDay(dayKey)}</strong>
-                          <span>{dayActivities.length ? `${dayActivities.length} 次玩法记录${items.length ? ` · ${items.length} 个作品` : ""}` : items.length ? `${items.length} 个作品` : "今天聊过的小事"}</span>
+                          <span>{libraryDemo && health ? "健康监护 · 连接器演示" : dayActivities.length ? `${dayActivities.length} 次玩法记录${items.length ? ` · ${items.length} 个作品` : ""}` : items.length ? `${items.length} 个作品` : "今天聊过的小事"}</span>
                         </div>
                       </header>
+                      {libraryDemo && health && <HealthDemoCard record={health} />}
                       <div className="media-day-grid">
                         {items.map((item) => (
                           <button

@@ -13,3 +13,15 @@ test("library demo data shows both English word teaching and Jiaojiao idiom crea
   assert.match(DEMO_RECORDS["2026-09-19"].summary, /刻桌求见/);
   assert.ok(DEMO_TIMELINE.find((day) => day.dayKey === "2026-09-19")?.friends.some((friend) => friend.id === "demo-friend-jiaojiao-bear"));
 });
+
+test("health connector example is the newest simulated day and keeps unknown breakfast distinct", async () => {
+  const { DEMO_HEALTH } = await import("./health-demo-data.js");
+  assert.equal(DEMO_TIMELINE[0].dayKey, DEMO_HEALTH.dayKey);
+  assert.equal(DEMO_TIMELINE[0].health.id, DEMO_HEALTH.id);
+  assert.equal(DEMO_RECORDS[DEMO_HEALTH.dayKey].source, "demo-health");
+  assert.match(DEMO_HEALTH.mealStatus, /尚未确认/);
+  assert.match(DEMO_HEALTH.explanation, /不等于/);
+  assert.match(DEMO_HEALTH.voice, /如果还没吃/);
+  assert.ok(DEMO_HEALTH.metrics.every(metric => metric.source));
+  assert.match(DEMO_HEALTH.pushBody, /确认是否/);
+});
