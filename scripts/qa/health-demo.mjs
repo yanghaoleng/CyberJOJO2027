@@ -24,16 +24,16 @@ try {
     assert.equal(await card.locator('.health-demo-metrics>div').count(), 4);
     assert.match(await card.textContent(), /早餐记录尚未确认/);
     // A failed audio resource must not claim playback succeeded.
-    await page.route('**/health-morning-reminder.mp3', route => route.abort());
-    await card.getByRole('button', { name: '体验语音 + Push 提醒', exact: true }).click();
+    await page.route('**/health-emergency-reminder.mp3', route => route.abort());
+    await card.getByRole('button', { name: '试听紧急语音提醒', exact: true }).click();
     await card.getByRole('status').filter({ hasText: '语音暂时无法播放' }).waitFor();
-    await page.locator('.health-demo-push').waitFor();
-    assert.match(await page.locator('.health-demo-push').textContent(), /未真实发送/);
-    await page.getByRole('button', { name: '关闭健康提醒预览' }).click();
-    await page.unroute('**/health-morning-reminder.mp3');
+    assert.match(await card.locator('.health-demo-parent-sent').textContent(), /已向家长发送紧急通知/);
+    assert.match(await card.locator('.health-demo-parent-sent').textContent(), /模拟状态/);
+    assert.equal(await page.locator('.health-demo-push').count(), 0);
+    await page.unroute('**/health-emergency-reminder.mp3');
     // Reload the failed media element and replay the deployed, actual voice asset.
     await card.locator('audio').evaluate(audio => audio.load());
-    await card.getByRole('button', { name: /重新体验语音/ }).click();
+    await card.getByRole('button', { name: /重新试听紧急提醒/ }).click();
     await page.waitForFunction(() => {
       const audio = document.querySelector('.health-demo-card audio');
       return audio && !audio.paused && audio.currentTime > .15 && audio.duration > 1;
@@ -41,7 +41,6 @@ try {
     assert.match(await card.locator('.health-demo-channels').textContent(), /正在播放/);
     await page.screenshot({ path: `/tmp/jojo-health-push-${width}.png` });
     await card.getByRole('button', { name: '停止语音', exact: true }).click();
-    await page.getByRole('button', { name: '关闭健康提醒预览' }).click();
     await card.screenshot({ path: `/tmp/jojo-health-card-${width}.png` });
     const bounds = await card.boundingBox(); assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width);
     assert.equal(await page.evaluate(() => JSON.stringify(localStorage).includes('demo-health-morning-activity')), false);
@@ -51,12 +50,28 @@ try {
     await page.goto(base + '/intro/index.html', { waitUntil: 'domcontentloaded' });
     await page.locator('#health-monitoring').scrollIntoViewIfNeeded();
     assert.match(await page.locator('#health-monitoring').textContent(), /智能手表/);
+    assert.equal(await page.locator('.health-trend').count(), 4);
+    assert.equal(await page.locator('.health-trend svg circle').count(), 28);
+    assert.equal(await page.locator('.health-answer-grid article').count(), 4);
+    assert.match(await page.locator('.health-emergency').textContent(), /疑似低血糖/);
+    assert.match(await page.locator('.health-parent-sent').textContent(), /已向家长发送紧急通知/);
+    await page.locator('.health-raw-data summary').click();
+    const rows = await page.locator('.health-raw-data tbody tr').evaluateAll(rows => rows.map(row => [...row.querySelectorAll('td')].map(cell => Number(cell.textContent))));
+    assert.equal(rows.length, 7);
+    const average = col => rows.reduce((sum,row) => sum + row[col], 0) / rows.length;
+    assert.equal(average(0), 60);
+    assert.equal(Math.round(average(1)), 1384);
+    assert.equal(average(2).toFixed(1), '8.6');
+    assert.equal(Math.round(average(3)), 46);
+    assert.equal(rows.filter(row => row[0] >= 60).length, 4);
+    assert.equal(rows.filter(row => row[2] < 9).length, 6);
+    await page.locator('.health-raw-data summary').click();
     assert.match(await page.locator('#health-monitoring').textContent(), /尚未上线/);
     assert.ok(await page.locator('#health-monitoring').evaluate(el => el.nextElementSibling.id === 'future-exploration'));
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.locator('#health-monitoring').screenshot({ path: `/tmp/jojo-health-site-${width}.png` });
     assert.deepEqual(errors, []);
     await page.close();
-    console.log(`PASS ${width}px: newest health demo, local isolation, audio failure/retry + actual playback, Push preview, official section and no overflow`);
+    console.log(`PASS ${width}px: newest health demo, local isolation, audio failure/retry + actual playback, emergency-sent mock status, 4 trends + verified summaries, professional answers and no overflow`);
   }
 } finally { await browser.close(); }

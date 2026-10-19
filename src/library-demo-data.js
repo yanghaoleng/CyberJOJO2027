@@ -165,7 +165,7 @@ export const DEMO_RECORDS = {
   [DEMO_HEALTH.dayKey]: {
     dayKey: DEMO_HEALTH.dayKey,
     source: "demo-health",
-    summary: "今天早晨的健康监护演示：把手环活动数据、家长填写的身体资料与待确认的早餐记录放在一起，先确认是否吃过早餐，再给出休息、补水和补充营养的生活提醒。",
+    summary: "今天早晨的特殊场景演示：孩子在跑跳中自述头晕、乏力，早餐情况尚未确认。提醒先停止运动、请成年人立即陪同，并展示已向家长发送紧急通知的模拟状态。",
     moments: [],
   },
   "2026-08-20": {

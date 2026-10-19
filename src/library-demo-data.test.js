@@ -21,7 +21,9 @@ test("health connector example is the newest simulated day and keeps unknown bre
   assert.equal(DEMO_RECORDS[DEMO_HEALTH.dayKey].source, "demo-health");
   assert.match(DEMO_HEALTH.mealStatus, /尚未确认/);
   assert.match(DEMO_HEALTH.explanation, /不等于/);
-  assert.match(DEMO_HEALTH.voice, /如果还没吃/);
+  assert.match(DEMO_HEALTH.voice, /身边的大人/);
+  assert.match(DEMO_HEALTH.symptoms, /主动说/);
   assert.ok(DEMO_HEALTH.metrics.every(metric => metric.source));
-  assert.match(DEMO_HEALTH.pushBody, /确认是否/);
+  assert.equal(DEMO_HEALTH.pushStatus, "已向家长发送紧急通知");
+  assert.match(DEMO_HEALTH.explanation, /不能确诊/);
 });
