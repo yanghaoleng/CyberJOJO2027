@@ -1,0 +1,16 @@
+.sticker-optic{width:100%;min-width:0;display:grid;justify-items:center;gap:8px}
+.sticker-optic-trigger{display:grid;place-items:center;width:100%;aspect-ratio:1.1;padding:12px;border:0;background:transparent;color:inherit;cursor:pointer;touch-action:pan-y;-webkit-tap-highlight-color:transparent}
+.sticker-optic-trigger:focus-visible{outline:2px solid #ffdc55;outline-offset:2px;border-radius:22px}
+.sticker-optic-surface{position:relative;display:grid;place-items:center;width:100%;height:100%;min-height:0;isolation:isolate;transform-style:preserve-3d}
+.friend-detail-sheet .sticker-optic-surface img{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none}
+.sticker-optic-mask{position:absolute;z-index:2;inset:0;overflow:hidden;pointer-events:none;mask-size:contain;mask-position:center;mask-repeat:no-repeat;-webkit-mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;mix-blend-mode:screen}
+.sticker-optic-rainbow{position:absolute;inset:-55%;background:repeating-linear-gradient(115deg,transparent 0%,#8affdf 8%,#82b7ff 15%,#dd8aff 22%,#ffafcf 29%,#ffe9a1 36%,transparent 45%);mix-blend-mode:color-dodge}
+.sticker-optic-glare{position:absolute;inset:-50%;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.08) 42%,rgba(255,255,255,.95) 49%,rgba(190,245,255,.25) 53%,transparent 61%)}
+.sticker-optic-corner{position:absolute;z-index:3;width:30px;height:30px;pointer-events:none;background:radial-gradient(circle,#fff 0 4%,#c8fffa 6%,rgba(152,175,255,.6) 15%,transparent 60%);border-color:rgba(193,255,248,.65);border-style:solid;border-width:0}
+.sticker-optic-corner:after{content:"";position:absolute;inset:4px;background:linear-gradient(transparent 45%,#fff 49% 51%,transparent 55%),linear-gradient(90deg,transparent 45%,#fff 49% 51%,transparent 55%)}
+.sticker-optic-corner.is-top-left{top:0;left:0;border-top-width:1px;border-left-width:1px;border-radius:10px 0 0 0}.sticker-optic-corner.is-top-right{top:0;right:0;border-top-width:1px;border-right-width:1px;border-radius:0 10px 0 0}.sticker-optic-corner.is-bottom-left{bottom:0;left:0;border-bottom-width:1px;border-left-width:1px;border-radius:0 0 0 10px}.sticker-optic-corner.is-bottom-right{bottom:0;right:0;border-bottom-width:1px;border-right-width:1px;border-radius:0 0 10px 0}
+.sticker-optic-hint{color:rgba(247,248,241,.55);font-size:10px;line-height:1.6;text-align:center;max-width:100%}
+.sticker-optic-enable{border:1px solid rgba(255,216,77,.35);border-radius:20px;padding:7px 12px;background:rgba(255,216,77,.1);color:#ffdc55;font:inherit;font-size:11px;cursor:pointer}.sticker-optic-enable:focus-visible{outline:2px solid #ffdc55;outline-offset:3px}.sticker-optic-enable:disabled{opacity:.5;cursor:wait}
+.friend-detail-sheet .friend-card-photo:has(.sticker-optic){aspect-ratio:auto}.friend-card-photo:has(.sticker-optic)>.friend-card-stamp{top:4px;bottom:auto;pointer-events:none}
+@media(hover:hover) and (pointer:fine){.sticker-optic-enable:hover{background:rgba(255,216,77,.2)}}
+@media(prefers-reduced-motion:reduce){.sticker-optic-surface{transform:none!important}.sticker-optic-rainbow,.sticker-optic-glare{transform:none!important}}
