@@ -49,6 +49,18 @@ function createResponse() {
   };
 }
 
+test("silent gesture recognition returns a partner even when human scenes are not commentable", async () => {
+  const handler = createVisionRequestHandler({
+    allowedOrigins: new Set(["https://cyberjojo.mikeywa.site"]),
+    assessScene: async () => ({ assessment: { evaluable: false, text: "", interactionPartner: { kind: "glasses", confidence: .96, personCount: 1 } } }),
+    enrichResponse: async () => assert.fail("mutual-like photos must not generate scene speech"),
+  });
+  const response = createResponse();
+  await handler(createRequest({ body: JSON.stringify({ source: "explicit", includeAudio: false }) }), response);
+  assert.equal(response.status, 200);
+  assert.equal(JSON.parse(response.body).interactionPartner.kind, "glasses");
+});
+
 test("vision route accepts an allowed origin and returns structured output", async () => {
   const handler = createVisionRequestHandler({
     allowedOrigins: new Set(["https://cyberjojo.mikeywa.site"]),

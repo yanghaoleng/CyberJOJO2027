@@ -1,3 +1,5 @@
+import { getInteractionPartnerLabel } from "../server/interaction-partner.js";
+
 const BOOK_SUBJECT_PATTERN = /(?:绘本|图画书|故事书|漫画|课本|书本|书籍|读物|图册|一本书|本书)/;
 const TOY_SUBJECT_PATTERN = /(?:玩具|积木|玩偶|公仔|小汽车|机器人|拼图|毛绒)/;
 
@@ -46,8 +48,14 @@ export function getContextualCaption({
   conversationTopic = "",
   fallbackMode = "together",
   day,
+  interactionPartner,
 } = {}) {
-  if (gesture === "thumbs_up" || ["heart", "heart_small", "heart_large"].includes(gesture)) return createDayCaption(day);
+  if (gesture === "thumbs_up") {
+    const firstLine = `${characterLabel}和${getInteractionPartnerLabel(interactionPartner)}`;
+    return { kind: "subject", mode: "contextual", interaction: "mutual_like", firstLine,
+      secondLine: "礼貌互赞", text: `${firstLine}礼貌互赞` };
+  }
+  if (["heart", "heart_small", "heart_large"].includes(gesture)) return createDayCaption(day);
 
   const topic = cleanSubject(conversationTopic);
   if (topic) return createConversationCaption(characterLabel, topic);

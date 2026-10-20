@@ -68,6 +68,8 @@ import {
   MEDIA_LIBRARY_LIMIT,
   loadMediaCaptures,
   storeMediaCapture,
+  persistMediaCaptureWithRetry,
+  sortMediaCaptures,
 } from "./media-library.js";
 import { getLibraryTabAfterSwipe, LIBRARY_TABS } from "./library-tabs.js";
 import useDailyJournal from "./journal/useDailyJournal.js";
@@ -91,6 +93,8 @@ import { CHARACTER_TIMELINES, resolveCharacterAnimation } from "./character-anim
 import { drawFaceHeartFeedback, drawLargeHeartFeedback, HEART_FEEDBACK_DURATION_MS } from "./heart-feedback.js";
 const FriendCollection = lazy(() => import("./friends/FriendCollection.jsx"));
 import { getContextualCaption } from "./contextual-caption.js";
+import { encodePhoto, resolveGestureCaption, respondToCameraGesture } from "./gesture-photo.js";
+import { requestScene } from "./scene-request.js";
 import { getRecentConversationTopic } from "./conversation-topic.js";
 import { createShutterSamples } from "./camera-feedback.js";
 import { getFrontCameraPipRect, hasLiveVideoTrack } from "./dual-camera.js";
@@ -122,7 +126,7 @@ import {
   getTabletThinkingIndicatorPosition,
   isTabletViewport,
 } from "./device-layout.js";
-import { useCameraSceneAnalysis } from "./use-camera-scene-analysis.js";
+import { useCameraSceneAnalysis, captureVisionImage, getVisionApiUrl } from "./use-camera-scene-analysis.js";
 import { useMotionFollow } from "./use-motion-follow.js";
 import MotionFollowOverlay from "./components/MotionFollowOverlay.jsx";
 import { createSceneFingerprint } from "./scene-analysis.js";
@@ -862,7 +866,8 @@ function App() {
   const videoRef = useRef(null);
   const pipVideoRef = useRef(null);
   const outputCanvasRef = useRef(null);
-  const photoCanvasRef = useRef(null);
+  const gesturePhotoIdRef = useRef(0);
+  const [mutualLikeCaption, setMutualLikeCaption] = useState(null);
   const riveCanvasRef = useRef(null);
   const riveCaptureCanvasRef = useRef(null);
   const heartBalloonCanvasRef = useRef(null);
@@ -1508,7 +1513,7 @@ function App() {
     }
   }, []);
 
-  const addMediaCapture = useCallback((capture, { automatic = false, persisted = false, quiet = false } = {}) => {
+  const addMediaCapture = useCallback(async (capture, { automatic = false, persisted = false, quiet = false } = {}) => {
     const item = {
       ...capture,
       id: capture.id || createCaptureId(capture.type),
@@ -1516,18 +1521,25 @@ function App() {
       url: URL.createObjectURL(capture.blob),
     };
     setMediaLibrary((current) => {
-      const next = [item, ...current].slice(0, MEDIA_LIBRARY_LIMIT);
-      for (const staleItem of current.slice(MEDIA_LIBRARY_LIMIT - 1)) {
+      const next = sortMediaCaptures([item, ...current.filter(({ id }) => id !== item.id)]).slice(0, MEDIA_LIBRARY_LIMIT);
+      const keptIds = new Set(next.map(({ id }) => id));
+      for (const staleItem of current.filter(({ id }) => !keptIds.has(id))) {
         if (staleItem.url) URL.revokeObjectURL(staleItem.url);
       }
       return next;
     });
-    if (!persisted) storeMediaCapture(item).catch((error) => {
+    const confirmSaved = () => {
+      if (!quiet) showToast(automatic ? "已自动拍照并保存到相册" : capture.type === "video" ? "短视频已保存到相册" : "照片已保存到相册");
+    };
+    try {
+      if (!persisted) await persistMediaCaptureWithRetry(item);
+      confirmSaved();
+      return { ...item, persisted: true };
+    } catch (error) {
       console.warn("Capture could not be persisted to the local media library", error);
-      showToast("作品已保留在本次相机中");
-    });
-    if (!quiet) showToast(automatic ? "已自动拍下这一刻" : capture.type === "video" ? "短视频已加入作品" : "照片已加入作品");
-    return item;
+      showToast("相册保存失败，作品暂留本次会话，请下载备份");
+      return { ...item, persisted: false };
+    }
   }, [showToast]);
 
   const scheduleAutoCapture = useCallback((reason, delay = 360) => {
@@ -1803,7 +1815,19 @@ function App() {
     ) return;
 
     const action = GESTURE_ACTIONS[update.trigger];
-    if (!action || !rivePlayAnimationRef.current?.(action.animation)) return;
+    if (!action) return;
+    // A photo is independent of the renderer and the topic/event capture timer.
+    // Freeze it now: waiting for recognition or an animation loses the raised thumb.
+    const animationPlayed = respondToCameraGesture(update.trigger, {
+      playAnimation: () => rivePlayAnimationRef.current?.(action.animation),
+      capturePhoto: () => {
+        if (autoCaptureTimerRef.current) window.clearTimeout(autoCaptureTimerRef.current);
+        autoCaptureTimerRef.current = null;
+        lastAutoCaptureAtRef.current = performance.now();
+        void takePhotoRef.current?.({ automatic: true, reason: "gesture:thumbs_up", mutualLike: true });
+      },
+    });
+    if (!animationPlayed && update.trigger !== CAMERA_GESTURES.THUMBS_UP) return;
     setLastRecognizedGesture(update.trigger);
     const isHeart = HEART_GESTURES.has(update.trigger);
     const effectDuration = isHeart
@@ -1820,7 +1844,7 @@ function App() {
       }, effectDuration);
     }
     notifyVoiceInteraction(update.trigger);
-    showToast(`${CHARACTERS[activeCharacter].label}${action.toast}`);
+    showToast(animationPlayed ? `${CHARACTERS[activeCharacter].label}${action.toast}` : "看到你的点赞啦");
   }, [activeCharacter, notifyVoiceInteraction, showToast]);
 
   const handleSceneReaction = useCallback((reaction) => {
@@ -1858,14 +1882,15 @@ function App() {
     () => getRecentConversationTopic(conversationEntries),
     [conversationEntries],
   );
-  const contextualCaption = useMemo(() => getContextualCaption({
+  const contextualCaption = useMemo(() => activeGestureEffect === CAMERA_GESTURES.THUMBS_UP && mutualLikeCaption
+    ? mutualLikeCaption : getContextualCaption({
     gesture: activeGestureEffect,
     sceneReaction: observedScene || sceneReaction,
     characterLabel: CHARACTERS[activeCharacter].label,
     conversationTopic: recentConversationTopic,
     fallbackMode: captionMode,
     day,
-  }), [activeCharacter, activeGestureEffect, captionMode, day, recentConversationTopic, observedScene, sceneReaction]);
+  }), [activeCharacter, activeGestureEffect, captionMode, day, recentConversationTopic, observedScene, sceneReaction, mutualLikeCaption]);
 
   useEffect(() => {
     if (cameraState !== "ready") return;
@@ -2646,10 +2671,10 @@ function App() {
     context.restore();
   }, [facingMode, isTabletDevice]);
 
-  const drawCaption = useCallback((context, targetWidth, targetHeight) => {
-    const activeCaption = recordingRef.current && recordingCaptionRef.current
+  const drawCaption = useCallback((context, targetWidth, targetHeight, captionOverride = null) => {
+    const activeCaption = captionOverride || (recordingRef.current && recordingCaptionRef.current
       ? recordingCaptionRef.current
-      : contextualCaption;
+      : contextualCaption);
     const centerX = targetWidth / 2;
     const isLandscape = targetHeight < targetWidth;
     const portraitCaptionScale = isLandscape ? 1 : 1.25;
@@ -2942,6 +2967,7 @@ function App() {
         { isTabletDevice },
       );
     }
+    return true;
   }, [characterBubble, drawCaption, drawFrontCameraPip, drawPropRiveLayer, drawRiveLayer, drawSpeechBubble, facingMode, isTabletDevice, personLayer]);
 
   useEffect(() => {
@@ -3644,6 +3670,7 @@ function App() {
 
   useEffect(() => () => {
     cameraReadyRef.current = false;
+    gesturePhotoIdRef.current += 1;
     voicePrewarmRef.current?.dispose();
     stopVoiceSession();
     stopPipCamera();
@@ -3714,6 +3741,8 @@ function App() {
     gestureTrackerRef.current = createGestureTracker();
     setLastRecognizedGesture("");
     setActiveGestureEffect("");
+    gesturePhotoIdRef.current += 1;
+    setMutualLikeCaption(null);
     stopVoiceSession();
     stopPipCamera();
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -3916,6 +3945,8 @@ function App() {
       const loaded = await riveLoadCharacterRef.current(nextBuffer);
       if (!loaded) throw new Error("Rive character failed to initialize");
       setActiveCharacter(nextCharacter);
+      gesturePhotoIdRef.current += 1;
+      setMutualLikeCaption(null);
       characterOffsetXRef.current = offscreenLeft;
       await new Promise((resolve) => window.requestAnimationFrame(resolve));
       await animateCharacterOffset(0, CHARACTER_ENTER_DURATION_MS, "enter");
@@ -4181,51 +4212,78 @@ function App() {
     mediaPreviewSwipeRef.current = { active: false, pointerId: null, startX: 0, startY: 0 };
   }, []);
 
-  const takePhoto = useCallback(({ automatic = false, reason = "manual" } = {}) => {
+  const takePhoto = useCallback(async ({ automatic = false, reason = "manual", mutualLike = false } = {}) => {
     const canvas = outputCanvasRef.current;
-    if (!canvas || cameraState !== "ready" || recordingRef.current) return;
-    const captureMoment = riveCaptureMomentRef.current || riveMarkCaptureRef.current?.();
-    riveCaptureMomentRef.current = null;
-    const captureRiveCanvas = rivePrepareCaptureRef.current?.(captureMoment) || riveCanvasRef.current;
-    renderFrame(true, captureRiveCanvas, true);
+    const video = videoRef.current;
+    if (!canvas || !canvas.width || !canvas.height || !video?.videoWidth || video.readyState < 2
+      || cameraState !== "ready" || (recordingRef.current && !mutualLike)) return false;
+    const photoId = mutualLike ? ++gesturePhotoIdRef.current : null;
+    const character = activeCharacterRef.current;
+    const characterLabel = CHARACTERS[character].label;
+    const id = createCaptureId("photo");
+    const createdAt = Date.now();
+    if (mutualLike) setMutualLikeCaption(getContextualCaption({ gesture: "thumbs_up", characterLabel }));
+    try {
+      const captureMoment = riveCaptureMomentRef.current || riveMarkCaptureRef.current?.();
+      riveCaptureMomentRef.current = null;
+      const captureRiveCanvas = rivePrepareCaptureRef.current?.(captureMoment) || riveCanvasRef.current;
+      if (!renderFrame(!mutualLike, captureRiveCanvas, true)) throw new Error("Camera frame unavailable");
 
-    const photoCanvas = photoCanvasRef.current || document.createElement("canvas");
-    photoCanvasRef.current = photoCanvas;
-    if (photoCanvas.width !== canvas.width || photoCanvas.height !== canvas.height) {
+      const photoCanvas = document.createElement("canvas");
       photoCanvas.width = canvas.width;
       photoCanvas.height = canvas.height;
-    }
-    const photoContext = photoCanvas.getContext("2d", { alpha: false });
-    if (!photoContext) {
-      showToast("照片生成失败，请再试一次");
-      return;
-    }
-    photoContext.drawImage(canvas, 0, 0);
-    playShutterSound();
-    if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
-    setFlashMode(automatic ? "automatic" : "manual");
-    flashTimerRef.current = window.setTimeout(() => {
-      flashTimerRef.current = null;
-      setFlashMode("");
-    }, 280);
-
-    photoCanvas.toBlob((blob) => {
-      if (!blob) {
-        showToast("照片生成失败，请再试一次");
-        return;
+      const photoContext = photoCanvas.getContext("2d", { alpha: false });
+      if (!photoContext) throw new Error("Photo canvas unavailable");
+      photoContext.drawImage(canvas, 0, 0);
+      // Recognition uses the exact original camera frame, not the composited IP.
+      let partnerImage = "";
+      if (mutualLike) {
+        try { partnerImage = captureVisionImage(video, document.createElement("canvas")); }
+        catch { /* Offline/encoding failures must never prevent the local photo. */ }
+        renderFrame(recordingRef.current, null, recordingRef.current);
       }
-      addMediaCapture({
+      playShutterSound();
+      if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
+      setFlashMode(automatic ? "automatic" : "manual");
+      flashTimerRef.current = window.setTimeout(() => {
+        flashTimerRef.current = null;
+        setFlashMode("");
+      }, 280);
+
+      let photoCaption = contextualCaption;
+      if (mutualLike) {
+        photoCaption = await resolveGestureCaption({
+          characterLabel,
+          identifyPartner: partnerImage ? async (signal) => {
+            const result = await requestScene(getVisionApiUrl(), { image: partnerImage, character }, { signal });
+            return result.interactionPartner;
+          } : undefined,
+        });
+        drawCaption(photoContext, photoCanvas.width, photoCanvas.height, photoCaption);
+        if (photoId === gesturePhotoIdRef.current && character === activeCharacterRef.current && cameraReadyRef.current) {
+          setMutualLikeCaption(photoCaption);
+        }
+      }
+      const blob = await encodePhoto(photoCanvas);
+      const saved = await addMediaCapture({
+        id,
+        createdAt,
         type: "photo",
         blob,
         day: paddedDay,
-        captionMode,
-        captionText: contextualCaption.text,
+        captionMode: mutualLike ? photoCaption.mode : captionMode,
+        captionText: photoCaption.text,
         source: reason,
       }, {
         automatic,
       });
-    }, "image/jpeg", 0.94);
-  }, [addMediaCapture, cameraState, captionMode, contextualCaption.text, paddedDay, playShutterSound, renderFrame, showToast]);
+      return saved.persisted;
+    } catch (error) {
+      console.warn("Photo capture failed", error);
+      showToast("照片生成失败，请再试一次点赞或手动拍照");
+      return false;
+    }
+  }, [addMediaCapture, cameraState, captionMode, contextualCaption, drawCaption, paddedDay, playShutterSound, renderFrame, showToast]);
 
   useEffect(() => {
     takePhotoRef.current = takePhoto;

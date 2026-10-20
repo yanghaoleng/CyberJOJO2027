@@ -10,4 +10,7 @@ test("auto photos happen on a real topic title change, not a gesture caption or 
   assert.equal(getTopicCaptureChange(pen.text, pen).reason, "");
   assert.deepEqual(getTopicCaptureChange(pen.text, { kind: "day", text: "第3天" }), { title: pen.text, reason: "" });
   assert.equal(getTopicCaptureChange(pen.text, defaultCaption).reason, "");
+  assert.deepEqual(getTopicCaptureChange(pen.text, {
+    kind: "subject", interaction: "mutual_like", text: "叫叫和新用户礼貌互赞", secondLine: "礼貌互赞",
+  }), { title: pen.text, reason: "" });
 });

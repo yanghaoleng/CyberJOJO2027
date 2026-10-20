@@ -79,6 +79,22 @@ test("vision distinguishes books and toys for contextual captions", () => {
   })).category, "toy");
 });
 
+test("a clear thumbs-up partner is independent of object commentary and constrained to visible features", () => {
+  for (const [input, expected] of [
+    [{ kind: "glasses", personCount: 1, confidence: .96 }, "glasses"],
+    [{ kind: "hat", personCount: 2, confidence: .99 }, "unknown"],
+    [{ kind: "blue_clothes", personCount: 1, confidence: .8 }, "unknown"],
+    [{ kind: "英俊男性", personCount: 1, confidence: 1 }, "unknown"],
+    [{ kind: "美貌女性", personCount: 1, confidence: 1 }, "unknown"],
+    [{ kind: "hat", personCount: true, confidence: .99 }, "unknown"],
+  ]) {
+    const assessment = parseSceneAssessment(JSON.stringify({ evaluable: false, confidence: .1, interaction_partner: input }));
+    assert.equal(assessment.evaluable, false);
+    assert.equal(assessment.interactionPartner.kind, expected);
+    assert.equal(assessment.text, "");
+  }
+});
+
 test("vision requests send low-detail images and return usage", async () => {
   let requestBody;
   let authorization;
@@ -111,6 +127,10 @@ test("vision requests send low-detail images and return usage", async () => {
   assert.equal(imageInput.detail, "low");
   assert.equal(imageInput.image_url, JPEG_DATA_URL);
   assert.equal(requestBody.tool_choice.name, "comment_on_camera_scene");
+  const schema = requestBody.tools[0].parameters;
+  assert.ok(schema.required.includes("interaction_partner"));
+  assert.ok(schema.properties.interaction_partner.properties.kind.enum.includes("glasses"));
+  assert.ok(!schema.properties.interaction_partner.properties.kind.enum.includes("male"));
   assert.equal(result.assessment.subject, "橘猫");
   assert.deepEqual(result.usage, { input_tokens: 700, output_tokens: 55 });
 });

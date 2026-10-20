@@ -13,7 +13,7 @@ const REACTION_VISIBLE_MS = 5_800;
 const FINGERPRINT_WIDTH = 64;
 const FINGERPRINT_HEIGHT = 40;
 
-function getVisionApiUrl() {
+export function getVisionApiUrl() {
   const configured = import.meta.env.VITE_JOCAM_VISION_URL;
   if (configured) return configured;
   if (["localhost", "127.0.0.1"].includes(window.location.hostname)) {
@@ -35,7 +35,7 @@ function captureFingerprint(video, canvas) {
   return createSceneFingerprint(context.getImageData(0, 0, canvas.width, canvas.height));
 }
 
-function captureVisionImage(video, canvas) {
+export function captureVisionImage(video, canvas) {
   const size = getVisionCaptureSize(video.videoWidth, video.videoHeight);
   if (!size.width || !size.height) return "";
   if (canvas.width !== size.width || canvas.height !== size.height) {

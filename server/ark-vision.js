@@ -1,3 +1,5 @@
+import { INTERACTION_PARTNERS, normalizeInteractionPartner } from "./interaction-partner.js";
+
 const VISION_ACTIONS = ["praise", "surprised", "think", "happy", "frighten", "curious"];
 const VISION_CATEGORIES = ["food", "dessert", "book", "toy", "cat", "dog", "animal", "plant", "object"];
 const VISION_TONES = ["delighted", "curious", "cautious"];
@@ -39,15 +41,17 @@ export function parseSceneAssessment(value) {
   }
 
   const confidence = clamp(Number(parsed?.confidence) || 0, 0, 1);
+  const partner = parsed?.interaction_partner
+    ? { interactionPartner: normalizeInteractionPartner(parsed.interaction_partner) } : {};
   if (!parsed?.evaluable || confidence < MIN_EVALUABLE_CONFIDENCE) {
-    return emptyAssessment(confidence);
+    return { ...emptyAssessment(confidence), ...partner };
   }
 
   const category = VISION_CATEGORIES.includes(parsed.category) ? parsed.category : null;
   const tone = VISION_TONES.includes(parsed.tone) ? parsed.tone : null;
   const subject = cleanText(parsed.subject, 24);
   const text = cleanText(parsed.text, 42);
-  if (!category || !tone || !subject || !text) return emptyAssessment(confidence);
+  if (!category || !tone || !subject || !text) return { ...emptyAssessment(confidence), ...partner };
 
   const action = VISION_ACTIONS.includes(parsed.action) ? parsed.action : null;
   const repeatKey = cleanText(parsed.repeat_key, 36) || `${category}:${subject}`;
@@ -60,6 +64,7 @@ export function parseSceneAssessment(value) {
     action,
     repeatKey,
     confidence,
+    ...partner,
   };
 }
 
@@ -153,7 +158,7 @@ export async function assessCameraScene(image, character, config, fetchImpl = fe
         stream: true,
         store: false,
         thinking: { type: "disabled" },
-        max_output_tokens: 220,
+        max_output_tokens: 320,
         input: [
           {
             role: "system",
@@ -163,7 +168,8 @@ export async function assessCameraScene(image, character, config, fetchImpl = fe
 你正在通过儿童相机看一张低清实时画面。只有当主体非常清楚且适合准确评价时，才设置 evaluable=true。
 可评价主体仅限：食物、具体甜点、绘本或书本、玩具、猫、狗、其他常见动物、植物，或非常明确且适合儿童互动的日常物品。绘本或书本使用 book，玩具使用 toy，植物使用 plant。能确认大类但不能确认具体名字时，可描述为“一本绘本”“一盆植物”，不要猜书名或植物品种。模糊、遮挡、无法确定、人脸或身体为主体、屏幕文字、危险情境时必须返回 evaluable=false。
 评价要像角色当场看到后自然说出的一句话，不超过 26 个汉字。可以热情夸赞，也可以在食物出现肉眼明显发霉、严重变色、萎蔫时谨慎说“看起来有点怪怪的，先请大人看看”。绝不声称已经闻到、尝到，也不判断食品一定变质、有毒或能否食用。
-不要评价人的长相、年龄、身体、健康或身份。不要使用 emoji。为相同主体生成稳定、简短的 repeat_key，并选择最贴合的预置动作；没有合适动作使用 none。${activeCharacter === "lvdou" ? "Domi 的 text 必须只用英语，短句指出可见对象并邀请孩子说它的英文名；以上中文长度限制改为不超过20个英文词。" : ""}必须调用 comment_on_camera_scene。`,
+不要评价人的长相、年龄、身体、健康或身份。不要使用 emoji。为相同主体生成稳定、简短的 repeat_key，并选择最贴合的预置动作；没有合适动作使用 none。
+另独立填写 interaction_partner，供相机点赞留影使用，不改变以上 evaluable 限制。只在画面恰好一人、能清楚确认该人正在竖起拇指、且置信度至少 0.9 时，从 glasses（戴眼镜）、hat（戴帽子）、red_clothes/blue_clothes/white_clothes/yellow_clothes/green_clothes/black_clothes（对应衣服颜色）中选一个可直接看见的特征。禁止根据人脸、发型或衣着推断性别、性别认同、年龄、身份或其他敏感属性，不做颜值评价，也不做身份匹配。多人、无人、模糊、不能确认手势属于谁或没有清楚特征时 kind=unknown。personCount 是画面可见人数；不要编造。${activeCharacter === "lvdou" ? "Domi 的 text 必须只用英语，短句指出可见对象并邀请孩子说它的英文名；以上中文长度限制改为不超过20个英文词。" : ""}必须调用 comment_on_camera_scene。`,
             }],
           },
           {
@@ -190,6 +196,15 @@ export async function assessCameraScene(image, character, config, fetchImpl = fe
               action: { type: "string", enum: [...VISION_ACTIONS, "none"] },
               repeat_key: { type: "string" },
               confidence: { type: "number", minimum: 0, maximum: 1 },
+              interaction_partner: {
+                type: "object", additionalProperties: false,
+                properties: {
+                  kind: { type: "string", enum: [...Object.keys(INTERACTION_PARTNERS), "unknown"] },
+                  confidence: { type: "number", minimum: 0, maximum: 1 },
+                  personCount: { type: "integer", minimum: 0 },
+                },
+                required: ["kind", "confidence", "personCount"],
+              },
             },
             required: [
               "evaluable",
@@ -200,6 +215,7 @@ export async function assessCameraScene(image, character, config, fetchImpl = fe
               "action",
               "repeat_key",
               "confidence",
+              "interaction_partner",
             ],
           },
           strict: true,

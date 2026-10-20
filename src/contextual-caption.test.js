@@ -2,10 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { getContextualCaption } from "./contextual-caption.js";
 
-test("thumbs up and heart always select the continuous-learning caption", () => {
+test("thumbs up uses mutual-like copy, never a reading streak or conversation topic", () => {
   const caption = getContextualCaption({ gesture: "thumbs_up", day: 18 });
-  assert.equal(caption.mode, "streak");
-  assert.equal(caption.text, "坚持连续学习叫叫阅读第 18 天");
+  assert.equal(caption.mode, "contextual");
+  assert.equal(caption.text, "叫叫和新用户礼貌互赞");
+  assert.equal(caption.interaction, "mutual_like");
+  assert.equal(getContextualCaption({ gesture: "thumbs_up", conversationTopic: "读书", characterLabel: "Domi",
+    interactionPartner: { kind: "glasses", confidence: .96, personCount: 1 } }).text, "Domi和戴眼镜的朋友礼貌互赞");
+});
+
+test("unrelated heart captions retain their existing behavior", () => {
   assert.equal(getContextualCaption({ gesture: "heart", day: 18 }).mode, "streak");
 });
 

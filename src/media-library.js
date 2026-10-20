@@ -79,8 +79,7 @@ export async function loadMediaCaptures(limit = MEDIA_LIBRARY_LIMIT) {
   try {
     const transaction = database.transaction(STORE_NAME, "readonly");
     const store = transaction.objectStore(STORE_NAME);
-    const captures = await readRecentCaptures(store, limit);
-    await transactionDone(transaction);
+    const [captures] = await Promise.all([readRecentCaptures(store, limit), transactionDone(transaction)]);
     return captures;
   } finally {
     database.close();
@@ -93,12 +92,33 @@ export async function storeMediaCapture(capture, limit = MEDIA_LIBRARY_LIMIT) {
   try {
     const transaction = database.transaction(STORE_NAME, "readwrite");
     const store = transaction.objectStore(STORE_NAME);
-    store.put(toStoredMediaCapture(capture));
-    const staleIds = await readStaleCaptureIds(store, limit);
-    for (const staleId of staleIds) store.delete(staleId);
-    await transactionDone(transaction);
+    const done = transactionDone(transaction);
+    const write = (async () => {
+      store.put(toStoredMediaCapture(capture));
+      const staleIds = await readStaleCaptureIds(store, limit);
+      for (const staleId of staleIds) store.delete(staleId);
+    })();
+    await Promise.all([write, done]);
     return true;
   } finally {
     database.close();
   }
+}
+
+export async function persistMediaCaptureWithRetry(capture, {
+  store = storeMediaCapture,
+  wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+} = {}) {
+  let failure;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (await store(capture)) return true;
+      throw new Error("Media library storage is unavailable");
+    } catch (error) {
+      failure = error;
+      if (["QuotaExceededError", "SecurityError"].includes(error?.name)) break;
+      if (attempt < 2) await wait(attempt ? 450 : 150);
+    }
+  }
+  throw failure;
 }
