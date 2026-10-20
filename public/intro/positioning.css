@@ -20,4 +20,4 @@
 
 @media(max-width:500px){.positioning-axis-label{font-size:14px}.positioning-axis-label.is-left,.positioning-axis-label.is-right{width:32px;font-size:14px;line-height:1.45}.positioning-axis-label.is-left{left:4px}.positioning-axis-label.is-right{right:4px}}
 
-.need-case>.product-positioning{grid-column:1/-1;min-width:0;background:transparent;border-top:1px solid #ded7ed;padding-top:clamp(36px,5vw,64px)}.play-card .journal-parent-entry{margin-top:12px}
+.need-case>.product-positioning{grid-column:1/-1;min-width:0;background:transparent;border-top:1px solid #ded7ed;padding-top:clamp(36px,5vw,64px)}.play-card .journal-parent-entry{margin-top:14px;padding:14px 16px;border-left:3px solid #b58a3b;border-radius:0 12px 12px 0;background:#fff5d9;color:#66502d}.journal-parent-entry strong{color:#513819;font-weight:750}
