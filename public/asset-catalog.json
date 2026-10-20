@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-19T15:48:09.434Z",
+  "generatedAt": "2026-10-20T15:22:34.994Z",
   "publicFileCount": 138,
-  "totalBytes": 113465164,
+  "totalBytes": 113465537,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -1047,8 +1047,8 @@
       "name": "index.html",
       "category": "other",
       "format": "HTML",
-      "bytes": 80288,
-      "sha256": "32f6de64c93092db7dea741e059e495ebe8f79a66315254aaab7058839e410fa"
+      "bytes": 80464,
+      "sha256": "90092daa5351d4776e2010718e411a2a20a72a79671e8df36f6b34e2d1303b8b"
     },
     {
       "id": "intro/learning-paths.css",
@@ -1065,8 +1065,8 @@
       "name": "positioning.css",
       "category": "other",
       "format": "CSS",
-      "bytes": 7036,
-      "sha256": "22e8f985048d0230e17f8d6254aa979951801582af3696076d5d47e68e8c0522"
+      "bytes": 7233,
+      "sha256": "b9c2f54ce47b690aaaf805365376e738a9155a23d84838cd2d636b77f679025a"
     },
     {
       "id": "media/heart-balloon.riv",

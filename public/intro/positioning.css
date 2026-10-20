@@ -19,3 +19,5 @@
 }
 
 @media(max-width:500px){.positioning-axis-label{font-size:14px}.positioning-axis-label.is-left,.positioning-axis-label.is-right{width:32px;font-size:14px;line-height:1.45}.positioning-axis-label.is-left{left:4px}.positioning-axis-label.is-right{right:4px}}
+
+.need-case>.product-positioning{grid-column:1/-1;min-width:0;background:transparent;border-top:1px solid #ded7ed;padding-top:clamp(36px,5vw,64px)}.play-card .journal-parent-entry{margin-top:12px}
