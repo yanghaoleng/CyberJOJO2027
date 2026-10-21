@@ -45,3 +45,10 @@
 - 猫箱：https://maoxiangai.com/ ，官方 App Store https://apps.apple.com/cn/app/id6475000292 ，图标取 Apple lookup 的 artworkUrl512。
 - 星野：https://www.xingyeai.com/ ，官方 App Store https://apps.apple.com/cn/app/id6463076337 ，图标取 Apple lookup 的 artworkUrl512。
 - 图表加高，手机端左右分列排布成人场景产品，避免图标与标签重叠。
+
+## 2026-10-21 Character.AI
+
+- 第四象限加入 Character.AI 官方应用图标，用 CSS grayscale(1) 显示黑白效果，保留原始图像文件。
+- 官方应用：https://apps.apple.com/us/app/character-ai-chat-talk-text/id1671705818 ，图标由 Apple lookup 的 artworkUrl512 下载。
+- 官方公告：https://blog.character.ai/an-update-on-character-ai/ ，公告发布于 2026-10-12，说明进入 Chapter 11 破产程序、寻求法院监督出售，平台目前仍在运营。图中标注程序状态，避免将申请破产表述为已停服或清算。
+- 右下方手机节点改为四行；维持其他产品图标原色。

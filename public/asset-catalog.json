@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-20T15:23:50.548Z",
-  "publicFileCount": 138,
-  "totalBytes": 113465784,
+  "generatedAt": "2026-10-21T06:07:03.040Z",
+  "publicFileCount": 139,
+  "totalBytes": 113481561,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -779,6 +779,15 @@
       ]
     },
     {
+      "id": "intro/assets/positioning/character-ai.jpg",
+      "path": "intro/assets/positioning/character-ai.jpg",
+      "name": "character-ai.jpg",
+      "category": "icon",
+      "format": "JPG",
+      "bytes": 14591,
+      "sha256": "1199485e335b73aaa0faa02ecebc0b4bbb2b4f71bbaa2fa2f1010320e0fc1e72"
+    },
+    {
       "id": "intro/assets/positioning/chatgpt.jpg",
       "path": "intro/assets/positioning/chatgpt.jpg",
       "name": "chatgpt.jpg",
@@ -1047,8 +1056,8 @@
       "name": "index.html",
       "category": "other",
       "format": "HTML",
-      "bytes": 80543,
-      "sha256": "c0d0322d64a276de301aaaf3f300d4b55500dd4196d529678e2d314c57b3a3e1"
+      "bytes": 81420,
+      "sha256": "8fc18c2d9dadaea7693d1cd34c2b2c545b1e0b671fef94f05ece49332467ff63"
     },
     {
       "id": "intro/learning-paths.css",
@@ -1065,8 +1074,8 @@
       "name": "positioning.css",
       "category": "other",
       "format": "CSS",
-      "bytes": 7401,
-      "sha256": "8f9a5c4180e65f2eae486bf5bea2d33d9294ae216018d1770557bf7a93e94ac7"
+      "bytes": 7710,
+      "sha256": "530161841d80a9d449e3679ac54d4d48915e3b5cda18c3085be1246ea0039d20"
     },
     {
       "id": "media/heart-balloon.riv",

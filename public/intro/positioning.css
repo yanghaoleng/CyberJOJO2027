@@ -13,11 +13,14 @@
 .positioning-point.is-manus{left:20%;top:70%}
 .positioning-point.is-grok{left:20%;top:82%}
 .positioning-point.is-muse{left:26%;top:94%}
-.positioning-point.is-emochi{left:78%;top:60%}
-.positioning-point.is-maoxiang{left:78%;top:75%}
-.positioning-point.is-xingye{left:78%;top:90%}
+.positioning-point.is-emochi{left:78%;top:58%}
+.positioning-point.is-character{left:78%;top:70%}
+.positioning-point.is-maoxiang{left:78%;top:82%}
+.positioning-point.is-xingye{left:78%;top:94%}
 }
 
 @media(max-width:500px){.positioning-axis-label{font-size:14px}.positioning-axis-label.is-left,.positioning-axis-label.is-right{width:32px;font-size:14px;line-height:1.45}.positioning-axis-label.is-left{left:4px}.positioning-axis-label.is-right{right:4px}}
 
 .need-case>.product-positioning{grid-column:1/-1;min-width:0;background:transparent;border-top:1px solid #ded7ed;padding-top:clamp(36px,5vw,64px)}.play-card .journal-parent-entry{margin-top:14px;padding:14px 16px;border-left:3px solid #b58a3b;border-radius:0 12px 12px 0;background:#fff5d9;color:#66502d}.journal-parent-entry strong{color:#513819;font-weight:750}
+
+.positioning-point.is-character img{filter:grayscale(1)}.positioning-point .positioning-status{font-size:9px;line-height:1.5;color:#8c8493}.positioning-point.is-character{gap:6px}@media(max-width:500px){.positioning-point .positioning-status{font-size:8px}}
