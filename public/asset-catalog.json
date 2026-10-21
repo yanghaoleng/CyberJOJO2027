@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-21T06:07:03.040Z",
+  "generatedAt": "2026-10-21T06:41:50.442Z",
   "publicFileCount": 139,
-  "totalBytes": 113481561,
+  "totalBytes": 113483084,
   "assets": [
     {
       "id": "apple-touch-icon.png",
@@ -1029,8 +1029,8 @@
       "name": "future-exploration.css",
       "category": "other",
       "format": "CSS",
-      "bytes": 4538,
-      "sha256": "7911ebba13ab15f9b2d4ae4f25d3039f9858e34c0154ff737f92c981c5a674e8"
+      "bytes": 4860,
+      "sha256": "0568fdc37513095296a0d7c4b8d3bb7ed5145323de7a44609970a32aa1b42a96"
     },
     {
       "id": "intro/health-icon-options.html",
@@ -1056,8 +1056,8 @@
       "name": "index.html",
       "category": "other",
       "format": "HTML",
-      "bytes": 81420,
-      "sha256": "8fc18c2d9dadaea7693d1cd34c2b2c545b1e0b671fef94f05ece49332467ff63"
+      "bytes": 82621,
+      "sha256": "3455b79a149225fd356828db09b949a57b1161526c430f409c76980a3944e06e"
     },
     {
       "id": "intro/learning-paths.css",

@@ -152,6 +152,24 @@
   border-top: 1px solid rgba(80, 66, 137, .18);
 }
 
+.exploration-outlook .exploration-coach {
+  grid-column: 1 / -1;
+}
+
+.exploration-coach p {
+  max-width: 960px;
+}
+
+.exploration-coach mark {
+  padding: .08em .22em;
+  border-radius: .18em;
+  background: #e2d6f4;
+  color: #593c83;
+  font-weight: 600;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
 .exploration-outlook h3 {
   margin: 14px 0 18px;
   font-size: clamp(21px, 2vw, 27px);
