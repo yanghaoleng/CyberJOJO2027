@@ -14,3 +14,6 @@ server/voice.env
 
 # 永不提交的营销素材
 cyberjojo-marketing-assets.zip
+
+# Task-local Library materializations; never ship original IP sources.
+.incoming/

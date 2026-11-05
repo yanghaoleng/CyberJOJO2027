@@ -42,6 +42,7 @@ import { configureCharacterPlayback, isDomiWordVoice } from "../server/character
 import { HealthDemoCard } from "./components/health-demo-card.jsx";
 import { requestDomiSpeech } from "./domi-speech.js";
 import { VoiceHealth, VOICE_ISSUES, appendVoiceLog } from "./voice-health.js";
+import { readOpeningHistory, rememberOpening } from "./daily-opening-history.js";
 import { getStoryVisit } from "./story-progress.js";
 import { createUISFX } from "uisfx";
 import {
@@ -900,6 +901,7 @@ function App() {
   const voiceSocketRef = useRef(null);
   const voicePrewarmRef = useRef(null);
   const voiceHasReplyRef = useRef(false);
+  const dailyOpeningIdRef = useRef(null);
   const [voiceWarmState, setVoiceWarmState] = useState("idle");
   const voiceAudioGraphRef = useRef(null);
   const voiceIntentionalCloseRef = useRef(false);
@@ -2111,7 +2113,8 @@ function App() {
         if (!warm?.startSent) socket.send(JSON.stringify({
           type: "start",
           storyDay,
-          resume: voiceHasReplyRef.current,
+          resume: voiceHasReplyRef.current || Boolean(dailyOpeningIdRef.current),
+          dailyOpening: { recentIds: readOpeningHistory(), eventId: dailyOpeningIdRef.current },
           inputMode: audioTrack ? "voice" : "text",
           sampleRate: 16_000,
           language: "zh-CN",
@@ -2120,7 +2123,7 @@ function App() {
         socket.send(JSON.stringify({ type: "interaction_mode", mode: gameplayModeRef.current === "words" ? "feed" : gameplayModeRef.current || "none" }));
         if (warm?.startSent) {
           socket.send(JSON.stringify({ type: "character", character }));
-          socket.send(JSON.stringify({ type: "activate", storyDay }));
+          socket.send(JSON.stringify({ type: "activate", storyDay, resume: voiceHasReplyRef.current || Boolean(dailyOpeningIdRef.current), dailyOpening: { recentIds: readOpeningHistory(), eventId: dailyOpeningIdRef.current } }));
         }
       };
       socket.addEventListener("open", beginSession);
@@ -2131,6 +2134,11 @@ function App() {
         try {
           message = JSON.parse(event.data);
         } catch {
+          return;
+        }
+        if (message.type === "daily_opening" && typeof message.id === "string") {
+          dailyOpeningIdRef.current = message.id;
+          rememberOpening(message.id);
           return;
         }
         if (message.type === "ready") {

@@ -221,3 +221,71 @@ test("text-only voice sessions preserve gameplay transcripts and let a newer tur
     await new Promise((resolve) => { provider.close(resolve); provider.closeAllConnections(); });
   }
 });
+
+test("daily opening context survives reconnect and yields to child speech and active games", { timeout: 15000 }, async () => {
+  const { dailyOpeningText } = await import('./daily-opening.js');
+  const document = JSON.parse(await (await import('node:fs/promises')).readFile(new URL('./data/daily-openings.json', import.meta.url), 'utf8'));
+  const event = document.items[0];
+  const provider = new WebSocketServer({ port: 0, host: '127.0.0.1' });
+  await once(provider, 'listening');
+  const sessions = [];
+  provider.on('connection', socket => {
+    const entry = { socket, messages: [] }; sessions.push(entry);
+    socket.on('message', data => entry.messages.push(JSON.parse(data)));
+  });
+  const port = await freePort();
+  const fixture = `globalThis.fetch=async()=>new Response(JSON.stringify({code:0,data:Buffer.from('mock audio').toString('base64')}));`;
+  const child = spawn(process.execPath, ['--import', `data:text/javascript,${encodeURIComponent(fixture)}`, fileURLToPath(new URL('./index.js', import.meta.url))], {
+    env: { PATH: process.env.PATH, NODE_ENV: 'test', PORT: String(port), VOLC_ARK_API_KEY: 'test-only', VOLC_SPEECH_API_KEY: 'test-only', SEEDUPLEX_ENDPOINT: `ws://127.0.0.1:${provider.address().port}`, JOCAM_ALLOWED_ORIGINS: 'http://127.0.0.1:5173' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let output = ''; child.stdout.on('data', data => output += data); child.stderr.on('data', data => output += data);
+  const clients = [];
+  try {
+    await waitFor(() => output.includes('bridge listening'));
+    for (const mode of ['daily', 'resume', 'warm-resume', 'resume-without-opening', 'retired-resume', 'child-first', 'gameplay']) {
+      const socket = new WebSocket(`ws://127.0.0.1:${port}/voice`, { origin: 'http://127.0.0.1:5173' }); clients.push(socket);
+      await once(socket, 'open');
+      const messages = []; socket.on('message', data => messages.push(JSON.parse(data)));
+      const send = value => socket.send(JSON.stringify(value));
+      const count = sessions.length;
+      const resumedId = mode === 'resume-without-opening' ? undefined : mode === 'retired-resume' ? 'retired' : event.id;
+      send({ type: 'start', character: 'jiaojiao', deferGreeting: true, resume: mode.includes('resume'), dailyOpening: mode === 'warm-resume' ? undefined : { eventId: resumedId } });
+      await waitFor(() => sessions.length === count + 1 && sessions.at(-1).messages.length);
+      const upstream = sessions.at(-1);
+      if (mode === 'gameplay') send({ type: 'interaction_mode', mode: 'feed' });
+      send({ type: 'activate', storyDay: 2, resume: mode.includes('resume'), dailyOpening: { eventId: resumedId } });
+      if (mode === 'child-first') {
+        send({ type: 'text', text: '我想聊我的玩具', clientMessageId: 'child-first' });
+        await waitFor(() => messages.some(message => message.type === 'transcript'));
+      }
+      upstream.socket.send(JSON.stringify({ type: 'session.created', session: { id: mode } }));
+      await waitFor(() => messages.some(message => message.type === 'ready'));
+      const greetings = () => upstream.messages.filter(message => message.type === 'speech_text_buffer.commit');
+      if (mode === 'daily') {
+        await waitFor(() => greetings().length === 1);
+        assert.equal(greetings()[0].text, dailyOpeningText(event));
+        assert.equal(messages.filter(message => message.type === 'daily_opening').length, 1);
+        const instructions = upstream.messages.filter(message => message.type === 'session.update').at(-1).session.instructions;
+        assert.ok(instructions.includes(event.opening)); assert.ok(instructions.includes('单轮最多选一个'));
+        assert.ok(instructions.includes('第2次')); assert.ok(!instructions.includes(`开场参考：最近读的绘本里`));
+        send({ type: 'context', entries: [{ role: 'user', text: '我也画了一个太阳' }] });
+        await waitFor(() => upstream.messages.some(message => message.type === 'session.update' && message.session.instructions.includes('我也画了一个太阳')));
+        assert.ok(upstream.messages.filter(message => message.type === 'session.update').at(-1).session.instructions.includes(event.opening));
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 60));
+        assert.equal(greetings().length, 0, `${mode} must not replay or interrupt`);
+        if (mode.includes('resume')) assert.equal(upstream.messages.some(message => (message.session?.instructions || '').includes(event.opening)), ['resume', 'warm-resume'].includes(mode));
+      }
+      send({ type: 'activate', storyDay: 2 });
+      if (mode === 'gameplay') send({ type: 'interaction_mode', mode: 'none' });
+      await new Promise(resolve => setTimeout(resolve, 30));
+      assert.equal(greetings().length, mode === 'daily' ? 1 : 0);
+      const closed = once(socket, 'close'); socket.close(); await closed;
+    }
+  } finally {
+    clients.forEach(socket => socket.terminate()); child.kill('SIGTERM');
+    for (const socket of provider.clients) socket.terminate();
+    await new Promise(resolve => provider.close(resolve));
+  }
+});

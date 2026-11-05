@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { WebSocketServer } from "ws";
 import { buildCharacterInstructions, getArkConfig, inferCharacterResponse, inferLeaveNote, parseCharacterSignal, sanitizeConversationContext } from "./ark-command.js";
 import { buildStoryInstructions, getStoryArc, STORY_ARC_DAYS } from "./story-arc.js";
+import { DAILY_OPENINGS, DAILY_OPENING_CONTENT_VERSION, DAILY_OPENING_CONTENT_SHA256, DAILY_OPENING_STATUS, DAILY_OPENING_VERSION, selectDailyOpening, dailyOpeningText, buildDailyOpeningInstructions } from "./daily-opening.js";
 import { correctBrandTranscript } from "./brand-lexicon.js";
 import { detectCharacterSwitchCommand } from "./character-switch-command.js";
 import { getVolcAsrConfig, VolcAsrSession } from "./volc-asr.js";
@@ -80,6 +81,7 @@ const server = http.createServer(async (request, response) => {
     response.end(JSON.stringify({
       ok: true,
       service: "jocam-voice",
+      dailyOpenings: { version: DAILY_OPENING_VERSION, contentVersion: DAILY_OPENING_CONTENT_VERSION, count: DAILY_OPENINGS.length, status: DAILY_OPENING_STATUS, contentSha256: DAILY_OPENING_CONTENT_SHA256 },
       brandLexicon: {
         hotwordCount: asrConfig.hotwords.length,
         correctionsApplied: correctionMetrics.applied,
@@ -166,10 +168,26 @@ websocketServer.on("connection", (client) => {
   let storyAgeGroup = "mid";
   let sessionStartedAt = 0;
   let storyClosingSent = false;
+  let dailyOpening = null;
+  let dailyOpeningRequested = false;
+  let dailyOpeningShared = false;
+  const applyDailyOpening = (message) => {
+    if (dailyOpening || activeCharacter !== "jiaojiao") return;
+    const candidate = message.dailyOpening;
+    if (candidate && typeof candidate === "object") {
+      dailyOpeningRequested = true;
+      // A resumed child-led session may never have used an opening. Do not invent one.
+      if (message.resume === true && !DAILY_OPENINGS.some(event => event.id === candidate.eventId)) {
+        dailyOpeningRequested = false;
+        return;
+      }
+      dailyOpening = selectDailyOpening({ recentIds: candidate.recentIds, eventId: candidate.eventId });
+    }
+  };
   let leaveNoteTimer = null;
   const storyInstructions = (closing = false) => activeCharacter === "lvdou"
     ? "Help the child discover one visible, safe everyday object. Invite them to show it, say its English name, and collect a cutout word card. Never claim to see an object without a camera observation. Speak only English."
-    : buildStoryInstructions(storyDay, storyAgeGroup, { closing, context });
+    : [dailyOpeningShared ? buildDailyOpeningInstructions(dailyOpening) : "", buildStoryInstructions(storyDay, storyAgeGroup, { closing, context, dailyOpening: dailyOpeningShared })].filter(Boolean).join("\n");
   const armLeaveNote = () => {
     if (closed || leaveNoteTimer) return;
     leaveNoteTimer = setTimeout(() => { leaveNoteTimer = null; void generateLeaveNote(); }, LEAVE_NOTE_IDLE_MS);
@@ -341,6 +359,7 @@ websocketServer.on("connection", (client) => {
       context: context.entries,
       onTranscript: (transcript) => {
         if (seeduplex !== session || !activated) return;
+        if (transcript.text) openingSent = true;
         const corrected = correctBrandTranscript(transcript.text);
         const normalizedTranscript = { ...transcript, text: corrected.text.slice(0, 1000),
           id: transcript.final ? `dialogue-${randomUUID()}` : undefined,
@@ -501,13 +520,19 @@ websocketServer.on("connection", (client) => {
   const greetWhenActive = () => {
     if (!activated || !upstreamReady || openingSent || closed) return;
     openingSent = true;
+    if (interactionMode !== "none") return;
+    dailyOpeningShared = dailyOpeningRequested;
+    if (dailyOpening) {
+      sendJson(client, { type: "daily_opening", id: dailyOpening.id, version: DAILY_OPENING_VERSION });
+    }
+    if (dailyOpeningRequested && seeduplex) seeduplex.update({ instructions: buildCharacterInstructions(activeCharacter, storyInstructions(false)) });
     sessionStartedAt = Date.now();
     clearTimeout(warmupTimer);
     if (seeduplex) {
       seeduplex.setMuted(false);
-      seeduplex.greet(buildOpeningText(storyDay, storyAgeGroup, activeCharacter));
+      seeduplex.greet(activeCharacter === "jiaojiao" && dailyOpeningRequested ? dailyOpeningText(dailyOpening) : buildOpeningText(storyDay, storyAgeGroup, activeCharacter));
     } else {
-      sendSpeech(buildOpeningText(storyDay, storyAgeGroup, activeCharacter), { opening: true, character: activeCharacter }).catch((error) => {
+      sendSpeech(activeCharacter === "jiaojiao" && dailyOpeningRequested ? dailyOpeningText(dailyOpening) : buildOpeningText(storyDay, storyAgeGroup, activeCharacter), { opening: true, character: activeCharacter }).catch((error) => {
         console.error("Opening speech failed", { name: error.name });
       });
     }
@@ -538,6 +563,9 @@ websocketServer.on("connection", (client) => {
     if (message.type === "activate") {
       if (!started || closed || activated) return;
       activated = true;
+      if (message.resume === true) openingSent = true;
+      applyDailyOpening(message);
+      if (message.resume === true && dailyOpeningRequested) dailyOpeningShared = true;
       if (Number.isInteger(message.storyDay)) storyDay = Math.min(STORY_ARC_DAYS + 1, Math.max(1, message.storyDay));
       if (seeduplex) {
         seeduplex.instructions = buildCharacterInstructions(activeCharacter, storyInstructions(false));
@@ -573,6 +601,7 @@ websocketServer.on("connection", (client) => {
       }
       const text = String(message.text || "").replace(/\s+/g, " ").trim().slice(0, 1000);
       if (!text) { sendJson(client, { type: "error", code: "INVALID_TEXT", message: "先写一句想说的话吧。", clientMessageId }); return; }
+      openingSent = true;
       lastTextAt = Date.now();
       disarmLeaveNote();
       const transcript = { type: "transcript", text, final: true, id: `dialogue-${clientMessageId || randomUUID()}`,
@@ -631,6 +660,7 @@ websocketServer.on("connection", (client) => {
       if (interactionMode === message.mode) return;
       cancelPending();
       interactionMode = message.mode;
+      if (interactionMode !== "none") openingSent = true;
       // Provider input mute also disables ASR. Gameplay still needs the child's
       // microphone; suppress free-chat output in callbacks, never mute input.
       seeduplex?.setMuted(!activated);
@@ -691,7 +721,9 @@ websocketServer.on("connection", (client) => {
     if (["low", "mid", "high"].includes(message.ageGroup)) {
       storyAgeGroup = message.ageGroup;
     }
+    applyDailyOpening(message);
     openingSent = message.resume === true;
+    dailyOpeningShared = openingSent && dailyOpeningRequested;
     if (activated) sessionStartedAt = Date.now();
     if (message.inputMode === "text" || message.textOnly === true) {
       sendJson(client, { type: "ready", inputMode: "text", sessionId });
@@ -715,6 +747,7 @@ websocketServer.on("connection", (client) => {
         greetWhenActive();
       },
       onTranscript: (transcript) => {
+        if (transcript.text) openingSent = true;
         const corrected = correctBrandTranscript(transcript.text);
         const normalizedTranscript = { ...transcript, text: corrected.text.slice(0, 1000),
           id: transcript.final ? `dialogue-${randomUUID()}` : undefined,

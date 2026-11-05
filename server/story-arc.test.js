@@ -49,3 +49,11 @@ test("each reading hook invites a natural next step", () => {
     }
   }
 });
+
+test("daily opening keeps reading available without forcing its opening or hook", () => {
+  const instructions = buildStoryInstructions(2, "mid", { dailyOpening: true });
+  assert.ok(instructions.includes("第2次"));
+  assert.ok(instructions.includes("仅供孩子主动聊书"));
+  assert.ok(!instructions.includes(`开场参考：${getStoryArc(2, "mid").opening}`));
+  assert.ok(!instructions.includes(`合适时才说：${getStoryArc(2, "mid").hook}`));
+});
