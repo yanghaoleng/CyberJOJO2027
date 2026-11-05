@@ -24,7 +24,7 @@ test("empty/small pools, stale ids and explicit resume degrade safely", () => {
 test("only selected event enters prompt, with skip, fiction, one-question and reading boundaries", () => {
   const prompt = buildDailyOpeningInstructions(library[8]);
   assert.match(prompt, /opening-8/); assert.doesNotMatch(prompt, /opening-9/);
-  for (const text of ["虚构", "单轮最多选一个", "最多一问", "立即接受", "停止", "主动聊书", "敏感资料"]) assert.ok(prompt.includes(text));
+  for (const text of ["虚构", "单轮最多选一个", "最多一问", "立即接受", "不得立即改问", "停止", "主动聊书", "敏感资料"]) assert.ok(prompt.includes(text));
 });
 
 test("content schema, short openings and production draft gate", async () => {
