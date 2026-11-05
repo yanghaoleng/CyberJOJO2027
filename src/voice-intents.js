@@ -59,3 +59,9 @@ export function getCollectionFollowUp(category, name) {
   if (category === "food") return `你最先注意到${label}的颜色，还是它的形状？`;
   return `你是在哪里发现${label}的？`;
 }
+
+// Explicit voice stop only; game-specific “不玩了” keeps its existing exit path.
+export function isVoiceStopCommand(value) {
+  const text = String(value || "").replace(/[\s，,。.!?！？、]/g, "");
+  return /^(?:请|叫叫|多米|Domi)*(?:关闭语音|关掉语音|停止语音|关闭麦克风|关掉麦克风|别听了|不聊了|我不聊了|我要休息了|我想停下来休息不聊了)$/i.test(text);
+}

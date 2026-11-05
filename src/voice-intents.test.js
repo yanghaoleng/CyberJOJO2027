@@ -65,3 +65,10 @@ test('English wake phrases share the word activity entry despite casing and punc
 test('declined English practice and partial word matches do not open the chapter', () => {
  for (const phrase of ["I don't want to practice English words", 'Don’t read words', 'Do not make a world', 'Not English words', 'Stop reading words', 'unread words', 'English wordsmith']) assert.equal(parseVoiceIntent(phrase), null);
 });
+
+
+test("explicit voice stop is separate from game exit and negative instructions", async () => {
+  const { isVoiceStopCommand } = await import('./voice-intents.js');
+  for (const text of ['关闭语音','我想停下来休息，不聊了。','请关闭麦克风','别听了']) assert.equal(isVoiceStopCommand(text),true);
+  for (const text of ['不玩了','结束跟随','不要关闭语音','我还想聊','叫叫找一找']) assert.equal(isVoiceStopCommand(text),false);
+});

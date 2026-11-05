@@ -41,6 +41,9 @@ import { createVoicePrewarm } from "./voice-prewarm.js";
 import { configureCharacterPlayback, isDomiWordVoice } from "../server/character-voice-policy.js";
 import { HealthDemoCard } from "./components/health-demo-card.jsx";
 import { requestDomiSpeech } from "./domi-speech.js";
+import { resumeVoiceCapture } from "./voice-capture-ready.js";
+import { VoiceReconnect } from "./voice-reconnect.js";
+import { VoiceConnectionNotice } from "./components/VoiceConnectionNotice.jsx";
 import { VoiceHealth, VOICE_ISSUES, appendVoiceLog } from "./voice-health.js";
 import { readOpeningHistory, rememberOpening } from "./daily-opening-history.js";
 import { getStoryVisit } from "./story-progress.js";
@@ -133,7 +136,7 @@ import MotionFollowOverlay from "./components/MotionFollowOverlay.jsx";
 import { createSceneFingerprint } from "./scene-analysis.js";
 import { AUTO_CAPTURE_COOLDOWN_MS, getTopicCaptureChange } from "./auto-capture-policy.js";
 import { advancePresentationGate, createPresentationGate, finishPresentationRequest, PRESENTATION_SAMPLE_MS } from "./presentation-gate.js";
-import { getCollectionFollowUp, parseVoiceIntent, shouldTriggerSceneAnalysis } from "./voice-intents.js";
+import { getCollectionFollowUp, isVoiceStopCommand, parseVoiceIntent, shouldTriggerSceneAnalysis } from "./voice-intents.js";
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -904,6 +907,7 @@ function App() {
   const dailyOpeningIdRef = useRef(null);
   const [voiceWarmState, setVoiceWarmState] = useState("idle");
   const voiceAudioGraphRef = useRef(null);
+  const voiceCaptureSetupRef = useRef(null);
   const voiceIntentionalCloseRef = useRef(false);
   const voiceReadyRef = useRef(false);
   const voiceReadyPromiseRef = useRef(null);
@@ -915,8 +919,10 @@ function App() {
   const voiceCharacterRef = useRef("jiaojiao");
   const voiceStreamRef = useRef({ id: "", character: "", epoch: 0 });
   const voiceStreamEpochRef = useRef(0);
-  const voiceReconnectTimerRef = useRef(null);
-  const voiceReconnectAttemptsRef = useRef(0);
+  const closeVoiceRef = useRef(null);
+  const voiceRecoveryRef = useRef(null);
+  const voiceDesiredRef = useRef(false);
+  const voiceUserClosedRef = useRef(false);
   const voiceHealthCleanupRef = useRef(null);
   const voiceRestartRef = useRef(null);
   const voiceLogRef = useRef([]);
@@ -1052,6 +1058,7 @@ function App() {
   const [pipVisible, setPipVisible] = useState(false);
   const [pipOpening, setPipOpening] = useState(false);
   const [voiceState, setVoiceState] = useState("idle");
+  const [voiceConnection, setVoiceConnection] = useState({ phase: "idle", code: "", nextAt: 0 });
   const [voiceIssue, setVoiceIssue] = useState("");
   const voiceIssueRef = useRef(voiceIssue);
   voiceIssueRef.current = voiceIssue;
@@ -1900,7 +1907,16 @@ function App() {
     previousTopicTitleRef.current = change.title;
     if (change.reason) scheduleAutoCapture(change.reason, 900);
   }, [cameraState, contextualCaption, scheduleAutoCapture]);
-  const stopVoiceSession = useCallback(() => {
+  if (!voiceRecoveryRef.current) voiceRecoveryRef.current = new VoiceReconnect({
+    onChange: setVoiceConnection,
+    eligible: () => voiceDesiredRef.current && Boolean(streamRef.current?.getAudioTracks().some(track => track.readyState === "live" && track.enabled)),
+    restart: () => { if (voiceDesiredRef.current && streamRef.current) void voiceRestartRef.current?.(streamRef.current); },
+  });
+  const stopVoiceSession = useCallback(({ preserveRecovery = false } = {}) => {
+    if (!preserveRecovery) { voiceDesiredRef.current = false; voiceRecoveryRef.current?.stop(); }
+    voiceCaptureSetupRef.current?.controller.abort();
+    voiceCaptureSetupRef.current?.context.close().catch(() => {});
+    voiceCaptureSetupRef.current = null;
     voiceHealthCleanupRef.current?.();
     voiceHealthCleanupRef.current = null;
     voiceStreamEpochRef.current += 1;
@@ -1912,8 +1928,7 @@ function App() {
     voiceReadyResolveRef.current?.(null);
     voiceReadyResolveRef.current = null;
     voiceReadyPromiseRef.current = null;
-    if (voiceReconnectTimerRef.current) window.clearTimeout(voiceReconnectTimerRef.current);
-    voiceReconnectTimerRef.current = null;
+
     pendingTextRef.current?.finish(false, "连接已中断，文字还在，可以再试一次。");
     voiceIntentionalCloseRef.current = true;
     const graph = voiceAudioGraphRef.current;
@@ -1943,23 +1958,30 @@ function App() {
     setAiState("idle");
   }, []);
 
-  const startVoiceSession = useCallback(async (stream, { textOnly = false } = {}) => {
+  const startVoiceSession = useCallback(async (stream, { textOnly = false, captureIssue = "" } = {}) => {
+    if (!stream || streamRef.current !== stream || voiceUserClosedRef.current) return null;
     const audioTrack = textOnly ? null : stream?.getAudioTracks?.()[0];
 
-    stopVoiceSession();
+    stopVoiceSession({ preserveRecovery: true });
+    voiceDesiredRef.current = true;
+    voiceRecoveryRef.current.connecting();
+    voiceRecoveryRef.current.environment({ online: navigator.onLine, visible: !document.hidden });
     const generation = voiceSessionGenerationRef.current;
     voiceIntentionalCloseRef.current = false;
     setVoiceState("connecting");
-    reportVoiceEvent("connecting", { attempt: voiceReconnectAttemptsRef.current });
+    reportVoiceEvent("connecting", { attempt: voiceRecoveryRef.current.attempt });
 
+    let captureReady = false;
     try {
       let processor = null;
       let inputSampleRate = 16_000;
       if (audioTrack) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) throw new Error("Web Audio is unavailable");
+      if (!AudioContextClass) throw Object.assign(new Error("Web Audio is unavailable"), { name: "NotSupportedError" });
       const context = new AudioContextClass();
-      await context.resume();
+      const captureController = new AbortController();
+      voiceCaptureSetupRef.current = { context, controller: captureController };
+      await resumeVoiceCapture(context, { signal: captureController.signal });
       if (generation !== voiceSessionGenerationRef.current) { void context.close(); return null; }
       inputSampleRate = context.sampleRate;
       const source = context.createMediaStreamSource(new MediaStream([audioTrack]));
@@ -1971,8 +1993,10 @@ function App() {
       processor.connect(silent);
       silent.connect(context.destination);
       voiceAudioGraphRef.current = { context, source, processor, silent };
+      voiceCaptureSetupRef.current = null;
       }
 
+      captureReady = true;
       const warm = audioTrack ? voicePrewarmRef.current?.take() : null;
       voicePrewarmRef.current?.dispose();
       voicePrewarmRef.current = null;
@@ -1991,25 +2015,11 @@ function App() {
       });
       const settleReady = voiceReadyResolveRef.current;
       const scheduleVoiceReconnect = () => {
-        if (
-          textOnly
-          || !audioTrack
-          || audioTrack.readyState !== "live"
-          || voiceIntentionalCloseRef.current
-          || voiceReconnectTimerRef.current
-          || streamRef.current !== stream
-        ) return;
-        const attempt = voiceReconnectAttemptsRef.current + 1;
-        voiceReconnectAttemptsRef.current = attempt;
-        const delay = attempt > 6 ? 30_000 : Math.min(4_000, 500 * (2 ** (attempt - 1)));
-        reportVoiceEvent("retry_scheduled", { attempt, delayMs: delay });
+        if (voiceIntentionalCloseRef.current || streamRef.current !== stream || !voiceDesiredRef.current) return;
+        voiceRecoveryRef.current.environment({ online: navigator.onLine, visible: !document.hidden });
+        voiceRecoveryRef.current.failed("connection_closed");
         setVoiceState("connecting");
-        voiceReconnectTimerRef.current = window.setTimeout(() => {
-          voiceReconnectTimerRef.current = null;
-          if (voiceIntentionalCloseRef.current || streamRef.current !== stream || audioTrack.readyState !== "live") return;
-          if (document.hidden || !navigator.onLine) { scheduleVoiceReconnect(); return; }
-          void voiceRestartRef.current?.(stream);
-        }, delay);
+        reportVoiceEvent("retry_scheduled", { attempt: voiceRecoveryRef.current.attempt, delayMs: Math.max(0, voiceRecoveryRef.current.state.nextAt - Date.now()) });
       };
       voiceReadyPromiseRef.current = readyPromise;
       readyTimer = window.setTimeout(() => {
@@ -2018,7 +2028,7 @@ function App() {
           voiceReadyRef.current = false;
           reportVoiceIssue("connection_timeout", { stage: "readiness" });
           setVoiceState("unavailable");
-          socket.close(1000, "session readiness timeout");
+          recover("connection_timeout", { stage: "readiness" });
         }
       }, 12_000);
       const health = new VoiceHealth(performance.now());
@@ -2041,21 +2051,24 @@ function App() {
         const code = health.check(now, { visible: !document.hidden, online: navigator.onLine, ready: voiceReadyRef.current,
           capture: Boolean(audioTrack), trackLive: audioTrack?.readyState === "live", trackMuted: Boolean(audioTrack?.muted), contextState: graph?.context.state });
         if (code === "network_offline") {
+          voiceRecoveryRef.current.environment({ online: false, visible: !document.hidden });
           if (voiceIssueRef.current !== code) reportVoiceIssue(code, { stage: "network" });
           return;
         }
         if (code === "microphone_interrupted") {
+          if (!audioTrack || audioTrack.readyState !== "live") voiceRecoveryRef.current.block("microphone_interrupted");
           if (voiceIssueRef.current !== code) reportVoiceIssue(code, { stage: "microphone", trackState: audioTrack?.readyState });
           return;
         }
         if (code === "microphone_paused") {
           if (!pausedAt) { pausedAt = now; reportVoiceIssue(code, { stage: "microphone", contextState: graph?.context.state }); }
           void graph?.context.resume().catch(() => {});
-          if (now - pausedAt > 6000) recover(code);
+          if (now - pausedAt > 6000) { voiceRecoveryRef.current.block("microphone_paused"); }
           return;
         }
         if (code) { recover(code); return; }
         pausedAt = 0;
+        if (voiceRecoveryRef.current.state.code === "microphone_paused") { voiceRecoveryRef.current.connecting(); voiceRecoveryRef.current.ready(); }
         if (socket.readyState === WebSocket.OPEN) {
           if (socket.bufferedAmount > 128000) { recover("connection_timeout", { stage: "upload", bufferedBytes: socket.bufferedAmount }); return; }
           const id = health.ping(now);
@@ -2066,6 +2079,7 @@ function App() {
         }
       };
       const wake = () => {
+        voiceRecoveryRef.current.environment({ online: navigator.onLine, visible: !document.hidden });
         if (document.hidden || voiceSocketRef.current !== socket) return;
         // Browser timers and audio may both have been suspended in the background.
         health.check(performance.now(), { visible: false });
@@ -2144,7 +2158,8 @@ function App() {
         if (message.type === "ready") {
           voiceTransportRef.current = message.transport || "classic";
           voiceReadyRef.current = true;
-          voiceReconnectAttemptsRef.current = 0;
+          voiceRecoveryRef.current.ready();
+          if (captureIssue) voiceRecoveryRef.current.block(captureIssue);
           settleReady(socket);
           setVoiceState("listening");
           setVoiceIssue(textOnly && stream?.getAudioTracks?.().length ? "microphone_paused" : "");
@@ -2175,6 +2190,11 @@ function App() {
             socket.send(JSON.stringify({ type: "cancel" }));
           }
           if (message.final) {
+            if (isVoiceStopCommand(text)) {
+              recordConversationMessage({ ...message, role: "user", text, source: "child_speech", character: activeCharacter });
+              closeVoiceRef.current?.();
+              return;
+            }
             if (message.clientMessageId && pendingTextRef.current?.id === message.clientMessageId) pendingTextRef.current.finish(true);
             if (gameplayModeRef.current === "words") {
               setWordUtterance({ id: message.id || crypto.randomUUID(), text });
@@ -2363,7 +2383,12 @@ function App() {
         if (message.type === "error") {
           if (message.clientMessageId && pendingTextRef.current?.id === message.clientMessageId) pendingTextRef.current.finish(false, message.message);
           if (!["TEXT_RATE_LIMIT", "TURN_QUEUE_FULL", "INVALID_TEXT", "LOCAL_SPEECH_RATE_LIMIT"].includes(message.code)) setVoiceState("unavailable");
-          showToast(message.message || "语音识别暂时不可用");
+          if (message.retryable === false || message.code === "VOICE_AUTH_FAILED" || message.code === "SESSION_LIMIT") {
+            recovering = true;
+            voiceRecoveryRef.current.block(message.code === "SESSION_LIMIT" ? "session_limit" : "voice_auth_failed");
+            if (socket.readyState < WebSocket.CLOSING) socket.close(1000, "voice unavailable");
+            return;
+          }
           if (message.code === "ASR_UNAVAILABLE") recover(message.stage === "recognition" ? "recognition_stalled" : message.stage === "response" ? "response_timeout" : "connection_closed", { stage: message.stage || "recognition" });
         }
       };
@@ -2385,15 +2410,24 @@ function App() {
         voiceReadyRef.current = false;
         settleReady(null);
         pendingTextRef.current?.finish(false, "连接已断开，文字还在，可以再试一次。");
-        if (!voiceIntentionalCloseRef.current) recover("connection_closed", { closeCode: event.code });
+        if (!voiceIntentionalCloseRef.current) {
+          if ([1008, 4001, 4003, 4401, 4403].includes(event.code)) { recovering = true; voiceRecoveryRef.current.block("voice_auth_failed"); }
+          else recover("connection_closed", { closeCode: event.code });
+        }
       });
       return readyPromise;
     } catch (error) {
       if (generation !== voiceSessionGenerationRef.current) return null;
-      console.warn("Voice session unavailable", error);
+      stopVoiceSession({ preserveRecovery: true });
+      console.warn("Voice session unavailable", { name: error.name });
       setVoiceState("unavailable");
-      reportVoiceIssue("microphone_paused", { stage: "capture_setup" });
-      if (audioTrack) return startVoiceSession(stream, { textOnly: true });
+      if (captureReady) {
+        reportVoiceIssue("connection_closed", { stage: "transport_setup" });
+        voiceRecoveryRef.current.failed("connection_closed");
+      } else {
+        reportVoiceIssue("microphone_paused", { stage: "capture_setup" });
+        voiceRecoveryRef.current.block(error.name === "NotSupportedError" ? "microphone_unsupported" : "microphone_paused");
+      }
       return null;
     }
   }, [activeCharacter, clearCharacterSpeech, dismissCollection, enqueueSynthesizedSpeech, prepareStreamingSpeech, recordConversationMessage, reportVoiceEvent, reportVoiceIssue, scheduleAutoCapture, setHiddenStoryFocus, showToast, stopVoiceSession]);
@@ -2402,7 +2436,9 @@ function App() {
     const stream = streamRef.current;
     if (!stream) return;
     reportVoiceEvent("manual_retry");
-    voiceReconnectAttemptsRef.current = 0;
+    if (voiceRecoveryRef.current.state.code === "voice_auth_failed") return;
+    voiceUserClosedRef.current = false;
+    stream.getAudioTracks().forEach(track => { track.enabled = true; });
     try {
       if (voiceIssueRef.current === "playback_blocked") {
         await pcmSpeechRef.current?.context.resume();
@@ -2417,8 +2453,25 @@ function App() {
         replacement.getAudioTracks().forEach(track => stream.addTrack(track));
       }
       await startVoiceSession(stream);
-    } catch { reportVoiceIssue("microphone_interrupted", { stage: "permission" }); }
+    } catch (error) {
+      voiceRecoveryRef.current.connecting();
+      voiceRecoveryRef.current.block(error.name === "NotAllowedError" ? "microphone_permission" : error.name === "NotFoundError" ? "microphone_missing" : "microphone_interrupted");
+      reportVoiceIssue("microphone_interrupted", { stage: "permission" });
+    }
   }, [reportVoiceEvent, reportVoiceIssue, startVoiceSession]);
+  const closeVoice = useCallback(() => {
+    voiceUserClosedRef.current = true;
+    stopVoiceSession();
+    voicePrewarmRef.current?.dispose(); voicePrewarmRef.current = null;
+    streamRef.current?.getAudioTracks().forEach(track => { track.enabled = false; });
+    setVoiceIssue("");
+  }, [stopVoiceSession]);
+  closeVoiceRef.current = closeVoice;
+  useEffect(() => {
+    const leave = () => { voiceUserClosedRef.current = true; stopVoiceSession(); voicePrewarmRef.current?.dispose(); };
+    window.addEventListener("pagehide", leave);
+    return () => window.removeEventListener("pagehide", leave);
+  }, [stopVoiceSession]);
   const downloadVoiceLog = useCallback(() => {
     const report = { createdAt: new Date().toISOString(), browser: navigator.userAgent, online: navigator.onLine,
       visibility: document.visibilityState, voiceState, issue: voiceIssue, events: voiceLogRef.current };
@@ -3767,7 +3820,7 @@ function App() {
         try {
           return {
             stream: await navigator.mediaDevices.getUserMedia({
-              audio: {
+              audio: voiceUserClosedRef.current ? false : {
                 channelCount: { ideal: 1 },
                 echoCancellation: { ideal: true },
                 noiseSuppression: { ideal: true },
@@ -3783,6 +3836,7 @@ function App() {
           return {
             stream: await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints }),
             microphoneUnavailable: true,
+            microphoneIssue: mediaError.name === "NotAllowedError" ? "microphone_permission" : mediaError.name === "NotFoundError" ? "microphone_missing" : "microphone_interrupted",
           };
         }
       };
@@ -3797,7 +3851,7 @@ function App() {
       }
       streamRef.current = stream;
       // Start the speech connection while video playback / optional PiP warms up.
-      void startVoiceSession(stream, { textOnly: microphoneUnavailable });
+      void startVoiceSession(stream, { textOnly: microphoneUnavailable, captureIssue: acquired.microphoneIssue });
       const video = videoRef.current;
       video.srcObject = stream;
       await video.play();
@@ -3811,7 +3865,7 @@ function App() {
           stream = acquired.stream;
           microphoneUnavailable = acquired.microphoneUnavailable;
           streamRef.current = stream;
-          void startVoiceSession(stream, { textOnly: microphoneUnavailable });
+          void startVoiceSession(stream, { textOnly: microphoneUnavailable, captureIssue: acquired.microphoneIssue });
           video.srcObject = stream;
           await video.play();
         }
@@ -4991,11 +5045,7 @@ function App() {
             characterRect={gameplayCharacterRect} onTarget={handleGameplayTarget} onGuide={text => handleGameplayReaction({ text, action: "curious", replace: true })}
             onProgress={report => { wordReportRef.current = report; }} onFinish={finishActivity} />}
           {!gameplayMode && <CharacterCaptionBubble reaction={characterBubble} canvasRendered={recording} />}
-          {cameraState === "ready" && voiceIssue && (
-            <button className="voice-health-hint" type="button" onClick={() => void retryVoice()} aria-label={`${VOICE_ISSUES[voiceIssue]}，点击恢复语音`}>
-              <Refresh width={14} height={14} aria-hidden="true" /><span>{VOICE_ISSUES[voiceIssue]}</span>
-            </button>
-          )}
+          {cameraState === "ready" && !voiceUserClosedRef.current && <VoiceConnectionNotice state={voiceConnection} issue={VOICE_ISSUES[voiceIssue] || ""} onRetry={() => void retryVoice()} onClose={closeVoice} />}
           {cameraState === "ready" && voiceDiagnosticsOpen && (
             <section className="voice-diagnostics" role="dialog" aria-modal="false" aria-label="语音连接记录">
               <header><strong>语音连接记录</strong><button type="button" aria-label="关闭语音连接记录" onClick={() => setVoiceDiagnosticsOpen(false)}><Xmark width={20} height={20} /></button></header>
@@ -5167,6 +5217,9 @@ function App() {
                   </button>
                   {cameraMenuOpen && (
                     <div className="camera-menu-popover" role="menu" aria-label="相机设置">
+                      <button type="button" role="menuitem" onClick={() => { setCameraMenuOpen(false); if (voiceUserClosedRef.current) void retryVoice(); else closeVoice(); }}>
+                        <Refresh width={19} height={19} aria-hidden="true" /><span>{voiceUserClosedRef.current ? "开启语音" : "关闭语音"}</span>
+                      </button>
                       <button type="button" role="menuitem" onClick={() => { setCameraMenuOpen(false); setVoiceDiagnosticsOpen(true); }}>
                         <OpenBook width={19} height={19} aria-hidden="true" /><span>语音连接记录</span>
                       </button>

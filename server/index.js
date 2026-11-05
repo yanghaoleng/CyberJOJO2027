@@ -14,6 +14,7 @@ import { createGameplayRequestHandler } from "./gameplay-route.js";
 import { createMattingRequestHandler } from "./matting-route.js";
 import { getSeeduplexConfig, SeeduplexSession } from "./seeduplex-session.js";
 import { startSocketHeartbeat } from "./socket-heartbeat.js";
+import { classifyVoiceFailure } from "./voice-failure.js";
 import { DOMI_WORD_VOICE_SOURCE } from "./character-voice-policy.js";
 import { createSpeechRequestHandler } from "./speech-route.js";
 
@@ -438,8 +439,8 @@ websocketServer.on("connection", (client) => {
       },
       onError: (error) => {
         if (seeduplex !== session || closed) return;
-        console.error("Seeduplex session failed", { name: error.name, message: error.message, generation });
-        sendJson(client, { type: "error", code: "ASR_UNAVAILABLE", stage: error.stage || "connection", message: "语音连接中断，正在重连，请再说一次。" });
+        console.error("Seeduplex session failed", { name: error.name, stage: error.stage || "connection", generation });
+        sendJson(client, { type: "error", ...classifyVoiceFailure(error), stage: error.stage || "connection" });
         // Close the bridge as well: an open browser socket must not hide a
         // dead upstream. The client reconnects with its saved conversation.
         client.close(1011, "voice upstream unavailable");
@@ -773,7 +774,7 @@ websocketServer.on("connection", (client) => {
       },
       onError: (error) => {
         console.error("ASR session failed", { name: error.name, message: error.message });
-        sendJson(client, { type: "error", code: "ASR_UNAVAILABLE", message: "语音识别暂时不可用" });
+        sendJson(client, { type: "error", ...classifyVoiceFailure(error) });
       },
     });
     try {
