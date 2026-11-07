@@ -1,3 +1,17 @@
+Food model license scope
+
+The existing CC0 dedication below applies only to these files:
+apple.glb, cake.glb, noodles.glb, drink.glb, candy.glb, orange.glb,
+strawberry.glb and milk.glb.
+
+It does not apply to banana.glb or bread.glb. Those two files retain the
+existing JOJO-Mysterious-Album migration terms recorded below. Source code
+and content have their respective existing notices in
+src/activities/domi-world/vendor/LICENSE,
+src/activities/domi-world/vendor/LICENSE-CONTENT.md and
+src/activities/domi-world/vendor/COMMERCIAL-LICENSE.md.
+No new permission or relicensing is granted by this scope clarification.
+
 CC0 1.0 Universal
 
 These original procedural food models were created for CyberJOJO2027.
